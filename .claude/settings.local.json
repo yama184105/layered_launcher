@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/yaman/.claude/projects/C--Users-yaman-layered-launcher/memory//**)",
+      "Read(//c/Users/yaman/.claude/projects/C--Users-yaman-layered-launcher/memory/**)",
+      "Bash(wc -l /c/Users/yaman/layered_launcher/lib/services/settings/*.dart)",
+      "Bash(wc -l /c/Users/yaman/layered_launcher/lib/screens/settings/parts/*.dart)",
+      "Bash(flutter build:*)"
+    ]
+  }
+}
