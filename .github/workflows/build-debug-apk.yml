@@ -3,8 +3,9 @@ name: Build debug APK
 on:
   push:
     branches:
+      - master
       - main
-      - claude/setup-flutter-android-sdk-Buk3N
+      - 'claude/**'
   workflow_dispatch:
 
 permissions:
