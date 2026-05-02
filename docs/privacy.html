@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>プライバシーポリシー — Layered Launcher</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="./" class="brand">Layered Launcher</a>
+  <div class="nav-links">
+    <a href="./">トップ</a>
+    <a href="https://github.com/yama184105/layered_launcher" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<main class="section">
+  <h1 style="font-size: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">プライバシーポリシー</h1>
+  <p class="muted small">最終更新日: 2026-04-28</p>
+
+  <h2>1. 概要</h2>
+  <p>
+    Layered Launcher (以下「本アプリ」) は、ユーザーの Android スマートフォン上で動作するホームランチャーです。
+    本アプリは、ユーザーの個人情報を外部サーバーに送信したり、第三者と共有したりすることはありません。
+    すべての設定および利用履歴はユーザーの端末内 (ローカルストレージ) のみに保存されます。
+  </p>
+
+  <h2>2. 収集する情報</h2>
+  <p>
+    本アプリが端末内で扱う情報は以下のとおりです。これらはいずれも端末から外部に送信されません。
+  </p>
+  <ul>
+    <li><strong>インストール済みアプリの一覧</strong>: フロアへの配置・表示順制御のために参照します</li>
+    <li><strong>アプリの起動履歴・回数</strong>: 「使用回数による階層変更」「自動移動」「アプリブロック」機能のために記録します</li>
+    <li><strong>各種設定値</strong>: フロア構成・壁紙・フォント等のユーザー設定</li>
+    <li><strong>(端末設定で許可した場合のみ) 通知内容のメタ情報</strong>: 通知バッチ処理機能のために、通知の送信元アプリ・件数を読み取ります</li>
+    <li><strong>(端末設定で許可した場合のみ) アプリ使用時間統計</strong>: スクリーンタイム表示のために OS の使用時間 API を参照します</li>
+  </ul>
+
+  <h2>3. 保存場所</h2>
+  <p>
+    上記すべての情報は、Hive (オンデバイス NoSQL ストレージ) を用いて<strong>端末内のみ</strong>に保存されます。
+    クラウド・第三者サーバー・解析サービスへの送信は一切行いません。
+  </p>
+
+  <h2>4. 第三者への提供</h2>
+  <p>
+    本アプリは収集情報を第三者に提供しません。広告 SDK、解析 SDK、クラッシュレポート SDK 等の外部 SDK を一切組み込んでいません。
+  </p>
+
+  <h2>5. 権限</h2>
+  <p>本アプリが要求する Android の権限は以下のとおりです。</p>
+  <ul>
+    <li><strong>QUERY_ALL_PACKAGES</strong>: インストール済みアプリ一覧の取得 (ランチャーのコア機能)</li>
+    <li><strong>PACKAGE_USAGE_STATS</strong> (任意): スクリーンタイム表示</li>
+    <li><strong>BIND_NOTIFICATION_LISTENER_SERVICE</strong> (任意): 通知バッチ処理</li>
+    <li><strong>POST_NOTIFICATIONS</strong>: マインドフルディレイ・自動移動の通知</li>
+    <li><strong>READ_EXTERNAL_STORAGE / READ_MEDIA_IMAGES</strong>: 壁紙の選択</li>
+    <li><strong>SET_WALLPAPER</strong>: 壁紙の設定</li>
+  </ul>
+  <p>
+    任意権限はユーザーが明示的に許可した場合のみ機能します。許可しなくても本アプリのコア機能は動作します。
+  </p>
+
+  <h2>6. データの削除</h2>
+  <p>
+    本アプリをアンインストールすると、保存された全データは Android OS により自動的に削除されます。
+    アプリ内の「設定 → データ管理」からも個別に削除できます。
+  </p>
+
+  <h2>7. 本ポリシーの変更</h2>
+  <p>
+    本プライバシーポリシーが更新された場合、本ページの「最終更新日」を変更し、
+    重要な変更がある場合はアプリ内通知でお知らせします。
+  </p>
+
+  <h2>8. 連絡先</h2>
+  <p>
+    本ポリシーに関するお問い合わせは、
+    <a href="https://github.com/yama184105/layered_launcher/issues">GitHub Issues</a> までお願いします。
+  </p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p>
+      <a href="./">トップ</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/yama184105/layered_launcher">GitHub</a>
+    </p>
+    <p class="copy">© 2026 Layered Launcher</p>
+  </div>
+</footer>
+
+</body>
+</html>

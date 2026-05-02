@@ -1,0 +1,362 @@
+/* Layered Launcher landing page
+   テキストオンリーの美学に合わせて、白黒・大きい余白・等幅 + sans-serif 混在 */
+
+:root {
+  --fg: #0a0a0a;
+  --bg: #ffffff;
+  --muted: #666666;
+  --border: #e5e5e5;
+  --accent: #0a0a0a;
+  --accent-fg: #ffffff;
+  --dark-bg: #0a0a0a;
+  --dark-fg: #f5f5f5;
+  --max-width: 720px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+  --font-mono: "SF Mono", "Menlo", "Monaco", "Consolas", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+h1, h2, h3 {
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  margin: 0 0 1.5rem;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  margin: 0 0 1.5rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
+h3 {
+  font-size: 1.15rem;
+  margin: 1.5rem 0 0.75rem;
+  font-weight: 700;
+}
+
+p {
+  margin: 0 0 1rem;
+}
+
+ul {
+  padding-left: 1.25rem;
+  margin: 0 0 1rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 0.875rem;
+}
+
+/* topnav */
+.topnav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10;
+}
+
+.topnav .brand {
+  font-weight: 800;
+  text-decoration: none;
+  font-size: 1rem;
+}
+
+.topnav .nav-links {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.topnav .nav-links a {
+  text-decoration: none;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.topnav .nav-links a:hover {
+  color: var(--fg);
+}
+
+@media (max-width: 540px) {
+  .topnav { padding: 0.75rem 1rem; }
+  .topnav .nav-links { gap: 0.75rem; }
+  .topnav .nav-links a { font-size: 0.8rem; }
+}
+
+/* hero */
+.hero {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 4rem 1.5rem 3rem;
+  text-align: left;
+}
+
+.hero .lead {
+  font-size: 1.15rem;
+  color: var(--fg);
+  max-width: 38rem;
+}
+
+.cta {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--fg);
+  border-radius: 2px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.15s ease;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.btn.primary:hover {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.btn.secondary {
+  background: transparent;
+  color: var(--fg);
+}
+
+.btn.secondary:hover {
+  background: var(--fg);
+  color: var(--accent-fg);
+}
+
+/* section */
+.section {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.section.dark {
+  max-width: none;
+  background: var(--dark-bg);
+  color: var(--dark-fg);
+  margin: 2rem 0;
+  padding: 4rem 1.5rem;
+}
+
+.section.dark > * {
+  max-width: var(--max-width);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section.dark h2 {
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+}
+
+.section.dark blockquote {
+  margin: 0;
+  border-left: 3px solid var(--dark-fg);
+  padding-left: 1.5rem;
+  font-size: 1.05rem;
+}
+
+.section.dark .signature {
+  margin-top: 2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* concept */
+.point {
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.point:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.point h3 {
+  margin-top: 0;
+}
+
+/* screenshots */
+.screenshot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.screenshot-grid figure {
+  margin: 0;
+}
+
+.screenshot-placeholder {
+  aspect-ratio: 9 / 19.5;
+  background: #f0f0f0;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  border-radius: 4px;
+}
+
+.screenshot-grid figcaption {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+}
+
+/* feature list */
+.feature-list {
+  list-style: none;
+  padding: 0;
+}
+
+.feature-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.feature-list li:last-child {
+  border-bottom: none;
+}
+
+/* beta */
+.beta-card {
+  border: 1px solid var(--fg);
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.signup-options {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+/* faq */
+.faq details {
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 0;
+}
+
+.faq details:last-child {
+  border-bottom: none;
+}
+
+.faq summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq summary::before {
+  content: "+";
+  position: absolute;
+  left: 0;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  transition: transform 0.15s;
+}
+
+.faq details[open] summary::before {
+  content: "−";
+}
+
+.faq details p {
+  margin-top: 0.75rem;
+  margin-left: 1.5rem;
+  color: var(--muted);
+}
+
+/* footer */
+.footer {
+  border-top: 1px solid var(--border);
+  margin-top: 3rem;
+  padding: 2rem 1.5rem;
+}
+
+.footer-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.footer-inner a {
+  color: var(--muted);
+}
+
+.footer .copy {
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+}

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Layered Launcher — スマホとの距離を、階層で設計する。テキストオンリーの Android ホームランチャー。">
+<meta property="og:title" content="Layered Launcher">
+<meta property="og:description" content="スマホとの距離を、階層で設計する。テキストオンリーの Android ホームランチャー。">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<title>Layered Launcher — スマホとの距離を、階層で設計する</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="./" class="brand">Layered Launcher</a>
+  <div class="nav-links">
+    <a href="#concept">設計</a>
+    <a href="#features">機能</a>
+    <a href="#beta">β 募集</a>
+    <a href="https://github.com/yama184105/layered_launcher" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <h1>スマホとの距離を、<br>階層で設計する。</h1>
+  <p class="lead">
+    Layered Launcher は、アプリを「フロア（階層）」で整理する Android ホームランチャー。
+    アイコンを廃し、テキストのみ。日常のタップに、わずかな摩擦と意図を取り戻す。
+  </p>
+  <div class="cta">
+    <a class="btn primary" href="#beta">β テスターになる</a>
+    <a class="btn secondary" href="#concept">設計思想を読む</a>
+  </div>
+</header>
+
+<section id="concept" class="section">
+  <h2>3 つの設計判断</h2>
+
+  <article class="point">
+    <h3>1. アイコンを使わない</h3>
+    <p>
+      アイコンは無意識に手を伸ばさせる。テキストだけにすると、目で読み、判断してから触れることになる。
+      色彩刺激が消え、画面の情報量が減り、思考のための余白が戻る。
+    </p>
+  </article>
+
+  <article class="point">
+    <h3>2. アプリは「階層 (フロア)」に置く</h3>
+    <p>
+      よく使うアプリは <strong>1F</strong>。誘惑系は <strong>5F</strong>。集中したいときに見えなくしたいものは <strong>地下 B1F</strong>。
+      0F はホーム画面。フロアは 1F〜10F + 地下 B1F〜B10F まで設定可能。
+    </p>
+  </article>
+
+  <article class="point">
+    <h3>3. 移動には小さな摩擦を入れる</h3>
+    <p>
+      フロア間の移動はアニメーションを介して行われる。マインドフルディレイで起動前にカウントダウンを置ける。
+      ストリクトモードで「変更前にタイマーを待つ」設定もできる。<strong>無意識のタップを意識のタップに変える</strong>仕掛け。
+    </p>
+  </article>
+</section>
+
+<section class="section screenshots">
+  <h2>画面</h2>
+  <p class="muted">スクリーンショットは順次差し替え予定。</p>
+  <div class="screenshot-grid">
+    <figure>
+      <div class="screenshot-placeholder" aria-label="ホーム画面 (0F)">
+        <span>0F<br>ホーム画面</span>
+      </div>
+      <figcaption>0F: 充電円・時計・お気に入り・ショートカット</figcaption>
+    </figure>
+    <figure>
+      <div class="screenshot-placeholder" aria-label="フロア (1F)">
+        <span>1F<br>アプリ一覧</span>
+      </div>
+      <figcaption>1F〜10F: テキストのみのアプリリスト</figcaption>
+    </figure>
+    <figure>
+      <div class="screenshot-placeholder" aria-label="設定">
+        <span>設定<br>アコーディオン</span>
+      </div>
+      <figcaption>設定: 1 行 = 1 項目のミニマル UI</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="features" class="section">
+  <h2>機能</h2>
+  <ul class="feature-list">
+    <li><strong>フロアシステム</strong> — 1F〜10F + 地下 B1F〜B10F + ホーム (0F)</li>
+    <li><strong>緊急モード</strong> — 指定アプリを 1F にも表示。日/週/年の使用回数制限つき</li>
+    <li><strong>マインドフルディレイ</strong> — 起動前カウントダウン (3/5/10/30 秒)</li>
+    <li><strong>自動移動</strong> — スケジュール (24h × 7 曜日) または日数間隔ランダム</li>
+    <li><strong>使用回数による階層変更</strong> — 起動回数の閾値でフロアが上がる</li>
+    <li><strong>ストリクトモード</strong> — 5 サブモードで設定変更にタイマー待ちを強制</li>
+    <li><strong>通知バッチ処理</strong> — SNS 通知を指定間隔でまとめる</li>
+    <li><strong>ジェスチャー</strong> — 上スワイプ・下スワイプ・ダブルタップに任意のアクション</li>
+    <li><strong>アプリブロック</strong> — 時間帯・曜日・終日・使用時間上限の組み合わせ</li>
+    <li><strong>外観カスタマイズ</strong> — フォント・行間・時計フォーマット・壁紙・フロア背景色</li>
+  </ul>
+</section>
+
+<section id="philosophy" class="section dark">
+  <h2>なぜ作ったか</h2>
+  <blockquote>
+    <p>
+      スマートフォンは「使われる」ものではなく、「設計するべき」ものになっている。
+      画面に並ぶアイコンは、メーカーや広告主の意図で配置された誘導の地図でしかない。
+    </p>
+    <p>
+      自分の生活を、自分でレイアウトし直したかった。
+      アプリに「フロア」を割り当て、必要な距離を意図的に置く。
+      それだけで、1 日の終わりに見るスクリーンタイムが変わる。
+    </p>
+    <p class="signature">— 開発者より</p>
+  </blockquote>
+</section>
+
+<section id="beta" class="section beta">
+  <h2>β テスター募集</h2>
+  <p>
+    Play Store のクローズドテストに参加してくれる方を募集中。<strong>14 日間</strong>、Galaxy など Android スマートフォンで毎日数分でも開いてくれれば OK。
+  </p>
+
+  <div class="beta-card">
+    <h3>テスターに求めること</h3>
+    <ul>
+      <li>Android スマートフォン (Android 10 以降推奨) を使っていること</li>
+      <li>Google アカウント (Gmail) を持っていること</li>
+      <li>14 日間、たまにアプリを開いてくれること</li>
+      <li>不具合や違和感があれば、簡単なメモで知らせてくれること (任意)</li>
+    </ul>
+
+    <h3>応募方法</h3>
+    <p>
+      下記のいずれかで Gmail アドレスをお送りください。Play Console から招待を送ります。
+    </p>
+    <p class="signup-options">
+      <a class="btn primary" href="https://forms.gle/REPLACE_WITH_YOUR_FORM_ID" target="_blank" rel="noopener">応募フォーム</a>
+      <a class="btn secondary" href="https://github.com/yama184105/layered_launcher/issues/new?labels=beta-tester&amp;title=%5B%CE%B2%5D+%E3%83%86%E3%82%B9%E3%82%BF%E3%83%BC%E5%BF%9C%E5%8B%9F&amp;body=Gmail+%3A+%0A%E6%99%AE%E6%AE%B5%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%84%E3%82%8B%E3%83%A9%E3%83%B3%E3%83%81%E3%83%A3%E3%83%BC+%3A+%0A%E6%9C%9F%E5%BE%85%E3%81%99%E3%82%8B%E7%82%B9+%3A+">GitHub Issue で応募</a>
+    </p>
+    <p class="muted small">
+      応募者の Gmail は Play Console のテスター登録のみに使用し、配布物に含めません。
+    </p>
+  </div>
+</section>
+
+<section class="section faq">
+  <h2>よくある質問</h2>
+
+  <details>
+    <summary>テスト期間中、何をすればいい？</summary>
+    <p>毎日数分 Layered Launcher をホームとして使うだけで OK。詳細なフィードバックは任意。</p>
+  </details>
+
+  <details>
+    <summary>普段使っているランチャーに戻せる？</summary>
+    <p>はい。Android の設定からデフォルトホームをいつでも変更できる。アンインストールも自由。</p>
+  </details>
+
+  <details>
+    <summary>有料？</summary>
+    <p>β 期間中は無料。正式公開後の価格は未定 (現時点では無料配布の方針)。</p>
+  </details>
+
+  <details>
+    <summary>iPhone 版は？</summary>
+    <p>未対応。iOS のホームランチャー API はサードパーティに開放されていないため、原理的に作成不可。</p>
+  </details>
+
+  <details>
+    <summary>個人情報は集まる？</summary>
+    <p>クラウドへのデータ送信は行わない。すべてのデータはローカル (Hive) に保存。詳細は<a href="privacy.html">プライバシーポリシー</a>。</p>
+  </details>
+</section>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p>
+      <a href="https://github.com/yama184105/layered_launcher">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="privacy.html">プライバシーポリシー</a>
+      &nbsp;·&nbsp;
+      <a href="#beta">β 募集</a>
+    </p>
+    <p class="copy">© 2026 Layered Launcher</p>
+  </div>
+</footer>
+
+</body>
+</html>
