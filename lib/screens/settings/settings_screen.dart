@@ -9,6 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../l10n/s.dart';
 import '../../models/app_config.dart';
 import '../../services/app_service.dart';
 import '../../services/native_service.dart';
@@ -29,28 +30,32 @@ part 'parts/security_settings_part.dart';
 part 'parts/backup_settings_part.dart';
 
 // ── Shared color picker ───────────────────────────────────────────────────────
-const _sharedColorSwatches = <(Color, String)>[
-  (Colors.black, '黒'),
-  (Colors.white, '白'),
-  (Colors.transparent, '透明'),
-  (Color(0xFF212121), 'グレー 900'),
-  (Color(0xFF616161), 'グレー 600'),
-  (Color(0xFFBDBDBD), 'グレー 400'),
-  (Color(0xFF0D47A1), 'ブルー 900'),
-  (Color(0xFF1565C0), 'ブルー 700'),
-  (Color(0xFF2196F3), 'ブルー'),
-  (Color(0xFF1A237E), 'インディゴ 900'),
-  (Color(0xFF3F51B5), 'インディゴ'),
-  (Color(0xFFB71C1C), 'レッド 900'),
-  (Color(0xFFF44336), 'レッド'),
-  (Color(0xFF1B5E20), 'グリーン 900'),
-  (Color(0xFF4CAF50), 'グリーン'),
-  (Color(0xFFE65100), 'オレンジ 900'),
-  (Color(0xFFFF9800), 'オレンジ'),
-];
+List<(Color, String)> _sharedColorSwatchesFor(BuildContext context) {
+  final s = S.of(context);
+  return <(Color, String)>[
+    (Colors.black, s.swatchBlack),
+    (Colors.white, s.swatchWhite),
+    (Colors.transparent, s.swatchTransparent),
+    (const Color(0xFF212121), s.swatchGray900),
+    (const Color(0xFF616161), s.swatchGray600),
+    (const Color(0xFFBDBDBD), s.swatchGray400),
+    (const Color(0xFF0D47A1), s.swatchBlue900),
+    (const Color(0xFF1565C0), s.swatchBlue700),
+    (const Color(0xFF2196F3), s.swatchBlue),
+    (const Color(0xFF1A237E), s.swatchIndigo900),
+    (const Color(0xFF3F51B5), s.swatchIndigo),
+    (const Color(0xFFB71C1C), s.swatchRed900),
+    (const Color(0xFFF44336), s.swatchRed),
+    (const Color(0xFF1B5E20), s.swatchGreen900),
+    (const Color(0xFF4CAF50), s.swatchGreen),
+    (const Color(0xFFE65100), s.swatchOrange900),
+    (const Color(0xFFFF9800), s.swatchOrange),
+  ];
+}
 
 Future<Color?> _showSharedColorPicker(BuildContext context, {Color? current, SettingsService? ss}) async {
   Color? selected = current;
+  final swatches = _sharedColorSwatchesFor(context);
   return showDialog<Color>(
     context: context,
     builder: (ctx) => StatefulBuilder(
@@ -58,7 +63,7 @@ Future<Color?> _showSharedColorPicker(BuildContext context, {Color? current, Set
         final customColors = ss?.customColors ?? [];
         return AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('色を選択', style: TextStyle(color: Colors.white, fontSize: 14)),
+          title: Text(S.of(ctx).selectColor, style: const TextStyle(color: Colors.white, fontSize: 14)),
           content: SizedBox(
             width: double.maxFinite,
             child: SingleChildScrollView(
@@ -72,10 +77,10 @@ Future<Color?> _showSharedColorPicker(BuildContext context, {Color? current, Set
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 4, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 0.85,
                     ),
-                    itemCount: _sharedColorSwatches.length,
+                    itemCount: swatches.length,
                     itemBuilder: (_, i) {
-                      final c = _sharedColorSwatches[i].$1;
-                      final label = _sharedColorSwatches[i].$2;
+                      final c = swatches[i].$1;
+                      final label = swatches[i].$2;
                       final isSel = selected == c ||
                           (selected != null && c != Colors.transparent && selected!.value == c.value);
                       final isTransparent = c == Colors.transparent;
@@ -95,7 +100,7 @@ Future<Color?> _showSharedColorPicker(BuildContext context, {Color? current, Set
                                 ),
                               ),
                               child: isTransparent
-                                  ? const Center(child: Text('透', style: TextStyle(color: Colors.white38, fontSize: 10)))
+                                  ? Center(child: Text(S.of(ctx).swatchTransparentMark, style: const TextStyle(color: Colors.white38, fontSize: 10)))
                                   : null,
                             ),
                             const SizedBox(height: 3),
@@ -108,7 +113,7 @@ Future<Color?> _showSharedColorPicker(BuildContext context, {Color? current, Set
                   ),
                   if (customColors.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    const Text('カスタム', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                    Text(S.of(ctx).customSection, style: const TextStyle(color: Colors.white38, fontSize: 11)),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
@@ -143,14 +148,14 @@ Future<Color?> _showSharedColorPicker(BuildContext context, {Color? current, Set
                       padding: EdgeInsets.zero,
                     ),
                     icon: const Icon(Icons.colorize, size: 16),
-                    label: const Text('カスタムカラーを追加', style: TextStyle(fontSize: 12)),
+                    label: Text(S.of(ctx).addCustomColor, style: const TextStyle(fontSize: 12)),
                     onPressed: () async {
                       Color pickerColor = selected ?? Colors.white;
                       final result = await showDialog<Color>(
                         context: ctx,
                         builder: (ctx2) => AlertDialog(
                           backgroundColor: const Color(0xFF1A1A1A),
-                          title: const Text('カスタムカラー', style: TextStyle(color: Colors.white, fontSize: 14)),
+                          title: Text(S.of(ctx2).customColor, style: const TextStyle(color: Colors.white, fontSize: 14)),
                           content: SingleChildScrollView(
                             child: ColorPicker(
                               pickerColor: pickerColor,
@@ -164,8 +169,8 @@ Future<Color?> _showSharedColorPicker(BuildContext context, {Color? current, Set
                             ),
                           ),
                           actions: [
-                            TextButton(onPressed: () => Navigator.pop(ctx2), child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
-                            TextButton(onPressed: () => Navigator.pop(ctx2, pickerColor), child: const Text('追加', style: TextStyle(color: Colors.white))),
+                            TextButton(onPressed: () => Navigator.pop(ctx2), child: Text(S.of(ctx2).actionCancel, style: const TextStyle(color: Colors.white54))),
+                            TextButton(onPressed: () => Navigator.pop(ctx2, pickerColor), child: Text(S.of(ctx2).actionAdd, style: const TextStyle(color: Colors.white))),
                           ],
                         ),
                       );
@@ -182,11 +187,11 @@ Future<Color?> _showSharedColorPicker(BuildContext context, {Color? current, Set
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル', style: TextStyle(color: Colors.white54)),
+              child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, selected),
-              child: const Text('確定', style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionConfirm, style: const TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -258,7 +263,7 @@ class _HourglassState extends State<_Hourglass>
                       const TextStyle(color: Colors.amber, fontSize: 12)),
               const SizedBox(height: 2),
               Text(
-                '残り  $mins:$secs',
+                '${S.of(context).remainingTime}  $mins:$secs',
                 style: const TextStyle(
                   color: Colors.amber,
                   fontSize: 18,
@@ -386,7 +391,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               : sorted.where((a) => a.appName.toLowerCase().contains(query.toLowerCase())).toList();
           return AlertDialog(
             backgroundColor: const Color(0xFF1A1A1A),
-            title: const Text('アプリを選択', style: TextStyle(color: Colors.white)),
+            title: Text(S.of(ctx).selectApp, style: const TextStyle(color: Colors.white)),
             content: SizedBox(
               width: double.maxFinite,
               height: 400,
@@ -394,20 +399,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   TextField(
                     style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: '検索...',
-                      hintStyle: TextStyle(color: Colors.white38),
-                      prefixIcon: Icon(Icons.search, color: Colors.white38),
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: S.of(ctx).searchHint,
+                      hintStyle: const TextStyle(color: Colors.white38),
+                      prefixIcon: const Icon(Icons.search, color: Colors.white38),
+                      border: const OutlineInputBorder(),
                     ),
                     onChanged: (v) => setInner(() => query = v),
                   ),
                   const SizedBox(height: 8),
-                  // "デフォルト" option
+                  // System default option
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('デフォルト', style: TextStyle(color: Colors.white)),
-                    subtitle: const Text('システムデフォルトを使用', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                    title: Text(S.of(ctx).defaultLabel, style: const TextStyle(color: Colors.white)),
+                    subtitle: Text(S.of(ctx).useSystemDefault, style: const TextStyle(color: Colors.white38, fontSize: 11)),
                     selected: currentPackage.isEmpty,
                     selectedColor: Colors.tealAccent,
                     onTap: () => Navigator.pop(ctx, ''),
@@ -434,7 +439,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('キャンセル', style: TextStyle(color: Colors.white54)),
+                child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)),
               ),
             ],
           );
@@ -617,18 +622,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<bool>(
-                title: const Text('有効', style: TextStyle(color: Colors.white, fontSize: 13)),
+                title: Text(S.of(ctx).actionEnabled, style: const TextStyle(color: Colors.white, fontSize: 13)),
                 value: true, groupValue: selected, activeColor: Colors.white,
                 onChanged: (v) { set(() => selected = v!); Navigator.pop(ctx, v); },
               ),
               RadioListTile<bool>(
-                title: const Text('無効', style: TextStyle(color: Colors.white, fontSize: 13)),
+                title: Text(S.of(ctx).actionDisabled, style: const TextStyle(color: Colors.white, fontSize: 13)),
                 value: false, groupValue: selected, activeColor: Colors.white,
                 onChanged: (v) { set(() => selected = v!); Navigator.pop(ctx, v); },
               ),
             ],
           ),
-          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54)))],
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)))],
         ),
       ),
     );
@@ -652,12 +657,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
               )).toList(),
             ),
           ),
-          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54)))],
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)))],
         ),
       ),
     );
   }
 
+
+  // ── Language section ──────────────────────────────────────────
+  // Uses a sentinel 'system' string so we can distinguish "follow system locale"
+  // from a Cancel (which the shared options dialog reports as null).
+  Widget _buildLanguageSection() {
+    final s = S.of(context);
+    final current = _ss.languageCode ?? 'system';
+    String currentLabel;
+    switch (current) {
+      case 'ja':
+        currentLabel = s.languageJapanese;
+        break;
+      case 'en':
+        currentLabel = s.languageEnglish;
+        break;
+      default:
+        currentLabel = '${s.useSystemDefault} (${Localizations.localeOf(context).languageCode})';
+    }
+    return _settingRow(
+      s.languageSettingTitle,
+      currentLabel,
+      () async {
+        final picked = await _showOptionsDialog<String>(
+          s.languageSettingTitle,
+          [
+            ('system', s.useSystemDefault),
+            ('ja', s.languageJapanese),
+            ('en', s.languageEnglish),
+          ],
+          current,
+        );
+        if (picked == null) return;
+        await _ss.setLanguageCode(picked == 'system' ? null : picked);
+      },
+    );
+  }
 
   // ── build ─────────────────────────────────────────────────────
 
@@ -668,22 +709,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Render settings immediately; the app list (_apps) loads in the background
     // and only the rows that depend on it (e.g. shortcut picker) will be empty
     // for the first frame or two — nothing we need a full-screen spinner for.
+    final s = S.of(context);
     final listContent = ListView(
       children: [
-        _accordionSection('home', 'ホーム', _homeSettingRows()),
-        _accordionSection('kaiso', '階層', _kaisoSettingRows()),
-        _accordionSection('gaikkan', '外観', _gaikkanSettingRows()),
-        _accordionSection('appmgmt', 'アプリ管理', _appMgmtSettingRows()),
-        _accordionSection('automove', '自動移動', _autoMoveSettingRows()),
-        _accordionSection('screentime', 'スクリーンタイム管理',
+        _accordionSection('home', s.sectionHome, _homeSettingRows()),
+        _accordionSection('kaiso', s.sectionFloors, _kaisoSettingRows()),
+        _accordionSection('gaikkan', s.sectionAppearance, _gaikkanSettingRows()),
+        _accordionSection('appmgmt', s.sectionAppManagement, _appMgmtSettingRows()),
+        _accordionSection('automove', s.sectionAutoMove, _autoMoveSettingRows()),
+        _accordionSection('screentime', s.sectionScreenTime,
             _screenTimeSettingRows()),
-        _accordionSection('lock', 'ロック・セキュリティ', [_buildLockModeSection()]),
-        _accordionSection('backup', 'バックアップ・復元', [
+        _accordionSection('lock', s.sectionLockSecurity, [_buildLockModeSection()]),
+        _accordionSection('backup', s.sectionBackupRestore, [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: _buildBackupRestoreSection(),
           ),
         ]),
+        _accordionSection('language', s.languageSection, [_buildLanguageSection()]),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -695,7 +738,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             icon: const Icon(Icons.settings, size: 18),
             label:
-                const Text('デバイス設定を開く', style: TextStyle(fontSize: 13)),
+                Text(s.openDeviceSettings, style: const TextStyle(fontSize: 13)),
           ),
         ),
         const SizedBox(height: 24),
@@ -706,7 +749,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       backgroundColor: wallpaper != null ? Colors.transparent : bgColor,
       appBar: AppBar(
         backgroundColor: Colors.black.withOpacity(0.7),
-        title: const Text('設定', style: TextStyle(color: Colors.white)),
+        title: Text(s.settingsTitle, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
         bottom: PreferredSize(
@@ -751,17 +794,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 activeColor: Colors.white, inactiveColor: Colors.white24,
                 onChanged: (v) => setInner(() => opacity = v),
               ),
-              const Text('0%=透明  100%=暗い', style: TextStyle(color: Colors.white38, fontSize: 11)),
+              Text(S.of(ctx).opacityScaleHint, style: const TextStyle(color: Colors.white38, fontSize: 11)),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
             TextButton(
               onPressed: () async {
                 await onSave(opacity);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('適用', style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionApply, style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -774,45 +817,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('ホーム背景', style: TextStyle(color: Colors.white, fontSize: 14)),
+        title: Text(S.of(ctx).homeBackground, style: const TextStyle(color: Colors.white, fontSize: 14)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.palette, color: Colors.white54),
-              title: const Text('色を選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).selectColor, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'color'),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.image, color: Colors.white54),
-              title: const Text('壁紙を選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).selectWallpaper, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'wallpaper'),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.auto_awesome, color: Colors.white54),
-              title: const Text('デフォルト壁紙', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).defaultWallpaper, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'default_wallpaper'),
             ),
             if (_ss.homeWallpaper != null) ...[
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.opacity, color: Colors.white54),
-                title: const Text('壁紙の透明度を変更', style: TextStyle(color: Colors.white, fontSize: 13)),
+                title: Text(S.of(ctx).changeWallpaperOpacity, style: const TextStyle(color: Colors.white, fontSize: 13)),
                 onTap: () => Navigator.pop(ctx, 'opacity'),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.delete, color: Colors.redAccent),
-                title: const Text('壁紙を削除', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                title: Text(S.of(ctx).deleteWallpaper, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
                 onTap: () => Navigator.pop(ctx, 'delete_wallpaper'),
               ),
             ],
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54)))],
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)))],
       ),
     );
     if (!mounted) return;
@@ -836,7 +879,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       });
     } else if (choice == 'opacity') {
       await _showOverlayOpacitySlider(
-        '壁紙の透明度（ホーム）',
+        S.of(context).wallpaperOpacityHome,
         _ss.homeOverlayOpacity,
         (v) => _ss.setHomeOverlayOpacity(v),
       );
@@ -852,45 +895,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('設定画面背景', style: TextStyle(color: Colors.white, fontSize: 14)),
+        title: Text(S.of(ctx).settingsBackground, style: const TextStyle(color: Colors.white, fontSize: 14)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.palette, color: Colors.white54),
-              title: const Text('色を選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).selectColor, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'color'),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.image, color: Colors.white54),
-              title: const Text('壁紙を選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).selectWallpaper, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'wallpaper'),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.auto_awesome, color: Colors.white54),
-              title: const Text('デフォルト壁紙', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).defaultWallpaper, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'default_wallpaper'),
             ),
             if (_ss.settingsWallpaper != null) ...[
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.opacity, color: Colors.white54),
-                title: const Text('壁紙の透明度を変更', style: TextStyle(color: Colors.white, fontSize: 13)),
+                title: Text(S.of(ctx).changeWallpaperOpacity, style: const TextStyle(color: Colors.white, fontSize: 13)),
                 onTap: () => Navigator.pop(ctx, 'opacity'),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.delete, color: Colors.redAccent),
-                title: const Text('壁紙を削除', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                title: Text(S.of(ctx).deleteWallpaper, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
                 onTap: () => Navigator.pop(ctx, 'delete_wallpaper'),
               ),
             ],
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54)))],
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)))],
       ),
     );
     if (choice == 'color') {
@@ -911,7 +954,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       });
     } else if (choice == 'opacity') {
       await _showOverlayOpacitySlider(
-        '壁紙の透明度（設定画面）',
+        S.of(context).wallpaperOpacitySettings,
         _ss.settingsOverlayOpacity,
         (v) => _ss.setSettingsOverlayOpacity(v),
       );
@@ -993,19 +1036,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showDefaultWallpaperPicker(BuildContext ctx, Future<void> Function(String path) onSelected) async {
-    const presets = [
-      ('black_gradient', 'ブラックグラデーション'),
-      ('night_sky', '夜空'),
-      ('dark_forest', 'ダークフォレスト'),
-      ('geometric', 'ジオメトリック'),
-      ('mountain', '山'),
-      ('navy_glow', 'ネイビーグロー'),
+    final s = S.of(ctx);
+    final presets = [
+      ('black_gradient', s.presetBlackGradient),
+      ('night_sky', s.presetNightSky),
+      ('dark_forest', s.presetDarkForest),
+      ('geometric', s.presetGeometric),
+      ('mountain', s.presetMountain),
+      ('navy_glow', s.presetNavyGlow),
     ];
     final chosen = await showDialog<String>(
       context: ctx,
       builder: (dCtx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('デフォルト壁紙', style: TextStyle(color: Colors.white, fontSize: 14)),
+        title: Text(S.of(dCtx).defaultWallpaper, style: const TextStyle(color: Colors.white, fontSize: 14)),
         content: SizedBox(
           width: double.maxFinite,
           child: Column(
@@ -1015,7 +1059,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.cloud_download, color: Colors.tealAccent),
-                title: const Text('オンライン壁紙ギャラリー', style: TextStyle(color: Colors.tealAccent, fontSize: 13)),
+                title: Text(S.of(dCtx).onlineWallpaperGallery, style: const TextStyle(color: Colors.tealAccent, fontSize: 13)),
                 onTap: () => Navigator.pop(dCtx, '_online'),
               ),
               const Divider(color: Colors.white12),
@@ -1053,7 +1097,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54)))],
+        actions: [TextButton(onPressed: () => Navigator.pop(dCtx), child: Text(S.of(dCtx).actionCancel, style: const TextStyle(color: Colors.white54)))],
       ),
     );
     if (chosen == null || !mounted) return;
@@ -1145,10 +1189,10 @@ class _UnsplashGalleryScreenState extends State<_UnsplashGalleryScreen> {
           _loading = false;
         });
       } else {
-        setState(() { _error = 'APIエラー (${resp.statusCode})'; _loading = false; });
+        setState(() { _error = '${S.of(context).apiError} (${resp.statusCode})'; _loading = false; });
       }
     } catch (e) {
-      setState(() { _error = '通信エラー: $e'; _loading = false; });
+      setState(() { _error = '${S.of(context).communicationError}: $e'; _loading = false; });
     }
   }
 
@@ -1158,7 +1202,7 @@ class _UnsplashGalleryScreenState extends State<_UnsplashGalleryScreen> {
       final urls = photo['urls'] as Map<String, dynamic>? ?? {};
       final fullUrl = urls['full'] as String? ?? urls['regular'] as String? ?? '';
       if (fullUrl.isEmpty) {
-        setState(() { _error = 'URLが見つかりません'; _loading = false; });
+        setState(() { _error = S.of(context).urlNotFound; _loading = false; });
         return;
       }
       final resp = await http.get(Uri.parse(fullUrl))
@@ -1169,10 +1213,10 @@ class _UnsplashGalleryScreenState extends State<_UnsplashGalleryScreen> {
         await File(path).writeAsBytes(resp.bodyBytes);
         if (mounted) Navigator.pop(context, path);
       } else {
-        setState(() { _error = 'ダウンロードエラー (${resp.statusCode})'; _loading = false; });
+        setState(() { _error = '${S.of(context).downloadError} (${resp.statusCode})'; _loading = false; });
       }
     } catch (e) {
-      setState(() { _error = 'ダウンロードエラー: $e'; _loading = false; });
+      setState(() { _error = '${S.of(context).downloadError}: $e'; _loading = false; });
     }
   }
 
@@ -1185,7 +1229,7 @@ class _UnsplashGalleryScreenState extends State<_UnsplashGalleryScreen> {
         foregroundColor: Colors.white,
         title: Text(_selectedCategory != null
             ? _categories.firstWhere((c) => c.$1 == _selectedCategory).$2
-            : 'オンライン壁紙ギャラリー',
+            : S.of(context).onlineWallpaperGallery,
             style: const TextStyle(color: Colors.white, fontSize: 16)),
         leading: _selectedCategory != null
             ? IconButton(
@@ -1241,7 +1285,7 @@ class _UnsplashGalleryScreenState extends State<_UnsplashGalleryScreen> {
       ));
     }
     if (_photos.isEmpty) {
-      return const Center(child: Text('写真が見つかりません', style: TextStyle(color: Colors.white54)));
+      return Center(child: Text(S.of(context).noPhotosFound, style: const TextStyle(color: Colors.white54)));
     }
     return GridView.builder(
       padding: const EdgeInsets.all(8),
