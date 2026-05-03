@@ -64,20 +64,30 @@ extension SearchMethods on _HomeScreenState {
     if (normalSorted.isEmpty && !hasEmergencyIndex) return const SizedBox.shrink();
 
     void scrollTo(String key) {
+      // 同じキーへの連続要求はハイライトだけ更新してスクロール再発火を抑える
+      if (key == _lastScrolledIndexKey) {
+        if (_activeIndexChar != key) {
+          setState(() => _activeIndexChar = key);
+        }
+        return;
+      }
+      _lastScrolledIndexKey = key;
       final globalKey = sectionKeys[key];
       final ctx = globalKey?.currentContext;
-      if (ctx == null) return;
-      Scrollable.ensureVisible(
-        ctx,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        alignment: 0.0,
-      );
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 60),
+          curve: Curves.easeOut,
+          alignment: 0.0,
+        );
+      }
       setState(() => _activeIndexChar = key);
     }
 
     void dismissHighlight() {
-      Future.delayed(const Duration(milliseconds: 600), () {
+      _lastScrolledIndexKey = null;
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) setState(() => _activeIndexChar = null);
       });
     }
@@ -111,19 +121,22 @@ extension SearchMethods on _HomeScreenState {
           final totalItemsH = items.length * itemH;
           final itemsStartY = ((totalH - totalItemsH) / 2).clamp(0.0, double.infinity);
 
-          void handleDrag(double localY) {
+          void handleAt(double localY) {
             final relY = localY - itemsStartY;
-            if (relY < 0 || relY >= totalItemsH) return;
-            final idx = (relY / itemH).floor().clamp(0, items.length - 1);
+            // 範囲外でも端の項目にスナップさせて反応を切らさない
+            final clampedRelY = relY.clamp(0.0, totalItemsH - 0.001);
+            final idx = (clampedRelY / itemH).floor().clamp(0, items.length - 1);
             scrollTo(items[idx]);
           }
 
-          return GestureDetector(
+          // Listener で raw pointer event を直接拾う。GestureDetector の
+          // ドラッグ方向認識を待たないため、指を置いた瞬間から追従する。
+          return Listener(
             behavior: HitTestBehavior.opaque,
-            onVerticalDragStart: (d) => handleDrag(d.localPosition.dy),
-            onVerticalDragUpdate: (d) => handleDrag(d.localPosition.dy),
-            onVerticalDragEnd: (_) => dismissHighlight(),
-            onTapDown: (d) { handleDrag(d.localPosition.dy); dismissHighlight(); },
+            onPointerDown: (e) => handleAt(e.localPosition.dy),
+            onPointerMove: (e) => handleAt(e.localPosition.dy),
+            onPointerUp: (_) => dismissHighlight(),
+            onPointerCancel: (_) => dismissHighlight(),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: items.map((c) => indexItem(c, colorOverride: itemColor)).toList(),
@@ -137,7 +150,7 @@ extension SearchMethods on _HomeScreenState {
     if (hasEmergencyIndex && normalSorted.isNotEmpty) {
       final emgItems = ['🚨', ...emgSubKeys];
       return SizedBox(
-        width: 24,
+        width: 32,
         child: LayoutBuilder(builder: (ctx, constraints) {
           const divH = 5.0; // divider area height
           final half = (constraints.maxHeight - divH) / 2;
@@ -160,7 +173,7 @@ extension SearchMethods on _HomeScreenState {
         ? ['🚨', ...emgSubKeys]
         : normalSorted;
     return SizedBox(
-      width: 24,
+      width: 32,
       child: indexStrip(items, itemColor: hasEmergencyIndex ? Colors.redAccent : null),
     );
   }

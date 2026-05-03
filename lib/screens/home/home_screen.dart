@@ -144,6 +144,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ── alphabet index highlight ──────────────────────────────────
   String? _activeIndexChar;
+  // 同じキーへの連続スクロール要求をスキップしてドラッグ追従を軽くする
+  String? _lastScrolledIndexKey;
 
   int get _maxFloor => widget.settingsService.maxFloors;
 
