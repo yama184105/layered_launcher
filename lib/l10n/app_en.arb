@@ -378,5 +378,35 @@
   "emergencyDurationDescription": "Apps stay on 1F for the chosen time. Usage is logged.",
   "minutesShort15": "15 min",
   "minutesShort30": "30 min",
-  "minutesShort60": "60 min"
+  "minutesShort60": "60 min",
+
+  "shortcutPhone": "Phone",
+  "shortcutCamera": "Camera",
+  "shortcutClock": "Clock",
+  "shortcutAlarm": "Alarm",
+  "threeEnabled": "All 3 on",
+  "shortcuts": "Shortcuts",
+  "phoneShortcut": "Phone shortcut",
+  "cameraShortcut": "Camera shortcut",
+  "alarmShortcut": "Tap clock to open alarm",
+  "enabledWithApp": "On · {app}",
+  "defaultWithLabel": "Default ({label})",
+  "indentedLabel": "  {label}",
+
+  "clock": "Clock",
+  "clockFormat": "Time format",
+  "dateFormat": "Date format",
+  "clockSize": "Clock size",
+  "clockSizeSmall": "Small",
+  "clockSizeNormal": "Normal",
+  "clockSizeLarge": "Large",
+  "chargingAnimation": "Charging animation",
+  "clockSummary": "{format} · {size}",
+
+  "gestures": "Gestures",
+  "gestureUp": "Up",
+  "gestureDown": "Down",
+  "gestureDoubleTap": "Double tap",
+  "shortcutLocked": "Shortcut app changes are locked",
+  "shortcutCooldown": "Shortcut change in cooldown"
 }

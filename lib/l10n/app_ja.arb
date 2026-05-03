@@ -526,5 +526,50 @@
   "emergencyDurationDescription": "選択した時間だけ1Fにも表示されます。使用記録が残ります。",
   "minutesShort15": "15分",
   "minutesShort30": "30分",
-  "minutesShort60": "60分"
+  "minutesShort60": "60分",
+
+  "shortcutPhone": "電話",
+  "shortcutCamera": "カメラ",
+  "shortcutClock": "時計",
+  "shortcutAlarm": "アラーム",
+  "threeEnabled": "3つ有効",
+  "shortcuts": "ショートカット",
+  "phoneShortcut": "電話ショートカット",
+  "cameraShortcut": "カメラショートカット",
+  "alarmShortcut": "時計タップでアラーム",
+  "enabledWithApp": "有効 · {app}",
+  "@enabledWithApp": {
+    "placeholders": { "app": { "type": "String" } }
+  },
+  "defaultWithLabel": "デフォルト（{label}）",
+  "@defaultWithLabel": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "indentedLabel": "　{label}",
+  "@indentedLabel": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+
+  "clock": "時計",
+  "clockFormat": "時刻フォーマット",
+  "dateFormat": "日付フォーマット",
+  "clockSize": "時計のサイズ",
+  "clockSizeSmall": "小",
+  "clockSizeNormal": "標準",
+  "clockSizeLarge": "大",
+  "chargingAnimation": "充電アニメーション",
+  "clockSummary": "{format} · {size}",
+  "@clockSummary": {
+    "placeholders": {
+      "format": { "type": "String" },
+      "size": { "type": "String" }
+    }
+  },
+
+  "gestures": "ジェスチャー",
+  "gestureUp": "上",
+  "gestureDown": "下",
+  "gestureDoubleTap": "ダブルタップ",
+  "shortcutLocked": "ショートカットアプリの変更がロックされています",
+  "shortcutCooldown": "ショートカット変更のクールダウン中です"
 }

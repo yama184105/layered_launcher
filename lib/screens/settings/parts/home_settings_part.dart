@@ -4,53 +4,54 @@ extension HomeSettingsMethods on _SettingsScreenState {
   // ── Section row builders ───────────────────────────────────────────
 
   List<Widget> _homeSettingRows() {
+    final s = S.of(context);
     final ss = _ss;
 
     // ── Shortcut group summary ──
     final shortcutsOn = <String>[
-      if (ss.showDialShortcut) '電話',
-      if (ss.showCameraShortcut) 'カメラ',
-      if (ss.showAlarmShortcut) '時計',
+      if (ss.showDialShortcut) s.shortcutPhone,
+      if (ss.showCameraShortcut) s.shortcutCamera,
+      if (ss.showAlarmShortcut) s.shortcutClock,
     ];
     final shortcutSummary = shortcutsOn.isEmpty
-        ? '無効'
+        ? s.actionDisabled
         : shortcutsOn.length == 3
-            ? '3つ有効'
+            ? s.threeEnabled
             : shortcutsOn.join('・');
 
     // ── Clock group summary ──
     final clockSizeLabel =
-        const {'small': '小', 'normal': '標準', 'large': '大'}[ss.clockSize] ??
+        {'small': s.clockSizeSmall, 'normal': s.clockSizeNormal, 'large': s.clockSizeLarge}[ss.clockSize] ??
             ss.clockSize;
-    final clockSummary = '${ss.clockFormat} · $clockSizeLabel';
+    final clockSummary = s.clockSummary(ss.clockFormat, clockSizeLabel);
 
     // ── Gesture group summary ──
     final activeGestures = <String>[
-      if ((ss.gestureUpApp ?? '').isNotEmpty) '上',
-      if ((ss.gestureDownApp ?? '').isNotEmpty) '下',
-      if ((ss.gestureDoubleTapApp ?? '').isNotEmpty) 'ダブルタップ',
+      if ((ss.gestureUpApp ?? '').isNotEmpty) s.gestureUp,
+      if ((ss.gestureDownApp ?? '').isNotEmpty) s.gestureDown,
+      if ((ss.gestureDoubleTapApp ?? '').isNotEmpty) s.gestureDoubleTap,
     ];
     final gestureSummary =
-        activeGestures.isEmpty ? '未設定' : activeGestures.join('・');
+        activeGestures.isEmpty ? s.notSet : activeGestures.join('・');
 
     return [
       _expandableRow(
         key: 'home_shortcuts',
-        title: 'ショートカット',
+        title: s.shortcuts,
         summary: shortcutSummary,
         children: _shortcutChildren(ss),
       ),
       _rowDivider,
       _expandableRow(
         key: 'home_clock',
-        title: '時計',
+        title: s.clock,
         summary: clockSummary,
         children: _clockChildren(ss),
       ),
       _rowDivider,
       _expandableRow(
         key: 'home_gesture',
-        title: 'ジェスチャー',
+        title: s.gestures,
         summary: gestureSummary,
         children: _gestureSettingRows(),
       ),
@@ -76,6 +77,7 @@ extension HomeSettingsMethods on _SettingsScreenState {
       required Future<void> Function(bool) onToggle,
       required Future<void> Function(String) onPickPackage,
     }) {
+      final s = S.of(context);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -84,7 +86,7 @@ extension HomeSettingsMethods on _SettingsScreenState {
             title: Text(title,
                 style: const TextStyle(color: Colors.white, fontSize: 14)),
             subtitle: Text(
-              enabled ? '有効 · ${appName(pkg, defaultLabel)}' : '無効',
+              enabled ? s.enabledWithApp(appName(pkg, defaultLabel)) : s.actionDisabled,
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
             activeColor: Colors.tealAccent,
@@ -95,7 +97,7 @@ extension HomeSettingsMethods on _SettingsScreenState {
             },
           ),
           if (enabled)
-            _settingRow('　$defaultLabel', appName(pkg, 'デフォルト（$defaultLabel）'),
+            _settingRow(s.indentedLabel(defaultLabel), appName(pkg, s.defaultWithLabel(defaultLabel)),
                 () async {
               if (!await _checkShortcutLock()) return;
               final picked = await _pickShortcutApp(pkg);
@@ -108,30 +110,31 @@ extension HomeSettingsMethods on _SettingsScreenState {
       );
     }
 
+    final s = S.of(context);
     return [
       shortcutBlock(
-        title: '電話ショートカット',
+        title: s.phoneShortcut,
         enabled: ss.showDialShortcut,
         pkg: ss.dialShortcutPackage,
-        defaultLabel: '電話',
+        defaultLabel: s.shortcutPhone,
         onToggle: ss.setShowDialShortcut,
         onPickPackage: ss.setDialShortcutPackage,
       ),
       _rowDivider,
       shortcutBlock(
-        title: 'カメラショートカット',
+        title: s.cameraShortcut,
         enabled: ss.showCameraShortcut,
         pkg: ss.cameraShortcutPackage,
-        defaultLabel: 'カメラ',
+        defaultLabel: s.shortcutCamera,
         onToggle: ss.setShowCameraShortcut,
         onPickPackage: ss.setCameraShortcutPackage,
       ),
       _rowDivider,
       shortcutBlock(
-        title: '時計タップでアラーム',
+        title: s.alarmShortcut,
         enabled: ss.showAlarmShortcut,
         pkg: ss.alarmShortcutPackage,
-        defaultLabel: 'アラーム',
+        defaultLabel: s.shortcutAlarm,
         onToggle: ss.setShowAlarmShortcut,
         onPickPackage: ss.setAlarmShortcutPackage,
       ),
@@ -139,9 +142,10 @@ extension HomeSettingsMethods on _SettingsScreenState {
   }
 
   List<Widget> _clockChildren(SettingsService ss) {
+    final s = S.of(context);
     return [
-      _settingRow('時刻フォーマット', ss.clockFormat, () async {
-        final v = await _showOptionsDialog('時刻フォーマット',
+      _settingRow(s.clockFormat, ss.clockFormat, () async {
+        final v = await _showOptionsDialog(s.clockFormat,
             [('HH:mm:ss', 'HH:mm:ss'), ('HH:mm', 'HH:mm')], ss.clockFormat);
         if (v != null) {
           await ss.setClockFormat(v);
@@ -149,8 +153,8 @@ extension HomeSettingsMethods on _SettingsScreenState {
         }
       }),
       _rowDivider,
-      _settingRow('日付フォーマット', ss.dateFormatString, () async {
-        final v = await _showOptionsDialog('日付フォーマット', [
+      _settingRow(s.dateFormat, ss.dateFormatString, () async {
+        final v = await _showOptionsDialog(s.dateFormat, [
           ('M/d (E)', 'M/d (E)'),
           ('yyyy/MM/dd', 'yyyy/MM/dd'),
           ('MM/dd (E)', 'MM/dd (E)'),
@@ -163,12 +167,12 @@ extension HomeSettingsMethods on _SettingsScreenState {
       }),
       _rowDivider,
       _settingRow(
-        '時計のサイズ',
-        const {'small': '小', 'normal': '標準', 'large': '大'}[ss.clockSize] ??
+        s.clockSize,
+        {'small': s.clockSizeSmall, 'normal': s.clockSizeNormal, 'large': s.clockSizeLarge}[ss.clockSize] ??
             ss.clockSize,
         () async {
-          final v = await _showOptionsDialog('時計のサイズ',
-              [('small', '小'), ('normal', '標準'), ('large', '大')], ss.clockSize);
+          final v = await _showOptionsDialog(s.clockSize,
+              [('small', s.clockSizeSmall), ('normal', s.clockSizeNormal), ('large', s.clockSizeLarge)], ss.clockSize);
           if (v != null) {
             await ss.setClockSize(v);
             setState(() {});
@@ -178,9 +182,9 @@ extension HomeSettingsMethods on _SettingsScreenState {
       _rowDivider,
       SwitchListTile(
         contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-        title: const Text('充電アニメーション',
-            style: TextStyle(color: Colors.white, fontSize: 14)),
-        subtitle: Text(ss.chargingAnimationEnabled ? '有効' : '無効',
+        title: Text(s.chargingAnimation,
+            style: const TextStyle(color: Colors.white, fontSize: 14)),
+        subtitle: Text(ss.chargingAnimationEnabled ? s.actionEnabled : s.actionDisabled,
             style: const TextStyle(color: Colors.white54, fontSize: 12)),
         activeColor: Colors.tealAccent,
         value: ss.chargingAnimationEnabled,
@@ -197,11 +201,11 @@ extension HomeSettingsMethods on _SettingsScreenState {
     final ss = _ss;
     if (!ss.strictSubEnabled('shortcut')) return true;
     if (ss.strictSubType('shortcut') == 'block') {
-      _showSnack('ショートカットアプリの変更がロックされています');
+      _showSnack(S.of(context).shortcutLocked);
       return false;
     }
     if (ss.isStrictSubCooldownActive('shortcut')) {
-      _showSnack('ショートカット変更のクールダウン中です');
+      _showSnack(S.of(context).shortcutCooldown);
       return false;
     }
     final confirmed = await showStrictTimerDialog(context,
