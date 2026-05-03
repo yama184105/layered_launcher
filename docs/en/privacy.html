@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Layered Launcher</title>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="./" class="brand">Layered Launcher</a>
+  <div class="nav-links">
+    <a href="./">Top</a>
+    <a href="https://github.com/yama184105/layered_launcher" target="_blank" rel="noopener">GitHub</a>
+    <a href="../privacy.html" class="lang-switch">JA</a>
+  </div>
+</nav>
+
+<main class="section">
+  <h1 style="font-size: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Privacy Policy</h1>
+  <p class="muted small">Last updated: 2026-05-03</p>
+
+  <h2>1. Overview</h2>
+  <p>
+    Layered Launcher ("the App") is a home launcher that runs on the user's Android device.
+    The App does not transmit personal information to external servers, nor share it with any third party.
+    All settings and usage history are stored solely on the user's device (local storage).
+  </p>
+
+  <h2>2. Information handled</h2>
+  <p>
+    The information the App handles on-device is listed below. None of it is transmitted off-device.
+  </p>
+  <ul>
+    <li><strong>List of installed apps</strong>: read in order to lay out apps across floors</li>
+    <li><strong>App launch history and counts</strong>: recorded for the "usage-driven floor change", "auto-move", and "app blocking" features</li>
+    <li><strong>User settings</strong>: floor configuration, wallpaper, fonts, and other preferences</li>
+    <li><strong>(Only when permitted) Notification metadata</strong>: source app and counts, used for notification batching</li>
+    <li><strong>(Only when permitted) App usage statistics</strong>: read from the OS Usage API for the screen-time display</li>
+  </ul>
+
+  <h2>3. Storage</h2>
+  <p>
+    All of the above is stored <strong>only on the device</strong> using Hive (an on-device NoSQL store).
+    No data is sent to any cloud, third-party server, or analytics service.
+  </p>
+
+  <h2>4. Third-party sharing</h2>
+  <p>
+    The App does not share collected information with any third party. No advertising, analytics, or
+    crash-reporting SDKs are bundled.
+  </p>
+
+  <h2>5. Permissions</h2>
+  <p>The Android permissions requested by the App are:</p>
+  <ul>
+    <li><strong>QUERY_ALL_PACKAGES</strong>: enumerate installed apps (core launcher functionality)</li>
+    <li><strong>PACKAGE_USAGE_STATS</strong> (optional): screen-time display</li>
+    <li><strong>BIND_NOTIFICATION_LISTENER_SERVICE</strong> (optional): notification batching</li>
+    <li><strong>POST_NOTIFICATIONS</strong>: notifications for Mindful Delay and auto-move</li>
+    <li><strong>READ_EXTERNAL_STORAGE / READ_MEDIA_IMAGES</strong>: wallpaper selection</li>
+    <li><strong>SET_WALLPAPER</strong>: wallpaper application</li>
+  </ul>
+  <p>
+    Optional permissions only activate the related features when explicitly granted by the user.
+    The App's core functionality works without them.
+  </p>
+
+  <h2>6. Data deletion</h2>
+  <p>
+    Uninstalling the App causes Android to remove all stored data automatically.
+    You can also delete data from "Settings → Data Management" inside the App.
+  </p>
+
+  <h2>7. Changes to this policy</h2>
+  <p>
+    If this privacy policy is updated, the "Last updated" date on this page will change, and significant
+    changes will be announced through in-app notifications.
+  </p>
+
+  <h2>8. Contact</h2>
+  <p>
+    For questions about this policy, please open an issue at
+    <a href="https://github.com/yama184105/layered_launcher/issues">GitHub Issues</a>.
+  </p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p>
+      <a href="./">Top</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/yama184105/layered_launcher">GitHub</a>
+    </p>
+    <p class="copy">© 2026 Layered Launcher</p>
+  </div>
+</footer>
+
+</body>
+</html>
