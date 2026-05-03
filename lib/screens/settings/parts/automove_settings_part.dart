@@ -2,12 +2,13 @@ part of '../settings_screen.dart';
 
 extension AutoMoveSettingsMethods on _SettingsScreenState {
   List<Widget> _autoMoveSettingRows() {
+    final s = S.of(context);
     final autoApps = _ss.allAutoMoveApps;
     String modeName(String mode) {
       switch (mode) {
-        case 'schedule': return 'スケジュール制';
-        case 'interval': return '日数間隔ランダム';
-        default: return '未設定';
+        case 'schedule': return s.modeSchedule;
+        case 'interval': return s.modeIntervalRandom;
+        default: return s.notSet;
       }
     }
     return [
@@ -22,7 +23,7 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('${autoApps.length}アプリに自動移動が設定されています',
+                    child: Text(s.autoMoveAppsCount(autoApps.length),
                         style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   ),
                   Icon(
@@ -37,8 +38,8 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
       if (autoApps.isEmpty)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-          child: const Text('自動移動が設定されているアプリはありません',
-              style: TextStyle(color: Colors.white38, fontSize: 12)),
+          child: Text(s.noAutoMoveApps,
+              style: const TextStyle(color: Colors.white38, fontSize: 12)),
         ),
       // Expanded app list
       if (_autoMoveListExpanded)
@@ -63,7 +64,7 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
             setState(() {});
           });
         }),
-      _settingRow('アプリを選んで設定', '', () async {
+      _settingRow(s.selectAppsToConfigure, '', () async {
         final selected = await _showAppMultiSelectDialog();
         if (selected != null && selected.isNotEmpty) {
           await Navigator.push(
@@ -94,8 +95,8 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
             backgroundColor: const Color(0xFF1A1A1A),
             title: Row(
               children: [
-                const Expanded(child: Text('アプリを選択', style: TextStyle(color: Colors.white, fontSize: 14))),
-                Text('${selected.length}個', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                Expanded(child: Text(S.of(ctx).selectApp, style: const TextStyle(color: Colors.white, fontSize: 14))),
+                Text(S.of(ctx).selectionCountSuffix(selected.length), style: const TextStyle(color: Colors.white38, fontSize: 12)),
               ],
             ),
             content: SizedBox(
@@ -112,7 +113,7 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
                     title: Text(name, style: const TextStyle(color: Colors.white, fontSize: 13)),
                     subtitle: Text(
                       _ss.autoMoveMode(app.packageName) != 'none'
-                          ? '設定済み'
+                          ? S.of(ctx).configuredLabel
                           : '',
                       style: const TextStyle(color: Colors.white38, fontSize: 10),
                     ),
@@ -130,11 +131,11 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('キャンセル', style: TextStyle(color: Colors.white54)),
+                child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)),
               ),
               TextButton(
                 onPressed: selected.isEmpty ? null : () => Navigator.pop(ctx, selected.toList()),
-                child: const Text('設定', style: TextStyle(color: Colors.white)),
+                child: Text(S.of(ctx).actionConfigure, style: const TextStyle(color: Colors.white)),
               ),
             ],
           );

@@ -2,20 +2,21 @@ part of '../settings_screen.dart';
 
 extension GestureSettingsMethods on _SettingsScreenState {
   List<Widget> _gestureSettingRows() {
+    final s = S.of(context);
     return [
-      _settingRow('上スワイプ', _gestureLabel(_ss.gestureUpApp), () async {
+      _settingRow(s.swipeUp, _gestureLabel(_ss.gestureUpApp), () async {
         final result = await _pickGestureAction(_ss.gestureUpApp, forUpSwipe: true);
         await _ss.setGestureUpApp(result);
         setState(() {});
       }),
       _rowDivider,
-      _settingRow('下スワイプ', _gestureLabel(_ss.gestureDownApp), () async {
+      _settingRow(s.swipeDown, _gestureLabel(_ss.gestureDownApp), () async {
         final result = await _pickGestureAction(_ss.gestureDownApp);
         await _ss.setGestureDownApp(result);
         setState(() {});
       }),
       _rowDivider,
-      _settingRow('ダブルタップ', _gestureLabel(_ss.gestureDoubleTapApp), () async {
+      _settingRow(s.doubleTap, _gestureLabel(_ss.gestureDoubleTapApp), () async {
         final result = await _pickGestureAction(_ss.gestureDoubleTapApp);
         await _ss.setGestureDoubleTapApp(result);
         setState(() {});
@@ -33,29 +34,29 @@ extension GestureSettingsMethods on _SettingsScreenState {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('ジェスチャーアクション',
-              style: TextStyle(color: Colors.white)),
+          title: Text(S.of(ctx).gestureAction,
+              style: const TextStyle(color: Colors.white)),
           content: SizedBox(
             width: double.maxFinite,
             height: 400,
             child: ListView(
               children: [
                 // None option
-                _gestureOption(ctx, null, selected, 'なし',
+                _gestureOption(ctx, null, selected, S.of(ctx).noneLabel,
                     () => setInner(() => selected = null)),
                 // Screen off option
                 _gestureOption(ctx, 'screen_off', selected,
-                    '画面オフ',
+                    S.of(ctx).gestureScreenOff,
                     () => setInner(() => selected = 'screen_off')),
                 // Notification panel option
                 _gestureOption(ctx, 'notification_panel', selected,
-                    '通知パネルを表示',
+                    S.of(ctx).gestureNotificationPanel,
                     () => setInner(() => selected = 'notification_panel')),
                 const Divider(color: Colors.white12),
                 if (forUpSwipe) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 6),
-                    child: Text('推奨アプリ', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(S.of(ctx).recommendedApps, style: const TextStyle(color: Colors.white54, fontSize: 11)),
                   ),
                   ..._recommendedApps().map((app) => _gestureOption(ctx, app.packageName, selected,
                       _displayName(app), () => setInner(() => selected = app.packageName))),
@@ -75,12 +76,12 @@ extension GestureSettingsMethods on _SettingsScreenState {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, current),
-                child: const Text('キャンセル',
-                    style: TextStyle(color: Colors.white54))),
+                child: Text(S.of(ctx).actionCancel,
+                    style: const TextStyle(color: Colors.white54))),
             TextButton(
               onPressed: () => Navigator.pop(ctx, selected),
-              child: const Text('完了',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionDone,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -127,9 +128,10 @@ extension GestureSettingsMethods on _SettingsScreenState {
   }
 
   String _gestureLabel(String? v) {
-    if (v == null) return 'なし';
-    if (v == 'screen_off') return '画面オフ';
-    if (v == 'notification_panel') return '通知パネルを表示';
+    final s = S.of(context);
+    if (v == null) return s.noneLabel;
+    if (v == 'screen_off') return s.gestureScreenOff;
+    if (v == 'notification_panel') return s.gestureNotificationPanel;
     final app = _apps.firstWhere(
       (a) => a.packageName == v,
       orElse: () => AppConfig(packageName: v, appName: v, floor: 1),

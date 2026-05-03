@@ -571,5 +571,102 @@
   "gestureDown": "下",
   "gestureDoubleTap": "ダブルタップ",
   "shortcutLocked": "ショートカットアプリの変更がロックされています",
-  "shortcutCooldown": "ショートカット変更のクールダウン中です"
+  "shortcutCooldown": "ショートカット変更のクールダウン中です",
+
+  "minutesShort30": "30分",
+  "hours1": "1時間",
+  "hours2": "2時間",
+  "hours4": "4時間",
+  "minutesShortGeneric": "{minutes}分",
+  "@minutesShortGeneric": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "secondsShort": "{seconds}秒",
+  "@secondsShort": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+
+  "mindfulDelaySettings": "マインドフルディレイ設定",
+  "batchInterval": "バッチ通知間隔",
+  "batchSummary": "バッチ {label}",
+  "@batchSummary": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "notificationSection": "通知",
+  "notificationLimit": "通知制限",
+  "appBlock": "アプリブロック",
+
+  "mindfulDelayEnable": "マインドフルディレイを有効にする",
+  "mindfulDelayHelp": "ONにすると対象アプリ起動時に遅延が発生します",
+  "waitTime": "待機時間",
+  "customSeconds": "カスタム秒数",
+  "enterSecondsHint": "秒数を入力",
+  "afterTimeoutAction": "時間終了後の動作",
+  "launchDirectly": "そのままアプリを開く",
+  "showConfirmAgain": "もう一度確認ダイアログを表示",
+  "cancelToHome": "キャンセルしてホームに戻る",
+  "appliedToAppsCount": "以下のアプリに適用  {count}件ON",
+  "@appliedToAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "strictMode": "ストリクトモード",
+  "strictModeDesc": "各カテゴリごとに制限を設定できます",
+  "submodeLocked": "サブモード設定がロックされています",
+  "fullBlock": "完全ブロック",
+  "timer": "タイマー",
+  "timerWaitMinutes": "タイマー（{minutes}分待ち）",
+  "@timerWaitMinutes": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "timerMinutes": "タイマー（分）",
+  "minutesShortValue": "{minutes}分",
+  "@minutesShortValue": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "applyPending": "反映待ち",
+  "legacyLockMode": "レガシーロックモード",
+  "legacyLockModeDesc": "全フロア移動・全アニメ設定を一括でクールダウン制限する旧モード",
+  "selectLockedApps": "ロック対象アプリを選択",
+  "deselectAll": "全解除",
+  "selectAll": "全選択",
+  "targetAllApps": "対象アプリ：全アプリ（タップして選択）",
+  "targetAppsCount": "対象アプリ：{count}個選択済み",
+  "@targetAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "swipeUp": "上スワイプ",
+  "swipeDown": "下スワイプ",
+  "doubleTap": "ダブルタップ",
+  "gestureAction": "ジェスチャーアクション",
+  "gestureScreenOff": "画面オフ",
+  "gestureNotificationPanel": "通知パネルを表示",
+  "recommendedApps": "推奨アプリ",
+
+  "modeSchedule": "スケジュール制",
+  "modeIntervalRandom": "日数間隔ランダム",
+  "autoMoveAppsCount": "{count}アプリに自動移動が設定されています",
+  "@autoMoveAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "noAutoMoveApps": "自動移動が設定されているアプリはありません",
+  "selectAppsToConfigure": "アプリを選んで設定",
+  "configuredLabel": "設定済み",
+  "actionConfigure": "設定",
+  "selectionCountSuffix": "{count}個",
+  "@selectionCountSuffix": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "backupRestoreTitle": "バックアップ・復元",
+  "emailHint": "メールアドレスを入力...",
+  "backupSubject": "Layered Launcher バックアップ",
+  "backupBodyPrefix": "バックアップデータ:\n\n{json}",
+  "@backupBodyPrefix": {
+    "placeholders": { "json": { "type": "String" } }
+  },
+  "sendBackup": "バックアップを送信",
+  "restoreFromBackup": "バックアップから復元",
+  "restoreInstructions": "復元するには、バックアップメールを開いてデータをコピーしてください"
 }

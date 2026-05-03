@@ -6,18 +6,19 @@ extension BackupSettingsMethods on _SettingsScreenState {
     final emailCtrl = TextEditingController();
     return StatefulBuilder(
       builder: (context, setInner) {
+        final s = S.of(context);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('バックアップ・復元',
-                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+            Text(s.backupRestoreTitle,
+                style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             TextField(
               controller: emailCtrl,
               style: const TextStyle(color: Colors.white, fontSize: 13),
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
-                hintText: 'メールアドレスを入力...',
+                hintText: s.emailHint,
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.07),
@@ -43,8 +44,8 @@ extension BackupSettingsMethods on _SettingsScreenState {
                       final jsonStr = settingsData.toString();
                       await _native.sendEmail(
                         to: email,
-                        subject: 'Layered Launcher バックアップ',
-                        body: 'バックアップデータ:\n\n$jsonStr',
+                        subject: s.backupSubject,
+                        body: s.backupBodyPrefix(jsonStr),
                       );
                     },
                     style: OutlinedButton.styleFrom(
@@ -52,7 +53,7 @@ extension BackupSettingsMethods on _SettingsScreenState {
                       side: const BorderSide(color: Colors.white24),
                     ),
                     icon: const Icon(Icons.backup, size: 16),
-                    label: const Text('バックアップを送信', style: TextStyle(fontSize: 12)),
+                    label: Text(s.sendBackup, style: const TextStyle(fontSize: 12)),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -60,7 +61,7 @@ extension BackupSettingsMethods on _SettingsScreenState {
                   child: OutlinedButton.icon(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('復元するには、バックアップメールを開いてデータをコピーしてください')),
+                        SnackBar(content: Text(s.restoreInstructions)),
                       );
                     },
                     style: OutlinedButton.styleFrom(
@@ -68,7 +69,7 @@ extension BackupSettingsMethods on _SettingsScreenState {
                       side: const BorderSide(color: Colors.white24),
                     ),
                     icon: const Icon(Icons.restore, size: 16),
-                    label: const Text('バックアップから復元', style: TextStyle(fontSize: 12)),
+                    label: Text(s.restoreFromBackup, style: const TextStyle(fontSize: 12)),
                   ),
                 ),
               ],
