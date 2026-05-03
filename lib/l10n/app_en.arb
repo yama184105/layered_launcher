@@ -475,5 +475,32 @@
   "backupBodyPrefix": "Backup data:\n\n{json}",
   "sendBackup": "Send backup",
   "restoreFromBackup": "Restore from backup",
-  "restoreInstructions": "To restore, open the backup email and copy the data"
+  "restoreInstructions": "To restore, open the backup email and copy the data",
+
+  "notificationAccessTitle": "Allow notification access",
+  "notificationAccessMessage": "To show notification badges, notification access is required. Open settings?",
+  "actionLater": "Later",
+  "appNotification": "{name} notification",
+  "notificationCountBody": "{count} notification(s)",
+  "batchNotificationChannel": "Batched notifications",
+  "weekdayMon": "Mon",
+  "weekdayTue": "Tue",
+  "weekdayWed": "Wed",
+  "weekdayThu": "Thu",
+  "weekdayFri": "Fri",
+  "weekdaySat": "Sat",
+  "weekdaySun": "Sun",
+  "screenTimeHM": "{h}h {m}m",
+  "screenTimeM": "{m}m",
+  "usageStatsPermissionRequired": "Usage stats permission required",
+
+  "noMatchingApps": "No matching apps",
+
+  "removeFavorite": "Unfavorite",
+  "addFavorite": "Favorite",
+  "selectionFloorMove": "Move floor",
+  "selectionAddFolder": "Add to folder",
+  "addedToFavorites": "Added {name} to favorites",
+  "removedFromFavorites": "Removed {name} from favorites",
+  "removeFromFavoritesShort": "Remove from favorites"
 }

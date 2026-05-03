@@ -668,5 +668,53 @@
   },
   "sendBackup": "バックアップを送信",
   "restoreFromBackup": "バックアップから復元",
-  "restoreInstructions": "復元するには、バックアップメールを開いてデータをコピーしてください"
+  "restoreInstructions": "復元するには、バックアップメールを開いてデータをコピーしてください",
+
+  "notificationAccessTitle": "通知アクセスを許可",
+  "notificationAccessMessage": "通知バッジを表示するには、通知アクセス権限が必要です。設定画面を開きますか？",
+  "actionLater": "後で",
+  "appNotification": "{name}の通知",
+  "@appNotification": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "notificationCountBody": "{count}件の通知があります",
+  "@notificationCountBody": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "batchNotificationChannel": "バッチ通知",
+  "weekdayMon": "月",
+  "weekdayTue": "火",
+  "weekdayWed": "水",
+  "weekdayThu": "木",
+  "weekdayFri": "金",
+  "weekdaySat": "土",
+  "weekdaySun": "日",
+  "screenTimeHM": "{h}時間{m}分",
+  "@screenTimeHM": {
+    "placeholders": {
+      "h": { "type": "int" },
+      "m": { "type": "int" }
+    }
+  },
+  "screenTimeM": "{m}分",
+  "@screenTimeM": {
+    "placeholders": { "m": { "type": "int" } }
+  },
+  "usageStatsPermissionRequired": "使用統計の許可が必要",
+
+  "noMatchingApps": "該当するアプリがありません",
+
+  "removeFavorite": "お気に入り解除",
+  "addFavorite": "お気に入り追加",
+  "selectionFloorMove": "フロア移動",
+  "selectionAddFolder": "フォルダ追加",
+  "addedToFavorites": "{name} をお気に入りに追加しました",
+  "@addedToFavorites": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "removedFromFavorites": "{name} をお気に入りから解除しました",
+  "@removedFromFavorites": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "removeFromFavoritesShort": "お気に入りから削除"
 }

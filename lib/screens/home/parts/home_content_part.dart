@@ -19,24 +19,24 @@ extension HomeContentMethods on _HomeScreenState {
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('通知アクセスを許可',
-              style: TextStyle(color: Colors.white)),
-          content: const Text(
-            '通知バッジを表示するには、通知アクセス権限が必要です。設定画面を開きますか？',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+          title: Text(S.of(ctx).notificationAccessTitle,
+              style: const TextStyle(color: Colors.white)),
+          content: Text(
+            S.of(ctx).notificationAccessMessage,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('後で',
-                    style: TextStyle(color: Colors.white54))),
+                child: Text(S.of(ctx).actionLater,
+                    style: const TextStyle(color: Colors.white54))),
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
                 _native.openNotificationAccessSettings();
               },
-              child: const Text('設定を開く',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).openSettings,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -70,14 +70,16 @@ extension HomeContentMethods on _HomeScreenState {
         final name = (app.customName?.isNotEmpty == true)
             ? app.customName!
             : app.appName;
+        if (!mounted) continue;
+        final s = S.of(context);
         await _flnp.show(
           pkg.hashCode,
-          '$nameの通知',
-          '$count件の通知があります',
-          const NotificationDetails(
+          s.appNotification(name),
+          s.notificationCountBody(count),
+          NotificationDetails(
             android: AndroidNotificationDetails(
               'batch_channel',
-              'バッチ通知',
+              s.batchNotificationChannel,
               importance: Importance.defaultImportance,
               priority: Priority.defaultPriority,
             ),
@@ -166,7 +168,8 @@ extension HomeContentMethods on _HomeScreenState {
   }
 
   String _formatDate() {
-    const wd = ['月', '火', '水', '木', '金', '土', '日'];
+    final s = S.of(context);
+    final wd = [s.weekdayMon, s.weekdayTue, s.weekdayWed, s.weekdayThu, s.weekdayFri, s.weekdaySat, s.weekdaySun];
     final ss = widget.settingsService;
     final fmt = ss.dateFormatString;
     // Simple substitution-based formatter
@@ -251,10 +254,11 @@ extension HomeContentMethods on _HomeScreenState {
 
   String _fmtScreenTime(int minutes) {
     if (minutes < 0) return '';
+    final s = S.of(context);
     final h = minutes ~/ 60;
     final m = minutes % 60;
-    if (h > 0) return '$h時間$m分';
-    return '$m分';
+    if (h > 0) return s.screenTimeHM(h, m);
+    return s.screenTimeM(m);
   }
 
   String _fmt(Duration d) {
@@ -418,7 +422,7 @@ extension HomeContentMethods on _HomeScreenState {
         if (!_usagePermGranted)
           GestureDetector(
             onTap: () => _native.openUsageStatsSettings(),
-            child: Text('使用統計の許可が必要',
+            child: Text(S.of(context).usageStatsPermissionRequired,
                 style: TextStyle(color: Colors.amber.withOpacity(0.8), fontSize: 11)),
           ),
       ],
@@ -433,11 +437,11 @@ extension HomeContentMethods on _HomeScreenState {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(bottom: 6),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
               child: Text(
-                'ドラッグして順番を変更',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
+                S.of(context).dragToReorder,
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
             ),
             ReorderableListView(
@@ -468,8 +472,8 @@ extension HomeContentMethods on _HomeScreenState {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => setState(() => _reorderMode = false),
-                child: const Text('完了',
-                    style: TextStyle(color: Colors.white)),
+                child: Text(S.of(context).actionDone,
+                    style: const TextStyle(color: Colors.white)),
               ),
             ),
           ],

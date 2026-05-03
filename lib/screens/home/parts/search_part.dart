@@ -189,9 +189,9 @@ extension SearchMethods on _HomeScreenState {
       ..sort((a, b) => _displayName(a).compareTo(_displayName(b)));
 
     if (results.isEmpty) {
-      return const Center(
-        child: Text('該当するアプリがありません',
-            style: TextStyle(color: Colors.white38, fontSize: 14)),
+      return Center(
+        child: Text(S.of(context).noMatchingApps,
+            style: const TextStyle(color: Colors.white38, fontSize: 14)),
       );
     }
 
@@ -238,7 +238,7 @@ extension SearchMethods on _HomeScreenState {
             focusNode: _searchFocusNode,
             style: TextStyle(color: textColor, fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'アプリを検索...',
+              hintText: S.of(context).appSearchHint,
               hintStyle: TextStyle(color: textColor.withOpacity(0.5), fontSize: 13),
               prefixIcon: Icon(Icons.search, color: textColor.withOpacity(0.5), size: 18),
               suffixIcon: _searchQuery.isNotEmpty
