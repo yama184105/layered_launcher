@@ -444,5 +444,57 @@
   "colorDarkWine": "ダークワイン",
   "colorDarkMauve": "ダークモーヴ",
   "colorDarkSlate": "ダークスレート",
-  "colorDarkMoss": "ダークモス"
+  "colorDarkMoss": "ダークモス",
+
+  "background": "背景",
+  "backgroundSummaryAll": "一括 / ホーム / 階層 / 設定",
+  "fontSettings": "フォント設定",
+  "fontColor": "フォントカラー",
+  "fontSize": "フォントサイズ",
+  "rowSpacingLabel": "行間隔",
+  "fontStyle": "フォントスタイル",
+  "sizeLabel": "サイズ",
+  "spacingLabel": "間隔",
+
+  "animTypeLabel": "種類",
+  "animDefaultSpeed": "デフォルト速度",
+  "animPerPairSpeed": "フロア間ごとの個別速度",
+  "pairSetting": "{count}件 設定中",
+  "@pairSetting": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "speedWithMs": "{label} ({ms}ms)",
+  "@speedWithMs": {
+    "placeholders": {
+      "label": { "type": "String" },
+      "ms": { "type": "int" }
+    }
+  },
+  "speedCustom": "カスタム",
+  "speedCustomWithMs": "カスタム ({ms}ms)",
+  "@speedCustomWithMs": {
+    "placeholders": { "ms": { "type": "int" } }
+  },
+  "speedRangeHint": "50〜5000",
+  "customSpeedTitle": "カスタム速度 (ms)",
+  "actionDecide": "決定",
+  "pairSpeedTitle": "{label} の速度 (ms)",
+  "@pairSpeedTitle": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "pairDefaultLabel": "(デフォルト)",
+  "bulkReset": "一括リセット",
+  "restoreDefaults": "デフォルトに戻す",
+  "animationLocked": "アニメーション速度がロックされています",
+
+  "speedInstant": "瞬速",
+  "speedSuperFast": "超速",
+  "speedFast": "速い",
+  "speedSomewhatFast": "やや速い",
+  "speedNormal": "普通",
+  "speedSomewhatSlow": "やや遅い",
+  "speedSlow": "遅い",
+  "speedVerySlow": "とても遅い",
+  "speedSuperSlow": "超遅い",
+  "speedExtremelySlow": "極遅い"
 }
