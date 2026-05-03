@@ -57,34 +57,48 @@ extension FloorSettingsMethods on _SettingsScreenState {
             ),
           ),
           const SizedBox(height: 10),
-          // Controls for max floors
-          Row(
+          // Controls for max floors. Using Wrap so the second group flows
+          // to a new line on narrow screens / longer locales (avoids the
+          // overflow stripe when "Underground:" is wider than 「地下:」).
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Text(S.of(context).maxFloorLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-              const SizedBox(width: 8),
-              _rangeStepButton(Icons.remove, () async {
-                if (maxF > 1) { await ss.setMaxFloors(maxF - 1); setState(() {}); }
-              }),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text('${maxF}F', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(S.of(context).maxFloorLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  const SizedBox(width: 8),
+                  _rangeStepButton(Icons.remove, () async {
+                    if (maxF > 1) { await ss.setMaxFloors(maxF - 1); setState(() {}); }
+                  }),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text('${maxF}F', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+                  ),
+                  _rangeStepButton(Icons.add, () async {
+                    if (maxF < 20) { await ss.setMaxFloors(maxF + 1); setState(() {}); }
+                  }),
+                ],
               ),
-              _rangeStepButton(Icons.add, () async {
-                if (maxF < 20) { await ss.setMaxFloors(maxF + 1); setState(() {}); }
-              }),
-              const SizedBox(width: 16),
-              Text(S.of(context).undergroundLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-              const SizedBox(width: 8),
-              _rangeStepButton(Icons.remove, () async {
-                if (underF > 0) { await ss.setUndergroundFloors(underF - 1); setState(() {}); }
-              }),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text('B${underF}F', style: const TextStyle(color: Colors.blueAccent, fontSize: 13, fontWeight: FontWeight.w500)),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(S.of(context).undergroundLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  const SizedBox(width: 8),
+                  _rangeStepButton(Icons.remove, () async {
+                    if (underF > 0) { await ss.setUndergroundFloors(underF - 1); setState(() {}); }
+                  }),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text('B${underF}F', style: const TextStyle(color: Colors.blueAccent, fontSize: 13, fontWeight: FontWeight.w500)),
+                  ),
+                  _rangeStepButton(Icons.add, () async {
+                    if (underF < 10) { await ss.setUndergroundFloors(underF + 1); setState(() {}); }
+                  }),
+                ],
               ),
-              _rangeStepButton(Icons.add, () async {
-                if (underF < 10) { await ss.setUndergroundFloors(underF + 1); setState(() {}); }
-              }),
             ],
           ),
         ],

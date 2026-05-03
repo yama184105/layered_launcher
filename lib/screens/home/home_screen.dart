@@ -475,7 +475,10 @@ class _HomeScreenState extends State<HomeScreen>
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      '緊急モード  残り ${remaining != null ? _fmt(remaining) : ""}  (${_emergency1FApps.length}アプリ)',
+                                      S.of(context).emergencyBannerActive(
+                                        remaining != null ? _fmt(remaining) : '',
+                                        _emergency1FApps.length,
+                                      ),
                                       style: const TextStyle(
                                           color: Colors.white, fontSize: 13),
                                     ),
@@ -489,8 +492,8 @@ class _HomeScreenState extends State<HomeScreen>
                                         border: Border.all(color: Colors.white54),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text('追加',
-                                          style: TextStyle(color: Colors.white, fontSize: 11)),
+                                      child: Text(S.of(context).actionAdd,
+                                          style: const TextStyle(color: Colors.white, fontSize: 11)),
                                     ),
                                   ),
                                   GestureDetector(
@@ -501,8 +504,8 @@ class _HomeScreenState extends State<HomeScreen>
                                         border: Border.all(color: Colors.white54),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text('停止',
-                                          style: TextStyle(color: Colors.white, fontSize: 11)),
+                                      child: Text(S.of(context).actionStop,
+                                          style: const TextStyle(color: Colors.white, fontSize: 11)),
                                     ),
                                   ),
                                 ],

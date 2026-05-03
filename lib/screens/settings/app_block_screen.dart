@@ -33,12 +33,13 @@ class _NotificationSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('通知制限',
-            style: TextStyle(color: Colors.white)),
+        title: Text(s.notificationSettingsTitle,
+            style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _loading
@@ -57,9 +58,9 @@ class _NotificationSettingsScreenState
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       for (final m in [
-                        ('allow', '許可'),
-                        ('batch', 'バッチ'),
-                        ('off', 'OFF'),
+                        ('allow', s.notificationModeAllow),
+                        ('batch', s.notificationModeBatch),
+                        ('off', s.actionOff),
                       ])
                         GestureDetector(
                           onTap: () async {
@@ -126,12 +127,13 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
   String _displayName(AppConfig app) =>
       (app.customName?.isNotEmpty == true) ? app.customName! : app.appName;
 
-  String _blockLabel(String type) {
+  String _blockLabel(BuildContext context, String type) {
+    final s = S.of(context);
     switch (type) {
-      case 'always': return '常時ブロック';
-      case 'time_range': return '時間帯';
-      case 'days': return '曜日';
-      default: return 'なし';
+      case 'always': return s.blockTypeAlways;
+      case 'time_range': return s.blockTypeTimeRange;
+      case 'days': return s.blockTypeDays;
+      default: return s.noBlockLabel;
     }
   }
 
@@ -146,9 +148,11 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
     await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setInner) => AlertDialog(
+        builder: (ctx, setInner) {
+          final s = S.of(ctx);
+          return AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: Text('${_displayName(app)} のブロック設定',
+          title: Text(s.blockSettingsForApp(_displayName(app)),
               style: const TextStyle(color: Colors.white, fontSize: 14)),
           content: SingleChildScrollView(
             child: Column(
@@ -156,18 +160,18 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Block type selector
-                const Text('ブロック種類',
-                    style: TextStyle(color: Colors.white54, fontSize: 12)),
+                Text(s.blockTypeLabel,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
                     for (final t in [
-                      ('none', 'なし'),
-                      ('always', '常時'),
-                      ('time_range', '時間帯'),
-                      ('days', '曜日'),
+                      ('none', s.blockOptionNone),
+                      ('always', s.blockOptionAlways),
+                      ('time_range', s.timeRangeLabel),
+                      ('days', s.weekdaysLabel),
                     ])
                       GestureDetector(
                         onTap: cooldown != null
@@ -203,8 +207,8 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
                 // Time range
                 if (blockType == 'time_range') ...[
                   const SizedBox(height: 10),
-                  const Text('時間帯',
-                      style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(s.timeRangeLabel,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   const SizedBox(height: 4),
                   Row(
                     children: [
@@ -235,13 +239,21 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
                 // Days
                 if (blockType == 'days') ...[
                   const SizedBox(height: 10),
-                  const Text('曜日',
-                      style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(s.weekdaysLabel,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 6,
                     children: [
-                      for (final d in [(1, '月'), (2, '火'), (3, '水'), (4, '木'), (5, '金'), (6, '土'), (7, '日')])
+                      for (final d in [
+                        (1, s.weekdayMon),
+                        (2, s.weekdayTue),
+                        (3, s.weekdayWed),
+                        (4, s.weekdayThu),
+                        (5, s.weekdayFri),
+                        (6, s.weekdaySat),
+                        (7, s.weekdaySun),
+                      ])
                         GestureDetector(
                           onTap: () => setInner(() {
                             if (days.contains(d.$1)) {
@@ -285,7 +297,7 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '変更は ${cooldown.inMinutes}分${cooldown.inSeconds.remainder(60)}秒後に反映されます',
+                      s.blockChangeAfter(cooldown.inMinutes, cooldown.inSeconds.remainder(60)),
                       style: const TextStyle(
                           color: Colors.amber, fontSize: 12),
                     ),
@@ -297,8 +309,8 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(s.actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: cooldown != null
@@ -317,23 +329,25 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
                       if (mounted) setState(() {});
                       if (ctx.mounted) Navigator.pop(ctx);
                     },
-              child: const Text('保存',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(s.actionSave,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
-        ),
+        );
+        },
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('アプリブロック',
-            style: TextStyle(color: Colors.white)),
+        title: Text(s.appBlockTitle,
+            style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _loading
@@ -350,8 +364,8 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
                       style: const TextStyle(
                           color: Colors.white, fontSize: 14)),
                   subtitle: Text(
-                    _blockLabel(blockType) +
-                        (isBlocked ? '  ●ブロック中' : ''),
+                    _blockLabel(context, blockType) +
+                        (isBlocked ? s.blockedNow : ''),
                     style: TextStyle(
                       color: isBlocked ? Colors.redAccent : Colors.white38,
                       fontSize: 12,

@@ -18,13 +18,14 @@ extension SecuritySettingsMethods on _SettingsScreenState {
               style: const TextStyle(color: Colors.white38, fontSize: 12)),
           const SizedBox(height: 12),
           ...BlockSettings.strictSubKeys.map((key) {
-            final label = BlockSettings.strictSubLabels[key] ?? key;
-            final desc = BlockSettings.strictSubDescriptions[key] ?? '';
+            final label = _strictSubLabel(s, key);
+            final desc = _strictSubDesc(s, key);
             final enabled = ss.strictSubEnabled(key);
             final type = ss.strictSubType(key);
             final timer = ss.strictSubTimerMinutes(key);
             final cooldown = ss.strictSubCooldownRemaining(key);
             final typeLabel = type == 'block' ? s.fullBlock : s.timerWaitMinutes(timer);
+            final offLabel = s.actionOff;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -37,7 +38,7 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                           Text(label, style: const TextStyle(color: Colors.white, fontSize: 13)),
                           Text(desc, style: const TextStyle(color: Colors.white30, fontSize: 10)),
                           const SizedBox(height: 2),
-                          Text(enabled ? typeLabel : 'OFF',
+                          Text(enabled ? typeLabel : offLabel,
                               style: TextStyle(
                                   color: enabled ? Colors.orangeAccent : Colors.white38,
                                   fontSize: 11)),
@@ -288,6 +289,28 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                 fontSize: 11)),
       ),
     );
+  }
+
+  String _strictSubLabel(S s, String key) {
+    switch (key) {
+      case 'floorMove': return s.strictFloorMoveLabel;
+      case 'animation': return s.strictAnimationLabel;
+      case 'submode': return s.strictSubmodeLabel;
+      case 'emergency': return s.strictEmergencyLabel;
+      case 'shortcut': return s.strictShortcutLabel;
+      default: return key;
+    }
+  }
+
+  String _strictSubDesc(S s, String key) {
+    switch (key) {
+      case 'floorMove': return s.strictFloorMoveDesc;
+      case 'animation': return s.strictAnimationDesc;
+      case 'submode': return s.strictSubmodeDesc;
+      case 'emergency': return s.strictEmergencyDesc;
+      case 'shortcut': return s.strictShortcutDesc;
+      default: return '';
+    }
   }
 
   Future<int?> _showIntSliderDialog(String title, double initial, double min, double max) async {

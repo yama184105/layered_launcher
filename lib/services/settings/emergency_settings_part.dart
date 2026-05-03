@@ -91,19 +91,19 @@ extension EmergencySettings on SettingsService {
     return !log.any((d) => d.isAfter(cutoff));
   }
 
-  String get emergencyLimitBlockMessage =>
-      checkEmergencyLimit('all', const []) ?? '緊急モードの使用回数制限を超えました';
+  String emergencyLimitBlockMessage(AppLocalizations s) =>
+      checkEmergencyLimit(s, 'all', const []) ?? s.legacyEmergencyLimitGeneric;
 
-  String limitLabel(String key) {
+  String limitLabel(AppLocalizations s, String key) {
     switch (key) {
       case 'unlimited':
-        return '無制限';
+        return s.unlimited;
       case 'daily':
-        return '1日1回';
+        return s.periodOnceDaily;
       case 'weekly':
-        return '1週間に1回';
+        return s.limitOnceWeeklyLong;
       case 'yearly':
-        return '1年間に1回';
+        return s.limitOnceYearlyLong;
       default:
         return key;
     }
@@ -248,47 +248,47 @@ extension EmergencySettings on SettingsService {
     return n;
   }
 
-  String periodLabel(String period) {
+  String periodLabel(AppLocalizations s, String period) {
     switch (period) {
       case 'hourly':
-        return '1時間';
+        return s.periodHourly;
       case 'daily':
-        return '1日';
+        return s.periodDaily;
       case 'weekly':
-        return '1週間';
+        return s.periodWeekly;
       case 'monthly':
-        return '1か月';
+        return s.periodMonthly;
       case 'yearly':
-        return '1年';
+        return s.periodYearly;
       case 'unlimited':
-        return '無制限';
+        return s.unlimited;
       default:
         return period;
     }
   }
 
-  String capSummary(Map<String, dynamic> cap) {
+  String capSummary(AppLocalizations s, Map<String, dynamic> cap) {
     final count = (cap['count'] as num?)?.toInt() ?? 0;
-    if (count <= 0) return '無制限';
+    if (count <= 0) return s.unlimited;
     final period = cap['period'] as String? ?? 'daily';
-    return '${periodLabel(period)}に$count回';
+    return s.capCountInPeriod(periodLabel(s, period), count);
   }
 
   /// Returns null when the requested emergency activation is allowed; otherwise
-  /// a Japanese reason describing which cap blocks it. [apps] is the set of
+  /// a localized reason describing which cap blocks it. [apps] is the set of
   /// packages the user is about to activate.
-  String? checkEmergencyLimit(String mode, List<String> apps) {
+  String? checkEmergencyLimit(AppLocalizations s, String mode, List<String> apps) {
     // Legacy global cap (kept for backwards compatibility with old setting).
     if (!_legacyGlobalAllows()) {
       switch (emergencyLimit) {
         case 'daily':
-          return '本日の緊急モード使用回数（1日1回）を超えました';
+          return s.legacyEmergencyLimitDaily;
         case 'weekly':
-          return '今週の緊急モード使用回数（1週間1回）を超えました';
+          return s.legacyEmergencyLimitWeekly;
         case 'yearly':
-          return '今年の緊急モード使用回数（1年1回）を超えました';
+          return s.legacyEmergencyLimitYearly;
         default:
-          return '緊急モードの使用回数制限を超えました';
+          return s.legacyEmergencyLimitGeneric;
       }
     }
     if (mode == 'all') {
@@ -298,7 +298,7 @@ extension EmergencySettings on SettingsService {
         final p = cap['period'] as String? ?? 'weekly';
         final used = _countUsage(mode: 'all', period: p);
         if (used >= c) {
-          return '「全アプリを1Fに表示」の上限（${periodLabel(p)}に$c回）に達しました';
+          return s.emergencyShowAllOn1FExceeded(periodLabel(s, p), c);
         }
       }
     } else if (mode == 'pick') {
@@ -308,7 +308,7 @@ extension EmergencySettings on SettingsService {
         final p = cap['period'] as String? ?? 'daily';
         final used = _countUsage(mode: 'pick', period: p);
         if (used >= c) {
-          return '「アプリ一覧から選択」の上限（${periodLabel(p)}に$c回）に達しました';
+          return s.emergencyAppListPickExceeded(periodLabel(s, p), c);
         }
       }
     } else if (mode == 'registered') {
@@ -319,7 +319,7 @@ extension EmergencySettings on SettingsService {
         final p = globalCap['period'] as String? ?? 'daily';
         final used = _countUsage(mode: 'registered', period: p);
         if (used >= gc) {
-          return '登録済み緊急アプリ全体の上限（${periodLabel(p)}に$gc回）に達しました';
+          return s.emergencyRegisteredGlobalExceeded(periodLabel(s, p), gc);
         }
       }
       // 2) per-app caps
@@ -331,7 +331,7 @@ extension EmergencySettings on SettingsService {
         final p = cfg['period'] as String? ?? 'daily';
         final used = _countUsage(containingApp: pkg, period: p);
         if (used >= c) {
-          return 'このアプリの上限（${periodLabel(p)}に$c回）に達しました';
+          return s.emergencyAppCapExceeded(periodLabel(s, p), c);
         }
       }
       // 3) folder caps
@@ -347,8 +347,8 @@ extension EmergencySettings on SettingsService {
         final p = folder['period'] as String? ?? 'daily';
         final used = _countUsage(containingAnyOf: folderApps, period: p);
         if (used >= c) {
-          final name = folder['name'] as String? ?? 'フォルダ';
-          return '$nameフォルダの上限（${periodLabel(p)}に$c回）に達しました';
+          final name = folder['name'] as String? ?? s.folderLabel;
+          return s.emergencyFolderCapExceeded(name, periodLabel(s, p), c);
         }
       }
     }

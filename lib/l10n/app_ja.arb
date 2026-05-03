@@ -716,5 +716,187 @@
   "@removedFromFavorites": {
     "placeholders": { "name": { "type": "String" } }
   },
-  "removeFromFavoritesShort": "お気に入りから削除"
+  "removeFromFavoritesShort": "お気に入りから削除",
+
+  "strictFloorMoveLabel": "アプリフロア移動ロック",
+  "strictAnimationLabel": "アニメーション速度ロック",
+  "strictSubmodeLabel": "サブモード設定ロック",
+  "strictEmergencyLabel": "緊急使用設定ロック",
+  "strictShortcutLabel": "ショートカットアプリ変更ロック",
+  "strictFloorMoveDesc": "選択したアプリのフロア移動を制限します",
+  "strictAnimationDesc": "アニメーション速度の変更を制限します",
+  "strictSubmodeDesc": "ストリクトモードの各設定の変更自体を制限します",
+  "strictEmergencyDesc": "緊急モードの使用制限設定の変更を制限します",
+  "strictShortcutDesc": "ホーム画面のショートカットアプリの変更を制限します",
+  "actionOff": "OFF",
+
+  "capCountInPeriod": "{period}に{count}回",
+  "@capCountInPeriod": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "limitOnceWeeklyLong": "1週間に1回",
+  "limitOnceYearlyLong": "1年間に1回",
+
+  "legacyEmergencyLimitDaily": "本日の緊急モード使用回数（1日1回）を超えました",
+  "legacyEmergencyLimitWeekly": "今週の緊急モード使用回数（1週間1回）を超えました",
+  "legacyEmergencyLimitYearly": "今年の緊急モード使用回数（1年1回）を超えました",
+  "legacyEmergencyLimitGeneric": "緊急モードの使用回数制限を超えました",
+  "emergencyShowAllOn1FExceeded": "「全アプリを1Fに表示」の上限（{period}に{count}回）に達しました",
+  "@emergencyShowAllOn1FExceeded": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "emergencyAppListPickExceeded": "「アプリ一覧から選択」の上限（{period}に{count}回）に達しました",
+  "@emergencyAppListPickExceeded": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "emergencyRegisteredGlobalExceeded": "登録済み緊急アプリ全体の上限（{period}に{count}回）に達しました",
+  "@emergencyRegisteredGlobalExceeded": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "emergencyAppCapExceeded": "このアプリの上限（{period}に{count}回）に達しました",
+  "@emergencyAppCapExceeded": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "emergencyFolderCapExceeded": "{name}フォルダの上限（{period}に{count}回）に達しました",
+  "@emergencyFolderCapExceeded": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+
+  "wallpaperCropTitle": "壁紙の位置を調整",
+  "actionConfirmShort": "確定",
+  "strictModeTimerTitle": "ストリクトモード",
+  "strictTimerWaitMessage": "変更を適用するにはタイマー完了後に確定してください。",
+  "strictTimerCanConfirm": "確定できます",
+
+  "relTimeJustNow": "たった今",
+  "relTimeMinutesAgo": "{n}分前",
+  "@relTimeMinutesAgo": {
+    "placeholders": { "n": { "type": "int" } }
+  },
+  "relTimeHoursAgo": "{n}時間前",
+  "@relTimeHoursAgo": {
+    "placeholders": { "n": { "type": "int" } }
+  },
+  "relTimeDaysAgo": "{n}日前",
+  "@relTimeDaysAgo": {
+    "placeholders": { "n": { "type": "int" } }
+  },
+
+  "emergencyBannerActive": "緊急モード  残り {time}  ({count}アプリ)",
+  "@emergencyBannerActive": {
+    "placeholders": {
+      "time": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "actionStop": "停止",
+
+  "appBlockTitle": "アプリブロック",
+  "blockedNow": "  ●ブロック中",
+  "notificationSettingsTitle": "通知制限",
+  "notificationModeAllow": "許可",
+  "notificationModeBatch": "バッチ",
+  "blockTypeAlways": "常時ブロック",
+  "blockTypeTimeRange": "時間帯",
+  "blockTypeDays": "曜日",
+  "blockSettingsForApp": "{name} のブロック設定",
+  "@blockSettingsForApp": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "blockTypeLabel": "ブロック種類",
+  "blockOptionNone": "なし",
+  "blockOptionAlways": "常時",
+  "timeRangeLabel": "時間帯",
+  "weekdaysLabel": "曜日",
+  "blockChangeAfter": "変更は {minutes}分{seconds}秒後に反映されます",
+  "@blockChangeAfter": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "seconds": { "type": "int" }
+    }
+  },
+
+  "automoveStrictModeTitle": "ストリクトモード",
+  "automoveStrictModeMessage": "このアプリはフロア移動ロック中です。ブロック/タイマーを適用しますか？",
+  "automoveTitleMulti": "自動移動 ({count}アプリ)",
+  "@automoveTitleMulti": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "automoveTitleSingle": "自動移動 - {name}",
+  "@automoveTitleSingle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "tabSchedule": "スケジュール制",
+  "tabIntervalRandom": "日数間隔ランダム",
+  "actionRelease": "解除",
+  "intervalRandomDesc": "指定日数ごとにランダムなフロアに配置",
+  "intervalLabel": "間隔: ",
+  "intervalDays": " 日ごと",
+  "intervalDaysHint": "(0=毎日)",
+  "targetFloorsLabel": "対象フロア:",
+  "defaultFloorLabel": "デフォルトフロア",
+  "defaultFloorDesc": "スケジュール外の時間帯に適用されるフロアです",
+  "scheduleLabel": "スケジュール",
+  "addSchedule": "＋ 追加",
+  "noScheduleHint": "スケジュールなし（デフォルトフロアが常に適用されます）",
+  "scheduleEdit": "スケジュール編集",
+  "scheduleAdd": "スケジュール追加",
+  "startTimeLabel": "開始",
+  "endTimeLabel": "終了",
+  "startMustBeBeforeEnd": "開始時刻は終了時刻より前にしてください",
+  "timeRangeOverlap": "時間帯が重複しています",
+  "copyToOtherDays": "他の曜日にコピー",
+  "registeredSchedules": "登録済みスケジュール",
+  "scheduleArrowRandom": "→ ランダム ({count}フロア)",
+  "@scheduleArrowRandom": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "fixedFloorOption": "固定フロア",
+  "weekdayScheduleInvalid": "{wd}曜日のスケジュールに不正な時刻があります",
+  "@weekdayScheduleInvalid": {
+    "placeholders": { "wd": { "type": "String" } }
+  },
+  "weekdayScheduleOverlap": "{wd}曜日のスケジュールに時間帯重複があります",
+  "@weekdayScheduleOverlap": {
+    "placeholders": { "wd": { "type": "String" } }
+  },
+  "scheduleArrowFloor": "→ {floor}",
+  "@scheduleArrowFloor": {
+    "placeholders": { "floor": { "type": "String" } }
+  },
+
+  "noBlockLabel": "なし",
+
+  "fixedFloor": "固定フロア",
+  "randomFloor": "ランダムフロア",
+  "placementFloorLabel": "配置先フロア:",
+  "shuffleModeLabel": "シャッフル方式:",
+  "shuffleOnceAtStart": "時間帯の最初に1回",
+  "shuffleRepeatInterval": "一定間隔で繰り返し",
+  "shuffleSpecifiedCount": "指定回数実行",
+  "countLabel": "回数: ",
+  "intervalDayUnit": "日",
+  "intervalHourUnit": "時間",
+  "intervalMinuteUnit": "分",
+  "copyToWeekdaysTitle": "コピー先の曜日",
+  "actionCopy": "コピー"
 }

@@ -80,12 +80,12 @@ class _WallpaperCropScreenState extends State<_WallpaperCropScreen> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('壁紙の位置を調整', style: TextStyle(color: Colors.white)),
+        title: Text(S.of(ctx).wallpaperCropTitle, style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           TextButton(
             onPressed: () => _confirm(ctx),
-            child: const Text('確定', style: TextStyle(color: Colors.white)),
+            child: Text(S.of(ctx).actionConfirmShort, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

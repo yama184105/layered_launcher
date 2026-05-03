@@ -485,6 +485,7 @@ extension FloorContentMethods on _HomeScreenState {
               if (ss.lastUsedDisplayApps.contains(app.packageName))
                 Builder(builder: (_) {
                   final label = formatLastUsedRelative(
+                      context,
                       _lastUsedMap[app.packageName],
                       now: _now);
                   if (label == null) return const SizedBox.shrink();
@@ -619,6 +620,7 @@ extension FloorContentMethods on _HomeScreenState {
               if (ss.lastUsedDisplayApps.contains(app.packageName))
                 Builder(builder: (_) {
                   final label = formatLastUsedRelative(
+                      context,
                       _lastUsedMap[app.packageName],
                       now: _now);
                   if (label == null) return const SizedBox.shrink();
@@ -1351,7 +1353,7 @@ extension FloorContentMethods on _HomeScreenState {
     }
     if (newPkgs == null || newPkgs.isEmpty || !mounted) return;
 
-    final block = ss.checkEmergencyLimit(choice, newPkgs.toList());
+    final block = ss.checkEmergencyLimit(S.of(context), choice, newPkgs.toList());
     if (block != null) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -1480,7 +1482,7 @@ extension FloorContentMethods on _HomeScreenState {
     if (!ss.canActivateEmergency()) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ss.emergencyLimitBlockMessage)));
+          SnackBar(content: Text(ss.emergencyLimitBlockMessage(S.of(context)))));
       }
       return;
     }
@@ -1556,7 +1558,7 @@ extension FloorContentMethods on _HomeScreenState {
     if (targetPkgs == null || targetPkgs.isEmpty) return;
 
     // Detailed limit check now that we know the chosen apps.
-    final block = ss.checkEmergencyLimit(choice, targetPkgs.toList());
+    final block = ss.checkEmergencyLimit(S.of(context), choice, targetPkgs.toList());
     if (block != null) {
       if (mounted) {
         ScaffoldMessenger.of(context)

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/app_config.dart';
 
 part 'settings/display_settings_part.dart';

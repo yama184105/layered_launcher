@@ -193,9 +193,9 @@ extension AppManagementMethods on _SettingsScreenState {
 
   String _emgLimitsSummary(SettingsService ss) {
     final s = S.of(context);
-    final all = ss.capSummary(ss.emergencyCapAll);
-    final pick = ss.capSummary(ss.emergencyCapPick);
-    final regGlobal = ss.capSummary(ss.emergencyCapRegisteredGlobal);
+    final all = ss.capSummary(s, ss.emergencyCapAll);
+    final pick = ss.capSummary(s, ss.emergencyCapPick);
+    final regGlobal = ss.capSummary(s, ss.emergencyCapRegisteredGlobal);
     return s.emergencyLimitsSummary(all, pick, regGlobal);
   }
 
@@ -204,7 +204,7 @@ extension AppManagementMethods on _SettingsScreenState {
     return [
       _settingRow(
         s.emergencyShowAllOn1F,
-        ss.capSummary(ss.emergencyCapAll),
+        ss.capSummary(s, ss.emergencyCapAll),
         () async {
           final cap = ss.emergencyCapAll;
           final result = await _showCapDialog(
@@ -219,7 +219,7 @@ extension AppManagementMethods on _SettingsScreenState {
       _rowDivider,
       _settingRow(
         s.emergencyAppListPick,
-        ss.capSummary(ss.emergencyCapPick),
+        ss.capSummary(s, ss.emergencyCapPick),
         () async {
           final cap = ss.emergencyCapPick;
           final result = await _showCapDialog(
@@ -236,14 +236,14 @@ extension AppManagementMethods on _SettingsScreenState {
         key: 'emg_limits_registered',
         title: s.emergencyRegistered,
         summary: s.emergencyRegisteredSummary(
-          ss.capSummary(ss.emergencyCapRegisteredGlobal),
+          ss.capSummary(s, ss.emergencyCapRegisteredGlobal),
           _emgPerAppCount(ss),
           ss.emergencyCapFolders.length,
         ),
         children: [
           _settingRow(
             s.emergencyGlobalLimit,
-            ss.capSummary(ss.emergencyCapRegisteredGlobal),
+            ss.capSummary(s, ss.emergencyCapRegisteredGlobal),
             () async {
               final cap = ss.emergencyCapRegisteredGlobal;
               final result = await _showCapDialog(
@@ -1220,7 +1220,7 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
     }
     if (_isEmergency && _emergencyActive) {
       if (!_ss.canActivateEmergency()) {
-        _showSnack(_ss.emergencyLimitBlockMessage);
+        _showSnack(_ss.emergencyLimitBlockMessage(S.of(context)));
         await _as.saveConfig(app);
         if (mounted) Navigator.pop(context);
         return;
@@ -1772,7 +1772,7 @@ class _EmergencyPerAppCapsScreenState
                 final cap = _ss.emergencyCapForApp(app.packageName);
                 final summary = cap == null
                     ? s.notSetUnlimited
-                    : _ss.capSummary(cap);
+                    : _ss.capSummary(s, cap);
                 return ListTile(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -2066,7 +2066,7 @@ class _EmergencyFolderCapsScreenState
                       style: const TextStyle(
                           color: Colors.white, fontSize: 14)),
                   subtitle: Text(
-                      s.folderAppSubtitle(_ss.capSummary(folder), apps.length),
+                      s.folderAppSubtitle(_ss.capSummary(s, folder), apps.length),
                       style: const TextStyle(
                           color: Colors.white54, fontSize: 12)),
                   trailing: const Icon(Icons.chevron_right,
