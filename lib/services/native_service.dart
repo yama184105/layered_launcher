@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 class NativeService {
   static const _channel =
-      MethodChannel('com.example.layered_launcher/native');
+      MethodChannel('com.yama184105.layered_launcher/native');
 
   // Singleton: only one instance so setMethodCallHandler is never overwritten.
   static final NativeService _instance = NativeService._internal();

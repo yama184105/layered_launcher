@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.layered_launcher"
+    namespace = "com.yama184105.layered_launcher"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.layered_launcher"
+        applicationId = "com.yama184105.layered_launcher"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
