@@ -362,5 +362,87 @@
   "folderPositionBottom": "最下部に固定",
   "fixedTopFolderOrder": "最上部固定フォルダの順番",
   "fixedBottomFolderOrder": "最下部固定フォルダの順番",
-  "dragToReorder": "ドラッグして順番を変更"
+  "dragToReorder": "ドラッグして順番を変更",
+
+  "animation": "アニメーション",
+  "animTypeSlide": "スライド",
+  "animTypeStair": "階段",
+  "animTypeFade": "フェード",
+  "animTypeZoom": "ズーム",
+  "animSummaryWithCustom": "{type} · {ms}ms · {count}件 個別",
+  "@animSummaryWithCustom": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "ms": { "type": "int" },
+      "count": { "type": "int" }
+    }
+  },
+  "animSummary": "{type} · {ms}ms",
+  "@animSummary": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "ms": { "type": "int" }
+    }
+  },
+
+  "singleFolderMode": "シングルフォルダモード",
+  "floorRange": "フロア範囲",
+  "alphabetIndex": "アルファベット索引",
+  "defaultNewAppFloor": "新規アプリのデフォルトフロア",
+  "maxFloorLabel": "最大フロア:",
+  "undergroundLabel": "地下:",
+
+  "recentlyAdded": "最近追加",
+  "recentlyAddedShow": "最近追加セクションを表示",
+  "judgmentDaysLabel": "判定日数:",
+  "daysValue": "{days}日",
+  "@daysValue": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "enabledWithDays": "有効 · {days}日",
+  "@enabledWithDays": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+
+  "bulkBackgroundChange": "背景一括変更",
+  "bulkApplyAllMessage": "ホーム・各階層・設定画面に一括適用します。",
+  "bulkOpacityTitle": "壁紙の透明度（一括）",
+  "floorBackground": "階層背景",
+  "bulkAllFloorChange": "全階層一括変更",
+  "bulkColorSet": "色を一括設定",
+  "bulkWallpaperSet": "壁紙を一括設定",
+  "bulkOpacitySet": "透明度を一括設定",
+  "noColorSet": "色未設定",
+
+  "colorPureBlack": "純黒",
+  "colorCharcoal": "チャコール",
+  "colorDarkGray": "ダークグレー",
+  "colorMediumGray": "ミディアムグレー",
+  "colorLightGray": "ライトグレー",
+  "colorWhite": "白",
+  "colorDarkRed": "ダークレッド",
+  "colorRedDeep": "レッド",
+  "colorOrangeRed": "オレンジレッド",
+  "colorDarkOrange": "ダークオレンジ",
+  "colorBrown": "ブラウン",
+  "colorBurgundy": "バーガンディ",
+  "colorDarkNavy": "ダークネイビー",
+  "colorNavy": "ネイビー",
+  "colorDarkBlue": "ダークブルー",
+  "colorMidnightBlue": "ミッドナイトブルー",
+  "colorTeal": "ティール",
+  "colorDarkCyan": "ダークシアン",
+  "colorForestGreen": "フォレストグリーン",
+  "colorDarkGreen": "ダークグリーン",
+  "colorOlive": "オリーブ",
+  "colorHunterGreen": "ハンターグリーン",
+  "colorDarkPurple": "ダークパープル",
+  "colorPurple": "パープル",
+  "colorIndigo": "インディゴ",
+  "colorPlum": "プラム",
+  "colorDarkMaroon": "ダークマルーン",
+  "colorDarkWine": "ダークワイン",
+  "colorDarkMauve": "ダークモーヴ",
+  "colorDarkSlate": "ダークスレート",
+  "colorDarkMoss": "ダークモス"
 }

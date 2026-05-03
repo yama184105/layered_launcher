@@ -60,7 +60,7 @@ extension FloorSettingsMethods on _SettingsScreenState {
           // Controls for max floors
           Row(
             children: [
-              const Text('最大フロア:', style: TextStyle(color: Colors.white54, fontSize: 12)),
+              Text(S.of(context).maxFloorLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
               const SizedBox(width: 8),
               _rangeStepButton(Icons.remove, () async {
                 if (maxF > 1) { await ss.setMaxFloors(maxF - 1); setState(() {}); }
@@ -73,7 +73,7 @@ extension FloorSettingsMethods on _SettingsScreenState {
                 if (maxF < 20) { await ss.setMaxFloors(maxF + 1); setState(() {}); }
               }),
               const SizedBox(width: 16),
-              const Text('地下:', style: TextStyle(color: Colors.white54, fontSize: 12)),
+              Text(S.of(context).undergroundLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
               const SizedBox(width: 8),
               _rangeStepButton(Icons.remove, () async {
                 if (underF > 0) { await ss.setUndergroundFloors(underF - 1); setState(() {}); }
@@ -107,43 +107,44 @@ extension FloorSettingsMethods on _SettingsScreenState {
   }
 
   List<Widget> _kaisoSettingRows() {
+    final s = S.of(context);
     final ss = _ss;
 
     // ── Animation summary ──
-    final typeLabel = const {
-          'slide': 'スライド',
-          'stair': '階段',
-          'fade': 'フェード',
-          'zoom': 'ズーム',
-          'none': 'なし',
+    final typeLabel = {
+          'slide': s.animTypeSlide,
+          'stair': s.animTypeStair,
+          'fade': s.animTypeFade,
+          'zoom': s.animTypeZoom,
+          'none': s.noneLabel,
         }[ss.animationType] ??
         ss.animationType;
     final pairCount = _customizedPairCount();
     final animSummary = pairCount > 0
-        ? '$typeLabel · ${ss.animationSpeedMs}ms · ${pairCount}件 個別'
-        : '$typeLabel · ${ss.animationSpeedMs}ms';
+        ? s.animSummaryWithCustom(typeLabel, ss.animationSpeedMs, pairCount)
+        : s.animSummary(typeLabel, ss.animationSpeedMs);
 
     // ── Recently added summary ──
     final recentSummary = ss.showRecentlyAdded
-        ? '有効 · ${ss.recentlyAddedDays}日'
-        : '無効';
+        ? s.enabledWithDays(ss.recentlyAddedDays)
+        : s.actionDisabled;
 
     return [
       _expandableRow(
         key: 'kaiso_animation',
-        title: 'アニメーション',
+        title: s.animation,
         summary: animSummary,
         children: [_buildAnimationSection()],
       ),
       _rowDivider,
-      _settingRow('シングルフォルダモード', ss.singleFolderMode ? '有効' : '無効', () async {
-        final v = await _showBoolDialog('シングルフォルダモード', ss.singleFolderMode);
+      _settingRow(s.singleFolderMode, ss.singleFolderMode ? s.actionEnabled : s.actionDisabled, () async {
+        final v = await _showBoolDialog(s.singleFolderMode, ss.singleFolderMode);
         if (v != null) { await ss.setSingleFolderMode(v); setState(() {}); }
       }),
       _rowDivider,
       _expandableRow(
         key: 'kaiso_floorrange',
-        title: 'フロア範囲',
+        title: s.floorRange,
         summary: ss.undergroundFloors > 0
             ? 'B${ss.undergroundFloors}F 〜 ${ss.maxFloors}F'
             : '1F 〜 ${ss.maxFloors}F',
@@ -152,14 +153,14 @@ extension FloorSettingsMethods on _SettingsScreenState {
       _rowDivider,
       _expandableRow(
         key: 'kaiso_recent',
-        title: '最近追加',
+        title: s.recentlyAdded,
         summary: recentSummary,
         children: [
           SwitchListTile(
             contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-            title: const Text('最近追加セクションを表示',
-                style: TextStyle(color: Colors.white, fontSize: 14)),
-            subtitle: Text(ss.showRecentlyAdded ? '有効' : '無効',
+            title: Text(s.recentlyAddedShow,
+                style: const TextStyle(color: Colors.white, fontSize: 14)),
+            subtitle: Text(ss.showRecentlyAdded ? s.actionEnabled : s.actionDisabled,
                 style: const TextStyle(color: Colors.white54, fontSize: 12)),
             activeColor: Colors.tealAccent,
             value: ss.showRecentlyAdded,
@@ -176,10 +177,10 @@ extension FloorSettingsMethods on _SettingsScreenState {
                 children: [
                   Row(
                     children: [
-                      const Text('判定日数:',
-                          style: TextStyle(color: Colors.white54, fontSize: 12)),
+                      Text(s.judgmentDaysLabel,
+                          style: const TextStyle(color: Colors.white54, fontSize: 12)),
                       const SizedBox(width: 8),
-                      Text('${ss.recentlyAddedDays}日',
+                      Text(s.daysValue(ss.recentlyAddedDays),
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 13,
@@ -204,12 +205,12 @@ extension FloorSettingsMethods on _SettingsScreenState {
         ],
       ),
       _rowDivider,
-      _settingRow('アルファベット索引', ss.showAlphabetIndex ? '有効' : '無効', () async {
-        final v = await _showBoolDialog('アルファベット索引', ss.showAlphabetIndex);
+      _settingRow(s.alphabetIndex, ss.showAlphabetIndex ? s.actionEnabled : s.actionDisabled, () async {
+        final v = await _showBoolDialog(s.alphabetIndex, ss.showAlphabetIndex);
         if (v != null) { await ss.setShowAlphabetIndex(v); setState(() {}); }
       }),
       _rowDivider,
-      _settingRow('新規アプリのデフォルトフロア', floorLabel(ss.defaultNewAppFloor), () async {
+      _settingRow(s.defaultNewAppFloor, floorLabel(ss.defaultNewAppFloor), () async {
         final ug = ss.undergroundFloors;
         final maxF = ss.maxFloors;
         final floors = [
@@ -220,8 +221,8 @@ extension FloorSettingsMethods on _SettingsScreenState {
           context: context,
           builder: (ctx) => AlertDialog(
             backgroundColor: const Color(0xFF1A1A1A),
-            title: const Text('新規アプリのデフォルトフロア',
-                style: TextStyle(color: Colors.white, fontSize: 14)),
+            title: Text(S.of(ctx).defaultNewAppFloor,
+                style: const TextStyle(color: Colors.white, fontSize: 14)),
             content: SizedBox(
               width: double.maxFinite,
               child: ListView(
@@ -241,7 +242,7 @@ extension FloorSettingsMethods on _SettingsScreenState {
             ),
             actions: [TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('キャンセル', style: TextStyle(color: Colors.white54)))],
+                child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)))],
           ),
         );
         if (v != null) { await ss.setDefaultNewAppFloor(v); setState(() {}); }
@@ -255,42 +256,42 @@ extension FloorSettingsMethods on _SettingsScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('背景一括変更', style: TextStyle(color: Colors.white, fontSize: 15)),
+        title: Text(S.of(ctx).bulkBackgroundChange, style: const TextStyle(color: Colors.white, fontSize: 15)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('ホーム・各階層・設定画面に一括適用します。',
-                style: TextStyle(color: Colors.white54, fontSize: 12)),
+            Text(S.of(ctx).bulkApplyAllMessage,
+                style: const TextStyle(color: Colors.white54, fontSize: 12)),
             const SizedBox(height: 12),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.palette, color: Colors.white54),
-              title: const Text('色を選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).selectColor, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'color'),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.image, color: Colors.white54),
-              title: const Text('壁紙を選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).selectWallpaper, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'wallpaper'),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.auto_awesome, color: Colors.white54),
-              title: const Text('デフォルト壁紙', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).defaultWallpaper, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'default_wallpaper'),
             ),
             if (_ss.homeWallpaper != null) ...[
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.opacity, color: Colors.white54),
-                title: const Text('壁紙の透明度を変更', style: TextStyle(color: Colors.white, fontSize: 13)),
+                title: Text(S.of(ctx).changeWallpaperOpacity, style: const TextStyle(color: Colors.white, fontSize: 13)),
                 onTap: () => Navigator.pop(ctx, 'opacity'),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.delete, color: Colors.redAccent),
-                title: const Text('壁紙を削除', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                title: Text(S.of(ctx).deleteWallpaper, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
                 onTap: () => Navigator.pop(ctx, 'delete'),
               ),
             ],
@@ -298,7 +299,7 @@ extension FloorSettingsMethods on _SettingsScreenState {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
+              child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
         ],
       ),
     );
@@ -319,7 +320,7 @@ extension FloorSettingsMethods on _SettingsScreenState {
       });
     } else if (choice == 'opacity') {
       await _showOverlayOpacitySlider(
-        '壁紙の透明度（一括）',
+        S.of(context).bulkOpacityTitle,
         _ss.homeOverlayOpacity,
         (v) async {
           await _ss.setHomeOverlayOpacity(v);
@@ -393,20 +394,23 @@ class _FloorBgScreen extends StatefulWidget {
 class _FloorBgScreenState extends State<_FloorBgScreen> {
   SettingsService get _ss => widget.settingsService;
 
-  static const _presetColors = [
-    (0xFF000000, '純黒'), (0xFF1A1A1A, 'チャコール'), (0xFF333333, 'ダークグレー'),
-    (0xFF666666, 'ミディアムグレー'), (0xFFAAAAAA, 'ライトグレー'), (0xFFFFFFFF, '白'),
-    (0xFF5C0000, 'ダークレッド'), (0xFFB22222, 'レッド'), (0xFF8B2500, 'オレンジレッド'),
-    (0xFF7A3500, 'ダークオレンジ'), (0xFF4A2800, 'ブラウン'), (0xFF4A0020, 'バーガンディ'),
-    (0xFF000428, 'ダークネイビー'), (0xFF001F5B, 'ネイビー'), (0xFF0A0A5C, 'ダークブルー'),
-    (0xFF191970, 'ミッドナイトブルー'), (0xFF003333, 'ティール'), (0xFF003D3D, 'ダークシアン'),
-    (0xFF0A2E0A, 'フォレストグリーン'), (0xFF1A3D1A, 'ダークグリーン'),
-    (0xFF2A3000, 'オリーブ'), (0xFF004D00, 'ハンターグリーン'),
-    (0xFF1E0033, 'ダークパープル'), (0xFF3D0066, 'パープル'),
-    (0xFF1A0066, 'インディゴ'), (0xFF3D003D, 'プラム'),
-    (0xFF2D0015, 'ダークマルーン'), (0xFF3D001A, 'ダークワイン'),
-    (0xFF2D1A2D, 'ダークモーヴ'), (0xFF1A1A2E, 'ダークスレート'), (0xFF1A2E1A, 'ダークモス'),
-  ];
+  List<(int, String)> _presetColorsFor(BuildContext ctx) {
+    final s = S.of(ctx);
+    return [
+      (0xFF000000, s.colorPureBlack), (0xFF1A1A1A, s.colorCharcoal), (0xFF333333, s.colorDarkGray),
+      (0xFF666666, s.colorMediumGray), (0xFFAAAAAA, s.colorLightGray), (0xFFFFFFFF, s.colorWhite),
+      (0xFF5C0000, s.colorDarkRed), (0xFFB22222, s.colorRedDeep), (0xFF8B2500, s.colorOrangeRed),
+      (0xFF7A3500, s.colorDarkOrange), (0xFF4A2800, s.colorBrown), (0xFF4A0020, s.colorBurgundy),
+      (0xFF000428, s.colorDarkNavy), (0xFF001F5B, s.colorNavy), (0xFF0A0A5C, s.colorDarkBlue),
+      (0xFF191970, s.colorMidnightBlue), (0xFF003333, s.colorTeal), (0xFF003D3D, s.colorDarkCyan),
+      (0xFF0A2E0A, s.colorForestGreen), (0xFF1A3D1A, s.colorDarkGreen),
+      (0xFF2A3000, s.colorOlive), (0xFF004D00, s.colorHunterGreen),
+      (0xFF1E0033, s.colorDarkPurple), (0xFF3D0066, s.colorPurple),
+      (0xFF1A0066, s.colorIndigo), (0xFF3D003D, s.colorPlum),
+      (0xFF2D0015, s.colorDarkMaroon), (0xFF3D001A, s.colorDarkWine),
+      (0xFF2D1A2D, s.colorDarkMauve), (0xFF1A1A2E, s.colorDarkSlate), (0xFF1A2E1A, s.colorDarkMoss),
+    ];
+  }
 
   Future<void> _pickColor(int floor) async {
     final currentVal = _ss.floorCustomBgValue(floor);
@@ -475,7 +479,7 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('壁紙の透明度（一括）', style: TextStyle(color: Colors.white, fontSize: 14)),
+          title: Text(S.of(ctx).bulkOpacityTitle, style: const TextStyle(color: Colors.white, fontSize: 14)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -485,11 +489,11 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                 activeColor: Colors.white, inactiveColor: Colors.white24,
                 onChanged: (v) => setInner(() => opacity = v),
               ),
-              const Text('0%=透明  100%=暗い', style: TextStyle(color: Colors.white38, fontSize: 11)),
+              Text(S.of(ctx).opacityScaleHint, style: const TextStyle(color: Colors.white38, fontSize: 11)),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
             TextButton(
               onPressed: () async {
                 for (final f in _allFloors) {
@@ -497,7 +501,7 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                 }
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('適用', style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionApply, style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -507,13 +511,15 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
+    final presetColors = _presetColorsFor(context);
     final floors = _allFloors;
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D0D0D),
         foregroundColor: Colors.white,
-        title: const Text('階層背景', style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text(s.floorBackground, style: const TextStyle(color: Colors.white, fontSize: 16)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -524,8 +530,8 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('全階層一括変更',
-                    style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                Text(s.bulkAllFloorChange,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -537,7 +543,7 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       ),
                       icon: const Icon(Icons.palette, size: 14),
-                      label: const Text('色を一括設定', style: TextStyle(fontSize: 12)),
+                      label: Text(s.bulkColorSet, style: const TextStyle(fontSize: 12)),
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
@@ -548,7 +554,7 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       ),
                       icon: const Icon(Icons.image, size: 14),
-                      label: const Text('壁紙を一括設定', style: TextStyle(fontSize: 12)),
+                      label: Text(s.bulkWallpaperSet, style: const TextStyle(fontSize: 12)),
                     ),
                   ],
                 ),
@@ -561,7 +567,7 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   ),
                   icon: const Icon(Icons.opacity, size: 14),
-                  label: const Text('透明度を一括設定', style: TextStyle(fontSize: 12)),
+                  label: Text(s.bulkOpacitySet, style: const TextStyle(fontSize: 12)),
                 ),
               ],
             ),
@@ -595,9 +601,9 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                     Expanded(
                       child: Text(
                         bgVal != null
-                            ? (_presetColors.where((p) => p.$1 == bgVal).map((p) => p.$2).firstOrNull
+                            ? (presetColors.where((p) => p.$1 == bgVal).map((p) => p.$2).firstOrNull
                                 ?? '#${bgVal.toRadixString(16).padLeft(8, '0').substring(2)}')
-                            : '色未設定',
+                            : s.noColorSet,
                         style: const TextStyle(color: Colors.white54, fontSize: 12),
                       ),
                     ),
@@ -608,7 +614,7 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       onPressed: () => _pickColor(floor),
-                      child: const Text('色を選択', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      child: Text(s.selectColor, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                     ),
                     if (bgVal != null)
                       GestureDetector(
@@ -649,7 +655,7 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         onPressed: () async { await _ss.setFloorWallpaper(floor, null); setState(() {}); },
-                        child: const Text('削除', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+                        child: Text(s.actionDelete, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
                       ),
                     ] else ...[
                       const Expanded(child: SizedBox()),
@@ -662,7 +668,7 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       ),
                       icon: const Icon(Icons.image, size: 14),
-                      label: const Text('壁紙を選択', style: TextStyle(fontSize: 12)),
+                      label: Text(s.selectWallpaper, style: const TextStyle(fontSize: 12)),
                     ),
                   ],
                 ),
