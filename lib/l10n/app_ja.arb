@@ -302,5 +302,65 @@
   "colorYellow": "黄色",
   "colorWhiteNoDistinction": "白（区別なし）",
   "colorGreen": "緑",
-  "colorLightBlue": "水色"
+  "colorLightBlue": "水色",
+
+  "actionDone": "完了",
+  "switchToMultiSelect": "複数選択モードに切り替え",
+  "renameApp": "名前を変更",
+  "moveFloor": "階層を移動",
+  "addToFolder": "フォルダに追加",
+  "addToFavorites": "お気に入りに追加",
+  "removeFromFavorites": "お気に入りを解除",
+  "appInfo": "アプリ情報",
+  "autoMove": "自動移動",
+  "uninstall": "アンインストール",
+  "renameFolder": "フォルダ名を変更",
+  "folderPosition": "フォルダの位置",
+  "deleteFolder": "フォルダを削除",
+  "moveFloorWithName": "階層を移動 — {name}",
+  "@moveFloorWithName": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "selectExistingFolder": "既存のフォルダを選択",
+  "newFolderName": "新しいフォルダ名",
+  "folderNameHint": "フォルダ名を入力...",
+  "folderName": "フォルダ名",
+  "noFolderEmoji": "📂  フォルダなし",
+  "moveAppsCount": "{count}個のアプリを移動",
+  "@moveAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "addAppsToFolder": "{count}個をフォルダに追加",
+  "@addAppsToFolder": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "floorMoveLockedAll": "フロア移動がロックされています",
+  "floorMoveLockedSome": "一部のアプリはフロア移動がロックされています",
+  "appBlockedTitle": "「{name}」はブロック中",
+  "@appBlockedTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "appBlockedMessage": "このアプリは現在ブロックされています。",
+  "emergencyOverride": "緊急解除",
+  "confirmOverrideTitle": "本当に解除しますか？",
+  "overrideRecorded": "解除の記録が残ります。",
+  "overrideAndLaunch": "解除して起動",
+  "deleteFolderTitle": "「{name}」を削除",
+  "@deleteFolderTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "deleteFolderMessage": "フォルダを削除します。{count}件のアプリはフォルダなしになります。",
+  "@deleteFolderMessage": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "folderPositionTitle": "「{name}」の表示位置",
+  "@folderPositionTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "folderPositionTop": "最上部に固定",
+  "folderPositionAlphabetical": "名前順（デフォルト）",
+  "folderPositionBottom": "最下部に固定",
+  "fixedTopFolderOrder": "最上部固定フォルダの順番",
+  "fixedBottomFolderOrder": "最下部固定フォルダの順番",
+  "dragToReorder": "ドラッグして順番を変更"
 }

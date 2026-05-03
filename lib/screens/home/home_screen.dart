@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import '../../l10n/s.dart';
 import '../../models/app_config.dart';
 import '../../services/app_service.dart';
 import '../../services/native_service.dart';
