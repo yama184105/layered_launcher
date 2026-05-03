@@ -23,24 +23,24 @@ extension FloorContentMethods on _HomeScreenState {
           context: context,
           builder: (ctx) => AlertDialog(
             backgroundColor: const Color(0xFF1A1A1A),
-            title: const Text('デバイス管理者権限が必要',
-                style: TextStyle(color: Colors.white)),
-            content: const Text(
-              '画面オフ機能を使用するには、デバイス管理者権限が必要です。設定を開きますか？',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+            title: Text(S.of(ctx).deviceAdminRequired,
+                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              S.of(ctx).screenOffNeedsAdmin,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('キャンセル',
-                      style: TextStyle(color: Colors.white54))),
+                  child: Text(S.of(ctx).actionCancel,
+                      style: const TextStyle(color: Colors.white54))),
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
                   _native.openDeviceAdminSettings();
                 },
-                child: const Text('設定を開く',
-                    style: TextStyle(color: Colors.white)),
+                child: Text(S.of(ctx).openSettings,
+                    style: const TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -144,10 +144,10 @@ extension FloorContentMethods on _HomeScreenState {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('本当に開きますか？',
-                      style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text(S.of(ctx).confirmOpenApp,
+                      style: const TextStyle(color: Colors.white70, fontSize: 14)),
                   const SizedBox(height: 12),
-                  Text('$remaining秒後に起動',
+                  Text(S.of(ctx).launchInSeconds(remaining),
                       style: const TextStyle(
                           color: Colors.amber,
                           fontSize: 24,
@@ -162,8 +162,8 @@ extension FloorContentMethods on _HomeScreenState {
                     _mindfulTimer = null;
                     if (ctx.mounted) Navigator.of(ctx).pop();
                   },
-                  child: const Text('キャンセル',
-                      style: TextStyle(color: Colors.redAccent)),
+                  child: Text(S.of(ctx).actionCancel,
+                      style: const TextStyle(color: Colors.redAccent)),
                 ),
               ],
             ),
@@ -554,7 +554,7 @@ extension FloorContentMethods on _HomeScreenState {
                   style: TextStyle(
                       color: textColor.withOpacity(0.70), fontSize: ss.fontSize)),
               const SizedBox(width: 6),
-              Text('(${apps.length}件)',
+              Text(S.of(context).folderItemsCount(apps.length),
                   style: TextStyle(
                       color: textColor.withOpacity(0.38), fontSize: 12)),
               const Spacer(),
@@ -748,7 +748,7 @@ extension FloorContentMethods on _HomeScreenState {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text('🆕 最近追加',
+            child: Text(S.of(context).recentlyAddedSection,
                 style: TextStyle(
                     color: _effectiveFloorText(floor).withOpacity(0.54),
                     fontSize: 12)),
@@ -776,7 +776,7 @@ extension FloorContentMethods on _HomeScreenState {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('🚨 緊急アプリ',
+              child: Text(S.of(context).emergencyAppsSection,
                   style: TextStyle(color: emgColor.withOpacity(0.7), fontSize: 12)),
             ),
           ),
@@ -861,7 +861,7 @@ extension FloorContentMethods on _HomeScreenState {
             padding: const EdgeInsets.only(right: 8),
             child: TextButton(
               onPressed: () => setState(() => _reorderingFolderKey = null),
-              child: const Text('完了', style: TextStyle(color: Colors.white)),
+              child: Text(S.of(context).actionDone, style: const TextStyle(color: Colors.white)),
             ),
           ),
         ));
@@ -929,9 +929,9 @@ extension FloorContentMethods on _HomeScreenState {
 
     if (widgets.isEmpty) {
       widgets.add(const SizedBox(height: 32));
-      widgets.add(const Center(
-        child: Text('この階にアプリがありません',
-            style: TextStyle(color: Colors.white24, fontSize: 14)),
+      widgets.add(Center(
+        child: Text(S.of(context).noAppsOnFloor,
+            style: const TextStyle(color: Colors.white24, fontSize: 14)),
       ));
     }
     return widgets;
@@ -1234,7 +1234,7 @@ extension FloorContentMethods on _HomeScreenState {
                       color: _floorText(_currentFloor),
                       fontSize: 13,
                       fontWeight: FontWeight.bold)),
-              Text('現在',
+              Text(S.of(context).currentFloor,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       color: _floorText(_currentFloor).withOpacity(0.54),
@@ -1299,25 +1299,25 @@ extension FloorContentMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('緊急アプリを追加', style: TextStyle(color: Colors.redAccent, fontSize: 14)),
+        title: Text(S.of(ctx).emergencyAddTitle, style: const TextStyle(color: Colors.redAccent, fontSize: 14)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.all_inclusive, color: Colors.redAccent, size: 20),
-              title: const Text('全アプリを1Fに追加', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyAddAllOn1F, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'all')),
             ListTile(dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.star, color: Colors.orangeAccent, size: 20),
-              title: const Text('登録済み緊急アプリから追加', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyAddFromRegistered, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'registered')),
             ListTile(dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.apps, color: Colors.white54, size: 20),
-              title: const Text('アプリ一覧から選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyAppListPick, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'pick')),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54)))],
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)))],
       ),
     );
     if (choice == null || !mounted) return;
@@ -1329,7 +1329,7 @@ extension FloorContentMethods on _HomeScreenState {
       final registered = ss.getEmergencyApps();
       if (registered.isEmpty) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('緊急アプリが登録されていません')));
+            SnackBar(content: Text(S.of(context).noEmergencyAppsRegistered)));
         return;
       }
       final candidates = _allApps
@@ -1338,14 +1338,14 @@ extension FloorContentMethods on _HomeScreenState {
         ..sort((a, b) =>
             a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
       final picked =
-          await _showAppCheckboxDialog('登録済み緊急アプリから追加', candidates);
+          await _showAppCheckboxDialog(S.of(context).emergencyAddFromRegistered, candidates);
       if (picked == null || picked.isEmpty || !mounted) return;
       newPkgs = picked;
     } else if (choice == 'pick') {
       final apps = List<AppConfig>.from(_allApps)
         ..sort((a, b) =>
             a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
-      final picked = await _showAppCheckboxDialog('アプリを選択', apps);
+      final picked = await _showAppCheckboxDialog(S.of(context).selectApp, apps);
       if (picked == null || picked.isEmpty || !mounted) return;
       newPkgs = picked;
     }
@@ -1462,13 +1462,13 @@ extension FloorContentMethods on _HomeScreenState {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('キャンセル',
-                    style: TextStyle(color: Colors.white54))),
+                child: Text(S.of(ctx).actionCancel,
+                    style: const TextStyle(color: Colors.white54))),
             TextButton(
                 onPressed: () =>
                     Navigator.pop(ctx, Set<String>.from(selected)),
-                child: const Text('決定',
-                    style: TextStyle(color: Colors.white))),
+                child: Text(S.of(ctx).actionDecide,
+                    style: const TextStyle(color: Colors.white))),
           ],
         ),
       ),
@@ -1488,35 +1488,35 @@ extension FloorContentMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('緊急使用', style: TextStyle(color: Colors.redAccent, fontSize: 15)),
+        title: Text(S.of(ctx).emergencyUseTitle, style: const TextStyle(color: Colors.redAccent, fontSize: 15)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('対象アプリを1Fにも一時表示します。元のフロアからは消えません。',
-                style: TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(S.of(ctx).emergencyUseDescription,
+                style: const TextStyle(color: Colors.white54, fontSize: 11)),
             const SizedBox(height: 12),
             ListTile(
               dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.all_inclusive, color: Colors.redAccent, size: 20),
-              title: const Text('全アプリを1Fに表示', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyShowAllOn1F, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'all'),
             ),
             ListTile(
               dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.star, color: Colors.orangeAccent, size: 20),
-              title: const Text('登録済み緊急アプリから選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyChooseRegistered, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'registered'),
             ),
             ListTile(
               dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.apps, color: Colors.white54, size: 20),
-              title: const Text('アプリ一覧から選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyAppListPick, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'pick'),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
         ],
       ),
     );
@@ -1530,7 +1530,7 @@ extension FloorContentMethods on _HomeScreenState {
       if (registered.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('緊急アプリが登録されていません。設定 → アプリ管理 → 緊急アプリ登録から登録してください。')));
+            SnackBar(content: Text(S.of(context).emergencyAppsRegisterHelp)));
         }
         return;
       }
@@ -1542,14 +1542,14 @@ extension FloorContentMethods on _HomeScreenState {
         ..sort((a, b) =>
             a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
       final picked = await _showAppCheckboxDialog(
-          '登録済み緊急アプリから選択', candidates);
+          S.of(context).emergencyChooseRegistered, candidates);
       if (picked == null || picked.isEmpty || !mounted) return;
       targetPkgs = picked;
     } else if (choice == 'pick') {
       final apps = List<AppConfig>.from(_allApps)
         ..sort((a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
       final picked =
-          await _showAppCheckboxDialog('緊急使用するアプリを選択', apps);
+          await _showAppCheckboxDialog(S.of(context).emergencyChooseTargetApps, apps);
       if (picked == null || picked.isEmpty || !mounted) return;
       targetPkgs = picked;
     }
@@ -1570,14 +1570,14 @@ extension FloorContentMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('使用時間を選択', style: TextStyle(color: Colors.redAccent, fontSize: 14)),
-        content: const Text('選択した時間だけ1Fにも表示されます。使用記録が残ります。',
-            style: TextStyle(color: Colors.white70, fontSize: 12)),
+        title: Text(S.of(ctx).selectDuration, style: const TextStyle(color: Colors.redAccent, fontSize: 14)),
+        content: Text(S.of(ctx).emergencyDurationDescription,
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
-          TextButton(onPressed: () => Navigator.pop(ctx, 15), child: const Text('15分', style: TextStyle(color: Colors.orangeAccent))),
-          TextButton(onPressed: () => Navigator.pop(ctx, 30), child: const Text('30分', style: TextStyle(color: Colors.orangeAccent))),
-          TextButton(onPressed: () => Navigator.pop(ctx, 60), child: const Text('60分', style: TextStyle(color: Colors.redAccent))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(ctx, 15), child: Text(S.of(ctx).minutesShort15, style: const TextStyle(color: Colors.orangeAccent))),
+          TextButton(onPressed: () => Navigator.pop(ctx, 30), child: Text(S.of(ctx).minutesShort30, style: const TextStyle(color: Colors.orangeAccent))),
+          TextButton(onPressed: () => Navigator.pop(ctx, 60), child: Text(S.of(ctx).minutesShort60, style: const TextStyle(color: Colors.redAccent))),
         ],
       ),
     );

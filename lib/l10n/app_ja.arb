@@ -496,5 +496,35 @@
   "speedSlow": "遅い",
   "speedVerySlow": "とても遅い",
   "speedSuperSlow": "超遅い",
-  "speedExtremelySlow": "極遅い"
+  "speedExtremelySlow": "極遅い",
+
+  "deviceAdminRequired": "デバイス管理者権限が必要",
+  "screenOffNeedsAdmin": "画面オフ機能を使用するには、デバイス管理者権限が必要です。設定を開きますか？",
+  "confirmOpenApp": "本当に開きますか？",
+  "launchInSeconds": "{seconds}秒後に起動",
+  "@launchInSeconds": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "noAppsOnFloor": "この階にアプリがありません",
+  "folderItemsCount": "({count}件)",
+  "@folderItemsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "recentlyAddedSection": "🆕 最近追加",
+  "emergencyAppsSection": "🚨 緊急アプリ",
+  "currentFloor": "現在",
+  "emergencyAddTitle": "緊急アプリを追加",
+  "emergencyAddAllOn1F": "全アプリを1Fに追加",
+  "emergencyAddFromRegistered": "登録済み緊急アプリから追加",
+  "noEmergencyAppsRegistered": "緊急アプリが登録されていません",
+  "emergencyUseTitle": "緊急使用",
+  "emergencyUseDescription": "対象アプリを1Fにも一時表示します。元のフロアからは消えません。",
+  "emergencyChooseRegistered": "登録済み緊急アプリから選択",
+  "emergencyAppsRegisterHelp": "緊急アプリが登録されていません。設定 → アプリ管理 → 緊急アプリ登録から登録してください。",
+  "emergencyChooseTargetApps": "緊急使用するアプリを選択",
+  "selectDuration": "使用時間を選択",
+  "emergencyDurationDescription": "選択した時間だけ1Fにも表示されます。使用記録が残ります。",
+  "minutesShort15": "15分",
+  "minutesShort30": "30分",
+  "minutesShort60": "60分"
 }
