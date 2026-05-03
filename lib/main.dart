@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'l10n/generated/app_localizations.dart';
 import 'models/app_config.dart';
 import 'services/app_service.dart';
 import 'services/settings_service.dart';
@@ -43,20 +45,26 @@ class LayeredLauncherApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'LayeredLauncher',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.black,
-        colorScheme: const ColorScheme.dark(
-          primary: Colors.white,
-          surface: Colors.black,
+    return ValueListenableBuilder<Locale?>(
+      valueListenable: settingsService.localeNotifier,
+      builder: (context, locale, _) => MaterialApp(
+        title: 'LayeredLauncher',
+        debugShowCheckedModeBanner: false,
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: Colors.black,
+          colorScheme: const ColorScheme.dark(
+            primary: Colors.white,
+            surface: Colors.black,
+          ),
         ),
-      ),
-      home: HomeScreen(
-        appService: appService,
-        settingsService: settingsService,
+        home: HomeScreen(
+          appService: appService,
+          settingsService: settingsService,
+        ),
       ),
     );
   }

@@ -19,4 +19,26 @@ class SettingsService {
   Future<void> init() async {
     _box = await Hive.openBox<dynamic>(_boxName);
   }
+
+  /// App locale code: 'ja' or 'en'. Null = follow system locale.
+  String? get languageCode => _box.get('languageCode') as String?;
+  Future<void> setLanguageCode(String? code) async {
+    if (code == null) {
+      await _box.delete('languageCode');
+    } else {
+      await _box.put('languageCode', code);
+    }
+    _localeNotifier.value = code == null ? null : Locale(code);
+  }
+
+  /// Reactive notifier for locale changes. main.dart rebuilds MaterialApp on
+  /// changes so the language switch takes effect immediately without a restart.
+  final ValueNotifier<Locale?> _localeNotifier = ValueNotifier<Locale?>(null);
+  ValueNotifier<Locale?> get localeNotifier {
+    final saved = languageCode;
+    if (saved != null && _localeNotifier.value?.languageCode != saved) {
+      _localeNotifier.value = Locale(saved);
+    }
+    return _localeNotifier;
+  }
 }

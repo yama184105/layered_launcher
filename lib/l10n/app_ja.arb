@@ -1,0 +1,99 @@
+{
+  "@@locale": "ja",
+
+  "appTitle": "LayeredLauncher",
+  "@appTitle": {},
+
+  "settingsTitle": "設定",
+  "@settingsTitle": {},
+
+  "sectionHome": "ホーム",
+  "sectionFloors": "階層",
+  "sectionAppearance": "外観",
+  "sectionAppManagement": "アプリ管理",
+  "sectionAutoMove": "自動移動",
+  "sectionScreenTime": "スクリーンタイム管理",
+  "sectionLockSecurity": "ロック・セキュリティ",
+  "sectionBackupRestore": "バックアップ・復元",
+
+  "openDeviceSettings": "デバイス設定を開く",
+
+  "actionCancel": "キャンセル",
+  "actionConfirm": "確定",
+  "actionApply": "適用",
+  "actionAdd": "追加",
+  "actionDelete": "削除",
+  "actionSave": "保存",
+  "actionClose": "閉じる",
+  "actionOpen": "開く",
+  "actionEnabled": "有効",
+  "actionDisabled": "無効",
+
+  "selectColor": "色を選択",
+  "customColor": "カスタムカラー",
+  "addCustomColor": "カスタムカラーを追加",
+  "customSection": "カスタム",
+  "swatchTransparentMark": "透",
+
+  "swatchBlack": "黒",
+  "swatchWhite": "白",
+  "swatchTransparent": "透明",
+  "swatchGray900": "グレー 900",
+  "swatchGray600": "グレー 600",
+  "swatchGray400": "グレー 400",
+  "swatchBlue900": "ブルー 900",
+  "swatchBlue700": "ブルー 700",
+  "swatchBlue": "ブルー",
+  "swatchIndigo900": "インディゴ 900",
+  "swatchIndigo": "インディゴ",
+  "swatchRed900": "レッド 900",
+  "swatchRed": "レッド",
+  "swatchGreen900": "グリーン 900",
+  "swatchGreen": "グリーン",
+  "swatchOrange900": "オレンジ 900",
+  "swatchOrange": "オレンジ",
+
+  "selectApp": "アプリを選択",
+  "searchHint": "検索...",
+  "defaultLabel": "デフォルト",
+  "useSystemDefault": "システムデフォルトを使用",
+
+  "homeBackground": "ホーム背景",
+  "settingsBackground": "設定画面背景",
+  "selectWallpaper": "壁紙を選択",
+  "defaultWallpaper": "デフォルト壁紙",
+  "changeWallpaperOpacity": "壁紙の透明度を変更",
+  "deleteWallpaper": "壁紙を削除",
+  "wallpaperOpacityHome": "壁紙の透明度（ホーム）",
+  "wallpaperOpacitySettings": "壁紙の透明度（設定画面）",
+  "opacityScaleHint": "0%=透明  100%=暗い",
+
+  "presetBlackGradient": "ブラックグラデーション",
+  "presetNightSky": "夜空",
+  "presetDarkForest": "ダークフォレスト",
+  "presetGeometric": "ジオメトリック",
+  "presetMountain": "山",
+  "presetNavyGlow": "ネイビーグロー",
+  "onlineWallpaperGallery": "オンライン壁紙ギャラリー",
+  "noPhotosFound": "写真が見つかりません",
+  "@noPhotosFound": {},
+  "downloadError": "ダウンロードエラー",
+  "communicationError": "通信エラー",
+  "apiError": "APIエラー",
+  "urlNotFound": "URLが見つかりません",
+
+  "remainingTime": "残り",
+
+  "languageSection": "言語",
+  "languageJapanese": "日本語",
+  "languageEnglish": "English",
+  "languageSettingTitle": "言語",
+
+  "remainingMinutesSeconds": "{minutes}:{seconds}",
+  "@remainingMinutesSeconds": {
+    "placeholders": {
+      "minutes": { "type": "String" },
+      "seconds": { "type": "String" }
+    }
+  }
+}
