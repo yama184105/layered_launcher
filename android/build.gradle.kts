@@ -14,6 +14,9 @@ rootProject.layout.buildDirectory.value(newBuildDir)
 // AGP 8 では android namespace が必須。古いプラグインで未指定のものへフォールバック注入。
 // device_apps 2.2.0 は AndroidManifest.xml の package 属性のみで namespace 未対応のため、
 // パッケージ名 fr.g123k.deviceapps を強制セットする。
+// 加えて device_apps は compileSdkVersion 30 を固定しており、その transitive 依存が
+// API 31 の android:attr/lStar を参照するため release ビルドの verifyReleaseResources が失敗する。
+// compileSdk = 35 に引き上げてリソース解決を通す。
 // NOTE: 後段の evaluationDependsOn(":app") が :app と依存プラグインの評価をトリガーするため、
 // この afterEvaluate 登録は必ずそれより前に行う必要がある。
 subprojects {
@@ -23,6 +26,7 @@ subprojects {
                 if (namespace == null) {
                     namespace = "fr.g123k.deviceapps"
                 }
+                compileSdk = 35
             }
         }
     }
