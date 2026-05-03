@@ -1,4 +1,4 @@
-package com.example.layered_launcher
+package com.yama184105.layered_launcher
 
 import android.app.AppOpsManager
 import android.app.admin.DevicePolicyManager
@@ -22,7 +22,7 @@ import java.util.Calendar
 
 class MainActivity : FlutterActivity() {
 
-    private val CHANNEL = "com.example.layered_launcher/native"
+    private val CHANNEL = "com.yama184105.layered_launcher/native"
     private var homeChannel: MethodChannel? = null
 
     override fun onNewIntent(intent: Intent) {

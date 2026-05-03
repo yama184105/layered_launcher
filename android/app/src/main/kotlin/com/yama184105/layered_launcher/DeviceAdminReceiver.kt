@@ -1,4 +1,4 @@
-package com.example.layered_launcher
+package com.yama184105.layered_launcher
 
 import android.app.admin.DeviceAdminReceiver
 
