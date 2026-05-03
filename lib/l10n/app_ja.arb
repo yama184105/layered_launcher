@@ -28,6 +28,14 @@
   "actionOpen": "開く",
   "actionEnabled": "有効",
   "actionDisabled": "無効",
+  "actionExecute": "実行",
+  "actionMove": "移動",
+  "actionEdit": "編集",
+  "actionReset": "リセット",
+  "actionSelectAll": "すべて選択",
+  "actionDeselectAll": "解除",
+  "actionAllSelect": "全て選択",
+  "actionAllDeselect": "全て解除",
 
   "selectColor": "色を選択",
   "customColor": "カスタムカラー",
@@ -95,5 +103,204 @@
       "minutes": { "type": "String" },
       "seconds": { "type": "String" }
     }
-  }
+  },
+
+  "appList": "アプリ一覧",
+  "appSearchHint": "アプリを検索...",
+  "appListCount": "アプリ一覧  {count}件",
+  "@appListCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "selectedItemsCount": "{selected}/{total}件",
+  "@selectedItemsCount": {
+    "placeholders": {
+      "selected": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "selectedCount": "{count}個選択中",
+  "@selectedCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "moveCount": "{count}個を移動",
+  "@moveCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "registeredCount": "{count}個登録済み",
+  "@registeredCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "displayedInAppsCount": "{count}個のアプリで表示",
+  "@displayedInAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "perAppLimitCount": "{count}個設定中",
+  "@perAppLimitCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "folderCount": "{count}フォルダ",
+  "@folderCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "minutesValue": "{minutes}分",
+  "@minutesValue": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "minutesUsedToFloor1": "使用時間 {minutes}分 → 1Fへ",
+  "@minutesUsedToFloor1": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "noUsageToFloor3": "使用時間なし → 3Fへ",
+  "todayLaunchCount": "今日の起動回数: {count}回",
+  "@todayLaunchCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "thresholdRule": "{threshold}回以上 → {floor}",
+  "@thresholdRule": {
+    "placeholders": {
+      "threshold": { "type": "int" },
+      "floor": { "type": "String" }
+    }
+  },
+  "randomScheduledCount": "{count}件を3分後にランダム配置します",
+  "@randomScheduledCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "randomDoneCount": "{count}件をランダム配置しました",
+  "@randomDoneCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "emergencySummary": "{limit}・{count}個",
+  "@emergencySummary": {
+    "placeholders": {
+      "limit": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "emergencyLimitsSummary": "全:{all} / 一覧:{pick} / 登録:{global}",
+  "@emergencyLimitsSummary": {
+    "placeholders": {
+      "all": { "type": "String" },
+      "pick": { "type": "String" },
+      "global": { "type": "String" }
+    }
+  },
+  "emergencyRegisteredSummary": "全体:{global} / 個別:{perApp} / フォルダ:{folders}",
+  "@emergencyRegisteredSummary": {
+    "placeholders": {
+      "global": { "type": "String" },
+      "perApp": { "type": "int" },
+      "folders": { "type": "int" }
+    }
+  },
+  "folderAppSubtitle": "{summary}・{count}アプリ",
+  "@folderAppSubtitle": {
+    "placeholders": {
+      "summary": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "appLimitTitle": "{name} の使用制限",
+  "@appLimitTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+
+  "floorChange": "フロア変更",
+  "delaySwitch": "ディレイ切替",
+  "pinSwitch": "ピン切替",
+  "noneLabel": "なし",
+  "displayNameLabel": "表示名",
+  "floorLabel": "フロア",
+  "folderLabel": "フォルダ",
+  "newFolderHint": "新しいフォルダ名（任意）",
+  "pinToThisFloor": "この階に固定する",
+  "mindfulDelayLabel": "マインドフルディレイ",
+  "notificationBatchLabel": "通知バッチ処理",
+  "markAsEmergency": "緊急アプリに指定",
+  "emergencyDuration": "緊急継続時間（分）",
+  "emergencyOnOff": "緊急モード ON/OFF",
+  "usageCountFloorChange": "起動回数フロア変更",
+  "noRules": "ルールなし",
+  "ruleAdd": "ルールを追加",
+  "ruleEdit": "ルールを編集",
+  "launchThresholdLabel": "起動回数の閾値:",
+  "thresholdSuffix": "回以上",
+  "targetFloorLabel": "移動先フロア:",
+  "cooldownChangeBlocked": "クールダウン中のため変更できません",
+  "cooldownActive": "クールダウン中です。変更できません。",
+  "changeProcessingTryLater": "変更処理中です。クールダウン終了後に再試行してください。",
+  "pendingChange": "(変更予定)",
+  "delayBadge": "[ディレイ]",
+  "batchBadge": "[バッチ]",
+  "blockBadge": "[ブロック]",
+  "emergencyActiveBadge": "[緊急中]",
+  "emergencyDesignatedBadge": "[緊急指定]",
+  "allFloors": "全て",
+
+  "randomPlacement": "ランダム配置",
+  "randomPlacementSelectApps": "ランダム配置するアプリを選択",
+  "floorOptimizationProposal": "フロア最適化を提案",
+  "floorOptimizationProposalDialog": "フロア最適化の提案",
+  "floorOptimizationDone": "フロアを最適化しました",
+  "floorOptimizationNoProposals": "最適化の提案はありません",
+
+  "emergencyMode": "緊急モード",
+  "emergencyAppsRegister": "緊急アプリ登録",
+  "notRegistered": "未登録",
+  "emergencyFontColor": "フォント色",
+  "emergencyFontColorTitle": "緊急アプリのフォント色",
+  "emergencyDisplayMethod": "表示方法",
+  "emergencyDisplayMethodTitle": "緊急アプリの表示方法",
+  "emergencyDisplaySection": "セクション表示",
+  "emergencyDisplaySectionDesc": "セクション表示（上部にまとめて表示）",
+  "emergencyDisplayNormal": "通常表示",
+  "emergencyDisplayNormalDesc": "通常表示（アルファベット順に混合）",
+  "emergencySectionIndex": "セクション索引",
+  "emergencySectionIndexDesc": "サイドバーに「🚨」索引を追加",
+  "emergencyUsageLimit": "使用制限",
+  "emergencyShowAllOn1F": "全アプリを1Fに表示",
+  "emergencyShowAllOn1FLimit": "「全アプリを1Fに表示」の使用制限",
+  "emergencyAppListPick": "アプリ一覧から選択",
+  "emergencyAppListPickLimit": "「アプリ一覧から選択」の使用制限",
+  "emergencyRegistered": "登録済み緊急アプリ",
+  "emergencyRegisteredGlobalLimit": "登録済みアプリ全体の使用制限",
+  "emergencyGlobalLimit": "全体制限",
+  "emergencyPerAppLimit": "アプリ個別制限",
+  "emergencyPerAppLimitTitle": "アプリ個別の使用制限",
+  "emergencyFolderLimit": "フォルダ単位制限",
+  "emergencyFolderLimitTitle": "フォルダ単位の使用制限",
+  "noEmergencyRegistered": "登録済み緊急アプリがありません",
+  "folderEdit": "フォルダ編集",
+  "folderAdd": "フォルダ追加",
+  "nameLabel": "名前",
+  "nameHintSns": "例: SNS",
+  "pleaseEnterName": "名前を入力してください",
+  "targetApps": "対象アプリ",
+  "countWithEmptyUnlimitedHint": "回数（空欄＝無制限）",
+  "unlimited": "無制限",
+  "periodLabel": "期間",
+  "folderAddTopRightHint": "右上の＋ボタンでフォルダを追加",
+  "notSetUnlimited": "未設定（無制限）",
+  "notSet": "未設定",
+
+  "periodHourly": "1時間",
+  "periodDaily": "1日",
+  "periodWeekly": "1週間",
+  "periodMonthly": "1か月",
+  "periodYearly": "1年",
+  "periodOnceDaily": "1日1回",
+  "periodOnceWeekly": "週1回",
+  "periodOnceYearly": "年1回",
+
+  "lastUsedDisplay": "最終起動時刻を表示",
+  "usageStatsAccessRequired": "使用履歴へのアクセスが必要",
+  "usageStatsAccessExplanation": "最終起動時刻を表示するには、設定から「使用履歴へのアクセス」を許可してください。",
+  "openSettings": "設定を開く",
+
+  "colorRed": "赤",
+  "colorOrange": "オレンジ",
+  "colorYellow": "黄色",
+  "colorWhiteNoDistinction": "白（区別なし）",
+  "colorGreen": "緑",
+  "colorLightBlue": "水色"
 }
