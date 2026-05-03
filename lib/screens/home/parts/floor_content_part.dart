@@ -693,6 +693,13 @@ extension FloorContentMethods on _HomeScreenState {
         final ka = _sortKey(nameA);
         final kb = _sortKey(nameB);
         if (ka != kb) return ka.compareTo(kb);
+        // Case-insensitive within ASCII so 'iGPSPORT' and 'iPhone' interleave
+        // alphabetically with 'Instagram' / 'Maps' instead of all-uppercase
+        // sorting before all-lowercase.
+        final lowA = nameA.toLowerCase();
+        final lowB = nameB.toLowerCase();
+        final c = lowA.compareTo(lowB);
+        if (c != 0) return c;
         return nameA.compareTo(nameB);
       });
 
@@ -728,7 +735,7 @@ extension FloorContentMethods on _HomeScreenState {
       if (ib == -1) return -1;
       return ia.compareTo(ib);
     });
-    alphFolders.sort();
+    alphFolders.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final bottomOrder = ss.getFixedBottomFolderOrder(floor);
     bottomFolders.sort((a, b) {
       final ia = bottomOrder.indexOf(a);
@@ -889,8 +896,8 @@ extension FloorContentMethods on _HomeScreenState {
       final hasFld = fldIdx < alphFolders.length;
       final bool takeApp;
       if (hasApp && hasFld) {
-        takeApp = _displayName(ungrouped[appIdx])
-                .compareTo(alphFolders[fldIdx]) <=
+        takeApp = _displayName(ungrouped[appIdx]).toLowerCase()
+                .compareTo(alphFolders[fldIdx].toLowerCase()) <=
             0;
       } else {
         takeApp = hasApp;
@@ -966,6 +973,10 @@ extension FloorContentMethods on _HomeScreenState {
       controller: isCurrent ? _scrollController : null,
       padding: EdgeInsets.only(bottom: navBarH + 16 + selectionBarH),
       physics: const ClampingScrollPhysics(),
+      // Keep many off-screen items in the element tree so the alphabet
+      // index sidebar's Scrollable.ensureVisible target contexts resolve
+      // even when the section is far from the current viewport.
+      cacheExtent: 99999,
       children: [
         for (final item in listItems)
           Align(alignment: Alignment.centerLeft, child: item),

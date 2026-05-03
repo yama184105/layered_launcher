@@ -75,12 +75,32 @@ extension SearchMethods on _HomeScreenState {
       final globalKey = sectionKeys[key];
       final ctx = globalKey?.currentContext;
       if (ctx != null) {
+        // Duration.zero で即時ジャンプ。ドラッグ追従でアニメ重なりが起きない。
         Scrollable.ensureVisible(
           ctx,
-          duration: const Duration(milliseconds: 60),
-          curve: Curves.easeOut,
+          duration: Duration.zero,
           alignment: 0.0,
         );
+      } else if (_scrollController.hasClients) {
+        // ctx 未解決（off-screen で未ビルド）の保険：先に近い位置までジャンプして
+        // 次フレームでもう一度 ensureVisible を試す。
+        final anchorOrder = [
+          'A','B','C','D','E','F','G','H','I','J','K','L','M',
+          'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+          'あ','か','さ','た','な','は','ま','や','ら','わ','#',
+        ];
+        final pos = anchorOrder.indexOf(key.startsWith('🚨') && key.length > 1 ? key.substring(1) : key);
+        if (pos >= 0) {
+          final maxScroll = _scrollController.position.maxScrollExtent;
+          final estimate = maxScroll * (pos / anchorOrder.length);
+          _scrollController.jumpTo(estimate.clamp(0.0, maxScroll));
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final ctx2 = sectionKeys[key]?.currentContext;
+            if (ctx2 != null) {
+              Scrollable.ensureVisible(ctx2, duration: Duration.zero, alignment: 0.0);
+            }
+          });
+        }
       }
       setState(() => _activeIndexChar = key);
     }
