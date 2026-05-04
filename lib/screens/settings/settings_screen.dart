@@ -459,12 +459,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Material(
-          color: Colors.transparent,
+          // 開いている章はヘッダ自体にも背景色を付けて、内容ブロックと
+          // 視覚的に連続して見えるようにする。
+          color: isOpen
+              ? Colors.white.withOpacity(0.04)
+              : Colors.transparent,
           child: InkWell(
             onTap: () => setState(() {
               _openSection = isOpen ? null : key;
             }),
-            child: Padding(
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  // 開いている章は左端にティールのバーを出す。
+                  left: BorderSide(
+                    color: isOpen ? Colors.tealAccent : Colors.transparent,
+                    width: 3,
+                  ),
+                ),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -485,14 +498,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         if (isOpen)
-          Padding(
-            padding: const EdgeInsets.only(left: 0, bottom: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.04),
+              border: const Border(
+                left: BorderSide(color: Colors.tealAccent, width: 3),
+              ),
+            ),
+            padding: const EdgeInsets.only(bottom: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: children,
             ),
           ),
-        const Divider(color: Colors.white12, height: 1),
+        // 章間の区切り線。開いている章の直後はやや強めにして、
+        // 「内容の終わり / 次章の始まり」を分かりやすくする。
+        Divider(
+          color: isOpen ? Colors.white38 : Colors.white12,
+          height: 1,
+          thickness: isOpen ? 1 : 0.5,
+        ),
       ],
     );
   }
