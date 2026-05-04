@@ -1082,12 +1082,7 @@ class _AppDetailScreen extends StatefulWidget {
 
 class _AppDetailScreenState extends State<_AppDetailScreen> {
   late int _selectedFloor;
-  late bool _isEmergency;
-  late int _emergencyMinutes;
-  late bool _emergencyActive;
   late bool _isPinned;
-  late bool _mindfulDelay;
-  late bool _batchEnabled;
 
   late TextEditingController _customNameCtrl;
   late TextEditingController _folderCtrl;
@@ -1104,20 +1099,7 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
     super.initState();
     final app = widget.app;
     _selectedFloor = _ss.pendingFloorChanges?[app.packageName] ?? app.floor;
-    _isEmergency = _ss.isEmergencyApp(app.packageName);
-    _emergencyMinutes = (app.emergencyUntil != null &&
-            app.emergencyUntil!.isAfter(DateTime.now()))
-        ? app.emergencyUntil!
-            .difference(DateTime.now())
-            .inMinutes
-            .clamp(1, 120)
-        : 30;
-    _emergencyActive = app.isEmergency &&
-        app.emergencyUntil != null &&
-        app.emergencyUntil!.isAfter(DateTime.now());
     _isPinned = app.isPinned;
-    _mindfulDelay = app.mindfulDelay;
-    _batchEnabled = _ss.batchApps.contains(app.packageName);
     _customNameCtrl =
         TextEditingController(text: app.customName ?? '');
     _folderCtrl =
@@ -1188,18 +1170,6 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
     // isPinned
     app.isPinned = _isPinned;
 
-    // mindfulDelay
-    app.mindfulDelay = _mindfulDelay;
-
-    // batch
-    final batches = _ss.batchApps;
-    if (_batchEnabled) {
-      batches.add(app.packageName);
-    } else {
-      batches.remove(app.packageName);
-    }
-    await _ss.setBatchApps(batches);
-
     // Floor change
     if (!_lockBlocked && _selectedFloor != app.floor) {
       if (_ss.lockModeEnabled) {
@@ -1209,27 +1179,6 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
       } else {
         app.floor = _selectedFloor;
       }
-    }
-
-    // Emergency — unified save
-    app.isEmergency = _isEmergency;
-    if (_isEmergency) {
-      await _ss.addEmergencyApp(app.packageName);
-    } else {
-      await _ss.removeEmergencyApp(app.packageName);
-    }
-    if (_isEmergency && _emergencyActive) {
-      if (!_ss.canActivateEmergency()) {
-        _showSnack(_ss.emergencyLimitBlockMessage(S.of(context)));
-        await _as.saveConfig(app);
-        if (mounted) Navigator.pop(context);
-        return;
-      }
-      app.emergencyUntil = DateTime.now()
-          .add(Duration(minutes: _emergencyMinutes));
-      await _ss.recordEmergencyUseV2('registered', [app.packageName]);
-    } else if (!_emergencyActive) {
-      app.emergencyUntil = null;
     }
 
     await _as.saveConfig(app);
@@ -1412,53 +1361,13 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
             const SizedBox(height: 16),
 
             // ── Switches ──
+            // Only "pin to this floor" stays here — that's a position concept.
+            // Mindful delay / notification batch / emergency designation /
+            // usage-count floor rules are configured from the corresponding
+            // sections in Settings, not per-app from this list, since they
+            // are typically applied in bulk.
             _switchRow(S.of(context).pinToThisFloor, _isPinned, Colors.blueAccent,
                 (v) => setState(() => _isPinned = v)),
-            _switchRow(S.of(context).mindfulDelayLabel, _mindfulDelay, Colors.tealAccent,
-                (v) => setState(() => _mindfulDelay = v)),
-            _switchRow(S.of(context).notificationBatchLabel, _batchEnabled, Colors.purpleAccent,
-                (v) => setState(() => _batchEnabled = v)),
-            _switchRow(S.of(context).markAsEmergency, _isEmergency, Colors.redAccent,
-                (v) => setState(() => _isEmergency = v)),
-
-            if (_isEmergency) ...[
-              const SizedBox(height: 8),
-              Text(S.of(context).emergencyDuration,
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 13)),
-              Row(
-                children: [
-                  Expanded(
-                    child: Slider(
-                      value: _emergencyMinutes.toDouble(),
-                      min: 1,
-                      max: 120,
-                      divisions: 119,
-                      activeColor: Colors.redAccent,
-                      inactiveColor: Colors.white24,
-                      label: S.of(context).minutesValue(_emergencyMinutes),
-                      onChanged: (v) =>
-                          setState(() => _emergencyMinutes = v.round()),
-                    ),
-                  ),
-                  Text(S.of(context).minutesValue(_emergencyMinutes),
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 13)),
-                ],
-              ),
-              _switchRow(S.of(context).emergencyOnOff, _emergencyActive, Colors.redAccent,
-                  (v) => setState(() => _emergencyActive = v)),
-            ],
-
-            const SizedBox(height: 16),
-
-            // ── Usage Count Floor Rules ──
-            _UsageCountRulesSection(
-              pkg: app.packageName,
-              settingsService: _ss,
-              maxFloors: _ss.maxFloors,
-              undergroundFloors: _ss.undergroundFloors,
-            ),
 
             const SizedBox(height: 32),
 
@@ -1508,203 +1417,6 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ── Usage Count Floor Rules Section ──────────────────────────────────────────
-
-class _UsageCountRulesSection extends StatefulWidget {
-  final String pkg;
-  final SettingsService settingsService;
-  final int maxFloors;
-  final int undergroundFloors;
-
-  const _UsageCountRulesSection({
-    required this.pkg,
-    required this.settingsService,
-    required this.maxFloors,
-    required this.undergroundFloors,
-  });
-
-  @override
-  State<_UsageCountRulesSection> createState() => _UsageCountRulesSectionState();
-}
-
-class _UsageCountRulesSectionState extends State<_UsageCountRulesSection> {
-  SettingsService get _ss => widget.settingsService;
-
-  Future<void> _addOrEditRule({Map<String, int>? existing, int? editIndex}) async {
-    final rules = _ss.usageCountFloorRules(widget.pkg);
-    int threshold = existing?['threshold'] ?? 5;
-    int floor = existing?['floor'] ?? 2;
-    final threshCtrl = TextEditingController(text: threshold.toString());
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setInner) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          title: Text(existing == null ? S.of(ctx).ruleAdd : S.of(ctx).ruleEdit,
-              style: const TextStyle(color: Colors.white, fontSize: 14)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(S.of(ctx).launchThresholdLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-              const SizedBox(height: 4),
-              TextField(
-                controller: threshCtrl,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.07),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: BorderSide.none,
-                  ),
-                  suffixText: S.of(ctx).thresholdSuffix,
-                  suffixStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                ),
-                onChanged: (v) => threshold = int.tryParse(v) ?? threshold,
-              ),
-              const SizedBox(height: 12),
-              Text(S.of(ctx).targetFloorLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-              const SizedBox(height: 4),
-              StatefulBuilder(
-                builder: (_, setWrap) {
-                  Widget chip(int f) {
-                    final sel = floor == f;
-                    return GestureDetector(
-                      onTap: () => setWrap(() => floor = f),
-                      child: Container(
-                        width: 44,
-                        height: 30,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: sel ? Colors.white : Colors.transparent,
-                          border: Border.all(
-                              color: sel ? Colors.white : Colors.white38),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(floorLabel(f),
-                            style: TextStyle(
-                                color:
-                                    sel ? Colors.black : Colors.white54,
-                                fontSize: 11)),
-                      ),
-                    );
-                  }
-
-                  return Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (int i = widget.undergroundFloors; i >= 1; i--)
-                        chip(-i),
-                      for (int i = 1; i <= widget.maxFloors; i++) chip(i),
-                    ],
-                  );
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false),
-                child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
-            TextButton(
-              onPressed: () {
-                threshold = int.tryParse(threshCtrl.text) ?? threshold;
-                Navigator.pop(ctx, true);
-              },
-              child: Text(S.of(ctx).actionSave, style: const TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    final updated = [...rules];
-    final newRule = {'threshold': threshold, 'floor': floor};
-    if (editIndex != null) {
-      updated[editIndex] = newRule;
-    } else {
-      updated.add(newRule);
-    }
-    updated.sort((a, b) => a['threshold']!.compareTo(b['threshold']!));
-    await _ss.setUsageCountFloorRules(widget.pkg, updated);
-    setState(() {});
-  }
-
-  Future<void> _deleteRule(int index) async {
-    final rules = [..._ss.usageCountFloorRules(widget.pkg)];
-    rules.removeAt(index);
-    await _ss.setUsageCountFloorRules(widget.pkg, rules);
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final s = S.of(context);
-    final rules = _ss.usageCountFloorRules(widget.pkg);
-    final todayCount = _ss.dailyLaunchCount(widget.pkg);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(s.usageCountFloorChange,
-                style: const TextStyle(color: Colors.white70, fontSize: 13)),
-            TextButton.icon(
-              onPressed: () => _addOrEditRule(),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              icon: const Icon(Icons.add, color: Colors.tealAccent, size: 16),
-              label: Text(s.actionAdd, style: const TextStyle(color: Colors.tealAccent, fontSize: 12)),
-            ),
-          ],
-        ),
-        Text(s.todayLaunchCount(todayCount),
-            style: const TextStyle(color: Colors.white38, fontSize: 11)),
-        const SizedBox(height: 4),
-        if (rules.isEmpty)
-          Text(s.noRules, style: const TextStyle(color: Colors.white24, fontSize: 12))
-        else
-          ...rules.asMap().entries.map((e) {
-            final i = e.key;
-            final rule = e.value;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      s.thresholdRule(rule['threshold']!, floorLabel(rule['floor']!)),
-                      style: const TextStyle(color: Colors.white60, fontSize: 12),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _addOrEditRule(existing: rule, editIndex: i),
-                    child: const Icon(Icons.edit, color: Colors.white38, size: 16),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => _deleteRule(i),
-                    child: const Icon(Icons.delete, color: Colors.redAccent, size: 16),
-                  ),
-                ],
-              ),
-            );
-          }),
-      ],
     );
   }
 }
