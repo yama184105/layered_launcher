@@ -347,10 +347,15 @@ extension FloorContentMethods on _HomeScreenState {
         // Page 1: 1F + stair nav
         _buildFloorBackground(1, child: Builder(builder: (ctx) {
           final statusBarH = MediaQuery.of(ctx).padding.top;
-          // Same lift-sectionKeys-up-and-put-index-on-the-far-right pattern
-          // as _buildFloorWithNavInner.
-          final sectionKeys =
-              _searchQuery.isEmpty ? <String, GlobalKey>{} : null;
+          // Eagerly walk _buildFloorWidgets so sectionKeys is populated
+          // before the index sidebar reads it (Row's children are
+          // constructed synchronously, so we can't rely on build order).
+          Map<String, GlobalKey>? sectionKeys;
+          List<Widget>? prebuiltItems;
+          if (_searchQuery.isEmpty) {
+            sectionKeys = <String, GlobalKey>{};
+            prebuiltItems = _buildFloorWidgets(1, apps1F, sectionKeys);
+          }
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -377,7 +382,8 @@ extension FloorContentMethods on _HomeScreenState {
                       child: _searchQuery.isNotEmpty
                           ? _buildSearchResults()
                           : _floorContent(1, apps1F,
-                              externalSectionKeys: sectionKeys),
+                              externalSectionKeys: sectionKeys,
+                              prebuiltListItems: prebuiltItems),
                     ),
                   ],
                 ),
@@ -964,7 +970,8 @@ extension FloorContentMethods on _HomeScreenState {
   }
 
   Widget _floorContent(int floor, List<AppConfig> apps,
-      {Map<String, GlobalKey>? externalSectionKeys}) {
+      {Map<String, GlobalKey>? externalSectionKeys,
+      List<Widget>? prebuiltListItems}) {
     if (floor == _HomeScreenState._homeFloor) return _buildHomeContent();
 
     final isCurrent = floor == _currentFloor;
@@ -977,7 +984,12 @@ extension FloorContentMethods on _HomeScreenState {
     // a throwaway.
     final sectionKeys = externalSectionKeys ??
         (isCurrentAndStill ? <String, GlobalKey>{} : null);
-    final listItems = _buildFloorWidgets(floor, apps, sectionKeys);
+    // If the caller already walked _buildFloorWidgets eagerly (so sectionKeys
+    // is populated before the index sidebar reads it), reuse those items —
+    // we can't call _buildFloorWidgets twice on the same map because it
+    // creates duplicate GlobalKeys.
+    final listItems = prebuiltListItems ??
+        _buildFloorWidgets(floor, apps, sectionKeys);
 
     final navBarH = MediaQuery.of(context).viewPadding.bottom;
     final selectionBarH = _selectionMode ? 100.0 : 0.0;
@@ -1013,7 +1025,8 @@ extension FloorContentMethods on _HomeScreenState {
   // ── content animation (unified with background movement) ────────────────────
 
   Widget _buildAnimatedContent(double floorH,
-      {Map<String, GlobalKey>? externalSectionKeys}) {
+      {Map<String, GlobalKey>? externalSectionKeys,
+      List<Widget>? prebuiltListItems}) {
     // For slide/stair: content slides in sync with the background (unified box).
     // For fade/zoom: content crossfades at fixed position.
     // For horizontal slide (HOME ↔ 1F): content slides horizontally.
@@ -1033,7 +1046,8 @@ extension FloorContentMethods on _HomeScreenState {
 
           if (!_isAnimating) {
             return _floorContent(_currentFloor, currentApps,
-                externalSectionKeys: externalSectionKeys);
+                externalSectionKeys: externalSectionKeys,
+                prebuiltListItems: prebuiltListItems);
           }
 
           // Horizontal slide (HOME ↔ 1F): slide content left/right
@@ -1115,13 +1129,20 @@ extension FloorContentMethods on _HomeScreenState {
     // For the current static floor we lift sectionKeys up to this level so
     // we can put the alphabet index sidebar at the very right edge of the
     // screen (easier to thumb-reach), with the floor-move buttons just inside
-    // it. The map is populated when _buildAnimatedContent → _floorContent →
-    // _buildFloorWidgets walks the tree, then the index sidebar reads it.
+    // it. We must walk _buildFloorWidgets EAGERLY here (not via the build
+    // closures inside the Row) — Row evaluates its children list synchronously
+    // at construction time, so by the time _buildIndexSidebar would read
+    // sectionKeys it would still be empty if we relied on build order.
     Map<String, GlobalKey>? sectionKeys;
     List<AppConfig>? currentApps;
-    if (!_isAnimating && _searchQuery.isEmpty) {
+    List<Widget>? prebuiltItems;
+    if (!_isAnimating &&
+        _searchQuery.isEmpty &&
+        _currentFloor != _HomeScreenState._homeFloor) {
       sectionKeys = <String, GlobalKey>{};
       currentApps = _appsForFloor(_currentFloor);
+      prebuiltItems =
+          _buildFloorWidgets(_currentFloor, currentApps, sectionKeys);
     }
 
     // UI row (transparent — backgrounds handled at this level)
@@ -1150,6 +1171,7 @@ extension FloorContentMethods on _HomeScreenState {
                       child: _buildAnimatedContent(
                         fullH,
                         externalSectionKeys: sectionKeys,
+                        prebuiltListItems: prebuiltItems,
                       ),
                     ),
                   ],

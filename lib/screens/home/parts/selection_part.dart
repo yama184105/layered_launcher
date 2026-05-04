@@ -33,9 +33,14 @@ extension SelectionMethods on _HomeScreenState {
                 ),
               ],
             ),
-            // Row 2: action buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            // Row 2: action buttons. Wrap so that 4 buttons (or longer
+            // English labels) flow to a second line on narrow screens
+            // instead of overflowing — was causing a yellow-stripe error
+            // bar on Galaxy with the JA labels.
+            Wrap(
+              alignment: WrapAlignment.spaceEvenly,
+              spacing: 4,
+              runSpacing: 0,
               children: _selectionInFavorites
                   ? [
                       _selBtn(Icons.star_border, s.removeFavorite,
