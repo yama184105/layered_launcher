@@ -347,6 +347,10 @@ extension FloorContentMethods on _HomeScreenState {
         // Page 1: 1F + stair nav
         _buildFloorBackground(1, child: Builder(builder: (ctx) {
           final statusBarH = MediaQuery.of(ctx).padding.top;
+          // Same lift-sectionKeys-up-and-put-index-on-the-far-right pattern
+          // as _buildFloorWithNavInner.
+          final sectionKeys =
+              _searchQuery.isEmpty ? <String, GlobalKey>{} : null;
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -372,7 +376,8 @@ extension FloorContentMethods on _HomeScreenState {
                     Expanded(
                       child: _searchQuery.isNotEmpty
                           ? _buildSearchResults()
-                          : _floorContent(1, apps1F),
+                          : _floorContent(1, apps1F,
+                              externalSectionKeys: sectionKeys),
                     ),
                   ],
                 ),
@@ -387,10 +392,22 @@ extension FloorContentMethods on _HomeScreenState {
                   return Opacity(opacity: opacity, child: child!);
                 },
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(4, statusBarH + 16, 8, 16),
+                  padding: EdgeInsets.fromLTRB(4, statusBarH + 16, 4, 16),
                   child: _buildStairNav(),
                 ),
               ),
+              if (sectionKeys != null)
+                AnimatedBuilder(
+                  animation: _pageCtrl,
+                  builder: (ctx2, child) {
+                    double opacity = 0.0;
+                    if (_pageCtrl.hasClients && _pageCtrl.page != null) {
+                      opacity = _pageCtrl.page!.clamp(0.0, 1.0);
+                    }
+                    return Opacity(opacity: opacity, child: child!);
+                  },
+                  child: _buildIndexSidebar(apps1F, sectionKeys),
+                ),
             ],
           );
         })),
@@ -946,13 +963,20 @@ extension FloorContentMethods on _HomeScreenState {
     return widgets;
   }
 
-  Widget _floorContent(int floor, List<AppConfig> apps) {
+  Widget _floorContent(int floor, List<AppConfig> apps,
+      {Map<String, GlobalKey>? externalSectionKeys}) {
     if (floor == _HomeScreenState._homeFloor) return _buildHomeContent();
 
     final isCurrent = floor == _currentFloor;
     final isCurrentAndStill = isCurrent && !_isAnimating;
 
-    final sectionKeys = isCurrentAndStill ? <String, GlobalKey>{} : null;
+    // Use the external map (passed in by _buildFloorWithNavInner so the outer
+    // index sidebar can resolve the same keys). Fall back to a fresh local
+    // map only if the caller didn't supply one and we're the current static
+    // floor — but in that case nobody will read the keys, so it's effectively
+    // a throwaway.
+    final sectionKeys = externalSectionKeys ??
+        (isCurrentAndStill ? <String, GlobalKey>{} : null);
     final listItems = _buildFloorWidgets(floor, apps, sectionKeys);
 
     final navBarH = MediaQuery.of(context).viewPadding.bottom;
@@ -968,7 +992,7 @@ extension FloorContentMethods on _HomeScreenState {
     //
     // Attach _scrollController to the current floor's listView even *during*
     // animation, so the controller's position survives the tree change too.
-    final listView = ListView(
+    return ListView(
       key: PageStorageKey<int>(floor),
       controller: isCurrent ? _scrollController : null,
       padding: EdgeInsets.only(bottom: navBarH + 16 + selectionBarH),
@@ -982,23 +1006,14 @@ extension FloorContentMethods on _HomeScreenState {
           Align(alignment: Alignment.centerLeft, child: item),
       ],
     );
-
-    if (!isCurrentAndStill) return listView;
-
-    // Add alphabet/あいうえお index sidebar for current non-animating floor
-    return Row(
-      children: [
-        Expanded(child: listView),
-        _buildIndexSidebar(apps, sectionKeys!),
-      ],
-    );
   }
 
   // ── animated content ──────────────────────────────────────────
 
   // ── content animation (unified with background movement) ────────────────────
 
-  Widget _buildAnimatedContent(double floorH) {
+  Widget _buildAnimatedContent(double floorH,
+      {Map<String, GlobalKey>? externalSectionKeys}) {
     // For slide/stair: content slides in sync with the background (unified box).
     // For fade/zoom: content crossfades at fixed position.
     // For horizontal slide (HOME ↔ 1F): content slides horizontally.
@@ -1017,7 +1032,8 @@ extension FloorContentMethods on _HomeScreenState {
           final p = animation.value;
 
           if (!_isAnimating) {
-            return _floorContent(_currentFloor, currentApps);
+            return _floorContent(_currentFloor, currentApps,
+                externalSectionKeys: externalSectionKeys);
           }
 
           // Horizontal slide (HOME ↔ 1F): slide content left/right
@@ -1096,6 +1112,18 @@ extension FloorContentMethods on _HomeScreenState {
     // cover the entire display including status bar and nav bar areas.
     final fullH = MediaQuery.of(context).size.height;
 
+    // For the current static floor we lift sectionKeys up to this level so
+    // we can put the alphabet index sidebar at the very right edge of the
+    // screen (easier to thumb-reach), with the floor-move buttons just inside
+    // it. The map is populated when _buildAnimatedContent → _floorContent →
+    // _buildFloorWidgets walks the tree, then the index sidebar reads it.
+    Map<String, GlobalKey>? sectionKeys;
+    List<AppConfig>? currentApps;
+    if (!_isAnimating && _searchQuery.isEmpty) {
+      sectionKeys = <String, GlobalKey>{};
+      currentApps = _appsForFloor(_currentFloor);
+    }
+
     // UI row (transparent — backgrounds handled at this level)
     // Content crossfades at fixed position; backgrounds slide with fullH.
     final uiContent = (_searchQuery.isNotEmpty && !_isAnimating)
@@ -1118,14 +1146,24 @@ extension FloorContentMethods on _HomeScreenState {
                     // Keep search bar in layout during animation (invisible but
                     // maintaining size) so the app list position doesn't shift.
                     Opacity(opacity: _isAnimating ? 0.0 : 1.0, child: _searchBar()),
-                    Expanded(child: _buildAnimatedContent(fullH)),
+                    Expanded(
+                      child: _buildAnimatedContent(
+                        fullH,
+                        externalSectionKeys: sectionKeys,
+                      ),
+                    ),
                   ],
                 ),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(4, statusBarH + 16, 8, 16),
+                padding: EdgeInsets.fromLTRB(4, statusBarH + 16, 4, 16),
                 child: _buildStairNav(),
               ),
+              // Right-edge alphabet index. Build order in this Row guarantees
+              // the Expanded child (and its _buildFloorWidgets walk) finishes
+              // populating `sectionKeys` before we read it here.
+              if (sectionKeys != null && currentApps != null)
+                _buildIndexSidebar(currentApps, sectionKeys),
             ],
           );
 
