@@ -12,3 +12,8 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+# Allow the dummy debug keystore in app/ so CI debug builds keep a stable
+# signature across runs (testers no longer need to uninstall before
+# updating). This keystore only signs debug builds — it must NOT be used
+# for the release upload to Play Store.
+!app/debug.keystore
