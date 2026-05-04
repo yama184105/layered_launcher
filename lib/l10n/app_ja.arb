@@ -898,5 +898,14 @@
   "intervalHourUnit": "時間",
   "intervalMinuteUnit": "分",
   "copyToWeekdaysTitle": "コピー先の曜日",
-  "actionCopy": "コピー"
+  "actionCopy": "コピー",
+
+  "usageCountRulesScreenTitle": "起動回数フロア変更",
+  "usageCountRulesHelp": "1日の起動回数が閾値に達したら自動でフロアを変更します。毎日0時にカウントはリセットされます。",
+  "usageCountAddAppButton": "アプリを追加",
+  "usageCountNoApps": "ルールが設定されたアプリはありません",
+  "usageCountSummaryFmt": "{count}ルール",
+  "@usageCountSummaryFmt": {
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

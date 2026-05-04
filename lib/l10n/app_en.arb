@@ -605,5 +605,11 @@
   "intervalHourUnit": "h",
   "intervalMinuteUnit": "m",
   "copyToWeekdaysTitle": "Copy to days",
-  "actionCopy": "Copy"
+  "actionCopy": "Copy",
+
+  "usageCountRulesScreenTitle": "Floor change by launch count",
+  "usageCountRulesHelp": "Automatically move the app to a different floor when its daily launch count reaches a threshold. Counts reset at midnight.",
+  "usageCountAddAppButton": "Add app",
+  "usageCountNoApps": "No apps have rules configured",
+  "usageCountSummaryFmt": "{count} rule(s)"
 }

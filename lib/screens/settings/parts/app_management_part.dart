@@ -32,51 +32,48 @@ extension AppManagementMethods on _SettingsScreenState {
         summary: emgSummary,
         children: _emergencyChildren(ss, current, limitLabels),
       ),
-      _rowDivider,
-      _settingRow(
-        s.lastUsedDisplay,
-        ss.lastUsedDisplayApps.isEmpty
-            ? s.notSet
-            : s.displayedInAppsCount(ss.lastUsedDisplayApps.length),
-        () async {
-          final granted = await _native.isUsageStatsPermissionGranted();
-          if (!granted) {
-            if (!mounted) return;
-            final go = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                backgroundColor: const Color(0xFF1A1A1A),
-                title: Text(S.of(ctx).usageStatsAccessRequired,
-                    style: const TextStyle(color: Colors.white, fontSize: 14)),
-                content: Text(
-                  S.of(ctx).usageStatsAccessExplanation,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: Text(S.of(ctx).actionCancel,
-                        style: const TextStyle(color: Colors.white54)),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: Text(S.of(ctx).openSettings,
-                        style: const TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            );
-            if (go == true) await _native.openUsageStatsSettings();
-            return;
-          }
-          await _showLockAppSelector(
-              'lastUsedDisplayApps',
-              ss.lastUsedDisplayApps,
-              (v) => ss.setLastUsedDisplayApps(v));
-          setState(() {});
-        },
-      ),
     ];
+  }
+
+  /// Used by screentime section: lets the user pick which apps show their
+  /// "last launched" relative time on the home/floor list. Requires the
+  /// system "Usage access" permission, which we prompt for if missing.
+  Future<void> showLastUsedDisplayPicker() async {
+    final granted = await _native.isUsageStatsPermissionGranted();
+    if (!granted) {
+      if (!mounted) return;
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: Text(S.of(ctx).usageStatsAccessRequired,
+              style: const TextStyle(color: Colors.white, fontSize: 14)),
+          content: Text(
+            S.of(ctx).usageStatsAccessExplanation,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(S.of(ctx).openSettings,
+                  style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+      if (go == true) await _native.openUsageStatsSettings();
+      return;
+    }
+    await _showLockAppSelector(
+        'lastUsedDisplayApps',
+        _ss.lastUsedDisplayApps,
+        (v) => _ss.setLastUsedDisplayApps(v));
+    setState(() {});
   }
 
   List<Widget> _emergencyChildren(SettingsService ss, String current,

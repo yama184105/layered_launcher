@@ -51,6 +51,16 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
           builder: (_) => _AppBlockScreen(appService: _as, settingsService: ss),
         ));
       }),
+      _rowDivider,
+      _settingRow(
+        s.lastUsedDisplay,
+        ss.lastUsedDisplayApps.isEmpty
+            ? s.notSet
+            : s.displayedInAppsCount(ss.lastUsedDisplayApps.length),
+        () async {
+          await showLastUsedDisplayPicker();
+        },
+      ),
     ];
   }
 
