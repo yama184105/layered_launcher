@@ -13,6 +13,15 @@ extension HomeContentMethods on _HomeScreenState {
   Future<void> _checkNotifPerm() async {
     if (_notifPermAsked) return;
     _notifPermAsked = true;
+    final ss = widget.settingsService;
+    // Skip if the user previously dismissed the prompt with "Later" — they
+    // can still grant access from device settings if/when they actually want
+    // a feature that needs it.
+    if (ss.notifPermDeferred) return;
+    // Don't even ask if no app uses notification batching; the only home-
+    // screen feature that actually needs notification access is the batch
+    // notification timer, so prompting before any app opts in is just noise.
+    if (ss.batchApps.isEmpty) return;
     final enabled = await _native.isNotificationServiceEnabled();
     if (!enabled && mounted) {
       showDialog(
@@ -27,7 +36,11 @@ extension HomeContentMethods on _HomeScreenState {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  // Remember the deferral so we don't pester them again.
+                  await ss.setNotifPermDeferred(true);
+                },
                 child: Text(S.of(ctx).actionLater,
                     style: const TextStyle(color: Colors.white54))),
             TextButton(

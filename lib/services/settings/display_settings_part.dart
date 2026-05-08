@@ -434,6 +434,16 @@ extension DisplaySettings on SettingsService {
   bool get singleFolderMode => (_box.get('singleFolderMode') as bool?) ?? false;
   Future<void> setSingleFolderMode(bool v) => _box.put('singleFolderMode', v);
 
+  // ── Notification permission prompt deferral ────────────────────────────────
+  // Set to true when the user dismisses the home-screen notification access
+  // prompt with "後で". Prevents the prompt from re-appearing on every launch.
+  // Reset when the user explicitly enables a feature that needs the
+  // permission (e.g. configuring a batch-notification app).
+  bool get notifPermDeferred =>
+      (_box.get('notifPermDeferred') as bool?) ?? false;
+  Future<void> setNotifPermDeferred(bool v) =>
+      _box.put('notifPermDeferred', v);
+
   // ── Max / Underground Floors ───────────────────────────────────────────────
   int get maxFloors => (_box.get('maxFloors') as int?) ?? 10;
   Future<void> setMaxFloors(int v) => _box.put('maxFloors', v);

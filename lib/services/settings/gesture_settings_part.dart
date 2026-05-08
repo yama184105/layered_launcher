@@ -112,6 +112,11 @@ extension GestureSettings on SettingsService {
     if (mode == 'batch') batch.add(pkg);
     await _box.put('notifOffApps', off.toList());
     await setBatchApps(batch);
+    // The user just opted into a feature that needs notification access, so
+    // un-defer the prompt so the home screen can ask again on next launch.
+    if (mode == 'batch') {
+      await setNotifPermDeferred(false);
+    }
   }
 
   Set<String> get notifOffApps {
