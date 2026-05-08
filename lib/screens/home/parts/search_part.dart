@@ -42,8 +42,8 @@ extension SearchMethods on _HomeScreenState {
 
   Widget _buildIndexSidebar(List<AppConfig> apps, Map<String, GlobalKey> sectionKeys) {
     if (!widget.settingsService.showAlphabetIndex) return const SizedBox.shrink();
-    final ungroupedCount = apps.where((a) => _folderOf(a) == null).length;
-    if (ungroupedCount < 6) return const SizedBox.shrink();
+    // No artificial app-count threshold — the sidebar already self-suppresses
+    // (returning SizedBox.shrink later) when no sections are present.
 
     const normalOrder = [
       'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
