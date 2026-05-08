@@ -58,48 +58,122 @@ extension HomeContentMethods on _HomeScreenState {
   }
 
   // ── batch timer ───────────────────────────────────────────────
+  // Ticks every minute and evaluates each user-defined batch group's
+  // schedule. A group fires when:
+  //   * today is one of its enabled weekdays, AND
+  //   * 'interval'   : now - lastFireAt >= intervalMinutes (or never fired)
+  //   * 'fixed'      : current H:M matches one of the configured times AND
+  //                    we haven't already fired that exact time today
+  //   * 'dailyOnce'  : same as 'fixed' with a single time
 
   void _startBatchTimer() {
     _batchTimer?.cancel();
-    final ss = widget.settingsService;
-    final interval =
-        Duration(minutes: ss.batchIntervalMinutes);
-    _batchTimer = Timer.periodic(interval, (_) => _processBatchNotifs());
+    _batchTimer =
+        Timer.periodic(const Duration(seconds: 60), (_) => _processBatchGroups());
+    // Also evaluate immediately so the initial state is correct on launch.
+    _processBatchGroups();
   }
 
-  Future<void> _processBatchNotifs() async {
+  Future<void> _processBatchGroups() async {
     final ss = widget.settingsService;
-    final batchApps = ss.batchApps;
-    if (batchApps.isEmpty) return;
+    final groups = ss.batchGroups;
+    if (groups.isEmpty) return;
     final counts = await _native.getNotificationCounts();
-    for (final pkg in batchApps) {
-      final count = counts[pkg] ?? 0;
-      if (count > 0) {
-        final app = _allApps.firstWhere(
-          (a) => a.packageName == pkg,
-          orElse: () =>
-              AppConfig(packageName: pkg, appName: pkg, floor: 1),
-        );
-        final name = (app.customName?.isNotEmpty == true)
-            ? app.customName!
-            : app.appName;
-        if (!mounted) continue;
-        final s = S.of(context);
-        await _flnp.show(
-          pkg.hashCode,
-          s.appNotification(name),
-          s.notificationCountBody(count),
-          NotificationDetails(
-            android: AndroidNotificationDetails(
-              'batch_channel',
-              s.batchNotificationChannel,
-              importance: Importance.defaultImportance,
-              priority: Priority.defaultPriority,
-            ),
+    final now = DateTime.now();
+
+    for (final g in groups) {
+      if (!_groupShouldFire(g, now)) continue;
+      final apps = ((g['apps'] as List?) ?? const [])
+          .map((e) => e.toString())
+          .toList();
+      if (apps.isEmpty) continue;
+      int total = 0;
+      for (final pkg in apps) {
+        total += counts[pkg] ?? 0;
+      }
+      if (total == 0) {
+        // Even if no notifications accumulated, mark this firing as handled
+        // so 'fixed'/'dailyOnce' schedules don't keep re-evaluating in the
+        // same minute window.
+        await ss.updateBatchGroupLastFire(g['id'] as String, now);
+        continue;
+      }
+      if (!mounted) continue;
+      final s = S.of(context);
+      final groupName = (g['name'] as String?)?.isNotEmpty == true
+          ? g['name'] as String
+          : s.batchNotificationChannel;
+      await _flnp.show(
+        ('batchgroup_${g['id']}').hashCode,
+        groupName,
+        s.notificationCountBody(total),
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'batch_channel',
+            s.batchNotificationChannel,
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
           ),
-        );
+        ),
+      );
+      await ss.updateBatchGroupLastFire(g['id'] as String, now);
+    }
+  }
+
+  bool _groupShouldFire(Map<String, dynamic> g, DateTime now) {
+    final weekdays = ((g['weekdays'] as List?) ?? const [1, 2, 3, 4, 5, 6, 7])
+        .cast<num>()
+        .map((e) => e.toInt())
+        .toSet();
+    if (!weekdays.contains(now.weekday)) return false;
+
+    final type = g['scheduleType'] as String? ?? 'interval';
+    final lastMs = (g['lastFireAt'] as num?)?.toInt() ?? 0;
+    final last =
+        lastMs > 0 ? DateTime.fromMillisecondsSinceEpoch(lastMs) : null;
+
+    if (type == 'interval') {
+      final mins = (g['intervalMinutes'] as num?)?.toInt() ?? 240;
+      if (last == null) return true;
+      return now.difference(last).inMinutes >= mins;
+    }
+
+    final times = <Map<String, int>>[];
+    if (type == 'fixed') {
+      for (final t in ((g['times'] as List?) ?? const [])) {
+        final m = Map<String, dynamic>.from(t as Map);
+        times.add({
+          'h': (m['h'] as num).toInt(),
+          'm': (m['m'] as num).toInt(),
+        });
+      }
+    } else if (type == 'dailyOnce') {
+      final t = g['time'] as Map?;
+      if (t != null) {
+        times.add({
+          'h': (t['h'] as num).toInt(),
+          'm': (t['m'] as num).toInt(),
+        });
       }
     }
+    if (times.isEmpty) return false;
+
+    for (final t in times) {
+      final h = t['h']!;
+      final m = t['m']!;
+      if (h != now.hour || m != now.minute) continue;
+      // Already fired this exact minute today?
+      if (last != null &&
+          last.year == now.year &&
+          last.month == now.month &&
+          last.day == now.day &&
+          last.hour == h &&
+          last.minute == m) {
+        continue;
+      }
+      return true;
+    }
+    return false;
   }
 
   // ── home widget loading ───────────────────────────────────────

@@ -18,6 +18,7 @@ import '../home/home_screen.dart' show floorLabel, showStrictTimerDialog;
 import 'automove_screen.dart';
 
 part 'app_block_screen.dart';
+part 'batch_groups_screen.dart';
 part 'wallpaper_crop_screen.dart';
 part 'parts/home_settings_part.dart';
 part 'parts/floor_settings_part.dart';

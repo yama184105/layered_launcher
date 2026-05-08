@@ -84,15 +84,6 @@ extension GestureSettings on SettingsService {
     await setBatchApps(current);
   }
 
-  /// Values: 30 | 60 | 120 | 240 (minutes)
-  int get batchIntervalMinutes {
-    final v = _box.get('batchIntervalMinutes') as int?;
-    return v ?? 60;
-  }
-
-  Future<void> setBatchIntervalMinutes(int v) =>
-      _box.put('batchIntervalMinutes', v);
-
   // ── Notification Mode ──────────────────────────────────────────────────────
 
   /// Returns the notification mode for a package: 'allow' | 'batch' | 'off'
@@ -127,4 +118,69 @@ extension GestureSettings on SettingsService {
     if (raw == null) return {};
     return raw.map((e) => e.toString()).toSet();
   }
+
+  // ── Batch Groups ───────────────────────────────────────────────────────────
+  // A batch group bundles a subset of the batch-mode apps with a delivery
+  // schedule. Three schedule types are supported:
+  //   - 'interval'   : every N minutes
+  //   - 'fixed'      : at a list of specific times of day
+  //   - 'dailyOnce'  : at a single time once per day
+  // Each group also has a weekday filter (default: every day).
+  //
+  // Stored shape (List<Map<String, dynamic>>):
+  //   {
+  //     'id': String,                        // stable UUID-ish
+  //     'name': String,                      // user-facing
+  //     'apps': List<String>,                // package names
+  //     'scheduleType': 'interval'|'fixed'|'dailyOnce',
+  //     'intervalMinutes': int,              // for 'interval'
+  //     'times': List<{'h': int, 'm': int}>, // for 'fixed'
+  //     'time': {'h': int, 'm': int},        // for 'dailyOnce'
+  //     'weekdays': List<int>,               // 1=Mon..7=Sun (Dart weekday)
+  //     'lastFireAt': int,                   // epochMs, anti-double-fire
+  //   }
+
+  List<Map<String, dynamic>> get batchGroups {
+    final raw = _box.get('batchGroups') as List?;
+    if (raw == null) return [];
+    return raw
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+  }
+
+  Future<void> setBatchGroups(List<Map<String, dynamic>> groups) =>
+      _box.put('batchGroups', groups);
+
+  Future<void> updateBatchGroupLastFire(String id, DateTime when) async {
+    final groups = batchGroups;
+    final i = groups.indexWhere((g) => g['id'] == id);
+    if (i < 0) return;
+    groups[i]['lastFireAt'] = when.millisecondsSinceEpoch;
+    await setBatchGroups(groups);
+  }
+
+  /// Initial migration from the legacy single-interval batch model. Runs once.
+  /// All existing batch apps (if any) move into a single "デフォルト" group
+  /// that defaults to every-4-hours, every weekday.
+  Future<void> migrateBatchGroupsIfNeeded() async {
+    if (_box.containsKey('batchGroups')) return;
+    final apps = batchApps.toList();
+    final defaultGroup = <String, dynamic>{
+      'id': 'default-${DateTime.now().millisecondsSinceEpoch}',
+      'name': 'デフォルト',
+      'apps': apps,
+      'scheduleType': 'interval',
+      'intervalMinutes': 240,
+      'weekdays': const <int>[1, 2, 3, 4, 5, 6, 7],
+      'lastFireAt': 0,
+    };
+    await _box.put('batchGroups', [defaultGroup]);
+    // Drop the now-unused legacy interval setting.
+    await _box.delete('batchIntervalMinutes');
+  }
+
+  /// Generates a fresh group id for new groups created from the UI. Not a
+  /// real UUID — millisecond timestamp is plenty since we only need it
+  /// stable within this device.
+  static String newBatchGroupId() => 'g-${DateTime.now().microsecondsSinceEpoch}';
 }

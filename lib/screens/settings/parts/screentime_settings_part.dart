@@ -3,15 +3,7 @@ part of '../settings_screen.dart';
 extension ScreenTimeSettingsMethods on _SettingsScreenState {
   List<Widget> _screenTimeSettingRows() {
     final s = S.of(context);
-    final intervalLabels = <int, String>{
-      30: s.minutesShort30,
-      60: s.hours1,
-      120: s.hours2,
-      240: s.hours4,
-    };
     final ss = _ss;
-    final batchLabel =
-        intervalLabels[ss.batchIntervalMinutes] ?? s.minutesShortGeneric(ss.batchIntervalMinutes);
     return [
       _settingRow(s.mindfulDelaySettings, '', () {
         Navigator.push(context, MaterialPageRoute(
@@ -22,7 +14,7 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
       _expandableRow(
         key: 'screentime_notif',
         title: s.notificationSection,
-        summary: s.batchSummary(batchLabel),
+        summary: s.batchGroupCount(ss.batchGroups.length),
         children: [
           _settingRow(s.notificationLimit, '', () {
             Navigator.push(context, MaterialPageRoute(
@@ -31,17 +23,16 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
             ));
           }),
           _rowDivider,
-          _settingRow(s.batchInterval, batchLabel, () async {
-            final v = await _showOptionsDialog(s.batchInterval, [
-              (30, s.minutesShort30),
-              (60, s.hours1),
-              (120, s.hours2),
-              (240, s.hours4),
-            ], ss.batchIntervalMinutes);
-            if (v != null) {
-              await ss.setBatchIntervalMinutes(v);
-              setState(() {});
-            }
+          _settingRow(s.batchGroupsTitle,
+              s.batchGroupCount(ss.batchGroups.length), () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => _BatchGroupsScreen(
+                    appService: _as, settingsService: ss),
+              ),
+            );
+            setState(() {});
           }),
         ],
       ),

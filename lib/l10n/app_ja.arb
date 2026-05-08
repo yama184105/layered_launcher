@@ -907,5 +907,73 @@
   "usageCountSummaryFmt": "{count}ルール",
   "@usageCountSummaryFmt": {
     "placeholders": { "count": { "type": "int" } }
+  },
+
+  "batchGroupsTitle": "バッチグループ",
+  "batchGroupsHelp": "バッチ通知の対象アプリをまとめ、グループごとに配信スケジュールを設定できます。",
+  "batchGroupAdd": "グループを追加",
+  "batchGroupNoGroups": "グループはまだありません",
+  "batchGroupCount": "{count}グループ",
+  "@batchGroupCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "batchGroupName": "名前",
+  "batchGroupNameHint": "例: SNS",
+  "batchGroupNewName": "新規グループ",
+  "batchGroupApps": "対象アプリ",
+  "batchGroupAppsCount": "{count}アプリ",
+  "@batchGroupAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "batchGroupSchedule": "スケジュール",
+  "batchGroupScheduleInterval": "間隔",
+  "batchGroupScheduleFixed": "指定時刻",
+  "batchGroupScheduleDailyOnce": "1日1回",
+  "batchGroupIntervalLabel": "{minutes}分ごと",
+  "@batchGroupIntervalLabel": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "batchGroupHourlyLabel": "{hours}時間ごと",
+  "@batchGroupHourlyLabel": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+  "batchGroupTimesLabel": "発火時刻",
+  "batchGroupAddTime": "時刻を追加",
+  "batchGroupTime": "時刻",
+  "batchGroupWeekdays": "曜日",
+  "batchGroupEveryDay": "毎日",
+  "batchGroupNoApps": "アプリ未設定",
+  "batchGroupNoTimes": "時刻未設定",
+  "batchGroupDeleteConfirm": "「{name}」を削除しますか？",
+  "@batchGroupDeleteConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "batchGroupSummaryInterval": "{minutes}分ごと · {appCount}アプリ",
+  "@batchGroupSummaryInterval": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "appCount": { "type": "int" }
+    }
+  },
+  "batchGroupSummaryHourly": "{hours}時間ごと · {appCount}アプリ",
+  "@batchGroupSummaryHourly": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "appCount": { "type": "int" }
+    }
+  },
+  "batchGroupSummaryFixed": "指定{count}回 · {appCount}アプリ",
+  "@batchGroupSummaryFixed": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "appCount": { "type": "int" }
+    }
+  },
+  "batchGroupSummaryDaily": "{time} · {appCount}アプリ",
+  "@batchGroupSummaryDaily": {
+    "placeholders": {
+      "time": { "type": "String" },
+      "appCount": { "type": "int" }
+    }
   }
 }

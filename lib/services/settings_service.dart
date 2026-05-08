@@ -25,6 +25,7 @@ class SettingsService {
 
   Future<void> init() async {
     _box = await Hive.openBox<dynamic>(_boxName);
+    await migrateBatchGroupsIfNeeded();
   }
 
   /// App locale code: 'ja' or 'en'. Null = follow system locale.
