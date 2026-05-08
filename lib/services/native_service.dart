@@ -67,6 +67,15 @@ class NativeService {
     }
   }
 
+  /// Push the current set of OFF-mode packages to the native side so that
+  /// NotificationService can dismiss new notifications from those apps and
+  /// our SharedPreferences-backed list survives Flutter being killed.
+  Future<void> setOffPackages(Set<String> packages) async {
+    try {
+      await _channel.invokeMethod('setOffPackages', packages.toList());
+    } catch (_) {}
+  }
+
   Future<bool> isNotificationServiceEnabled() async {
     try {
       final result = await _channel

@@ -54,6 +54,34 @@ class MainActivity : FlutterActivity() {
                     "getNotificationCounts" -> {
                         result.success(NotificationService.counts.toMap())
                     }
+                    "setOffPackages" -> {
+                        // Persist the list of OFF-mode packages where
+                        // NotificationService can read it on each posted
+                        // notification. Stored in SharedPreferences so it
+                        // survives even if the Flutter engine is killed.
+                        val pkgs = (call.arguments as? List<*>)
+                            ?.filterIsInstance<String>()
+                            ?.toSet()
+                            ?: emptySet()
+                        val sp = getSharedPreferences(
+                            NotificationService.PREFS_NAME,
+                            Context.MODE_PRIVATE,
+                        )
+                        sp.edit()
+                            .putStringSet(NotificationService.KEY_OFF_PACKAGES, pkgs)
+                            .apply()
+                        // Sweep currently-active notifications too, so apps
+                        // moved into OFF after they posted get cleared.
+                        try {
+                            val service = NotificationService.instance
+                            service?.activeNotifications?.forEach { sbn ->
+                                if (pkgs.contains(sbn.packageName)) {
+                                    try { service.cancelNotification(sbn.key) } catch (_: Exception) {}
+                                }
+                            }
+                        } catch (_: Exception) {}
+                        result.success(null)
+                    }
                     "isNotificationServiceEnabled" -> {
                         val enabled = Settings.Secure.getString(
                             contentResolver,

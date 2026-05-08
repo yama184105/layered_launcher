@@ -17,6 +17,12 @@ class SettingsService {
   static const String unsplashAccessKey = 'YOUR_UNSPLASH_ACCESS_KEY';
   late Box<dynamic> _box;
 
+  /// Hook invoked whenever the OFF-mode package set changes. main.dart wires
+  /// this to NativeService.setOffPackages so the kotlin notification listener
+  /// can stay in sync without SettingsService having to depend on
+  /// NativeService directly.
+  Future<void> Function(Set<String> offPackages)? onOffPackagesChanged;
+
   Future<void> init() async {
     _box = await Hive.openBox<dynamic>(_boxName);
   }

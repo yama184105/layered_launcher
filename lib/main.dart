@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'models/app_config.dart';
 import 'services/app_service.dart';
+import 'services/native_service.dart';
 import 'services/settings_service.dart';
 import 'screens/home/home_screen.dart';
 
@@ -26,6 +27,14 @@ void main() async {
 
   final settingsService = SettingsService();
   await settingsService.init();
+
+  // Wire SettingsService → native notification listener so OFF-mode apps
+  // get their notifications dismissed in real-time, and sync the current
+  // list once on startup (in case it changed since last launch).
+  final nativeService = NativeService();
+  settingsService.onOffPackagesChanged =
+      (offPackages) => nativeService.setOffPackages(offPackages);
+  await nativeService.setOffPackages(settingsService.notifOffApps);
 
   runApp(LayeredLauncherApp(
     appService: appService,
