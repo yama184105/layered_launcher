@@ -262,8 +262,33 @@ class _BatchGroupEditScreenState extends State<_BatchGroupEditScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: Text(S.of(ctx).batchGroupApps,
-              style: const TextStyle(color: Colors.white, fontSize: 14)),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(S.of(ctx).batchGroupApps,
+                    style: const TextStyle(color: Colors.white, fontSize: 14)),
+              ),
+              if (candidates.isNotEmpty)
+                TextButton(
+                  onPressed: () => setInner(() {
+                    if (selected.length == candidates.length) {
+                      selected.clear();
+                    } else {
+                      selected
+                        ..clear()
+                        ..addAll(candidates.map((a) => a.packageName));
+                    }
+                  }),
+                  child: Text(
+                    selected.length == candidates.length
+                        ? S.of(ctx).actionDeselectAll
+                        : S.of(ctx).actionSelectAll,
+                    style: const TextStyle(
+                        color: Colors.tealAccent, fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
           content: SizedBox(
             width: double.maxFinite,
             height: 400,

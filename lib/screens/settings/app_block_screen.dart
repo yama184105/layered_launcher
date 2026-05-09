@@ -18,18 +18,156 @@ class _NotificationSettingsScreenState
     extends State<_NotificationSettingsScreen> {
   List<AppConfig> _apps = [];
   bool _loading = true;
+  bool _selectionMode = false;
+  final Set<String> _selected = {};
   SettingsService get _ss => widget.settingsService;
 
   @override
   void initState() {
     super.initState();
     widget.appService.getAllApps().then((apps) {
-      if (mounted) setState(() { _apps = apps; _loading = false; });
+      if (!mounted) return;
+      apps.sort((a, b) => _displayName(a)
+          .toLowerCase()
+          .compareTo(_displayName(b).toLowerCase()));
+      setState(() {
+        _apps = apps;
+        _loading = false;
+      });
     });
   }
 
   String _displayName(AppConfig app) =>
       (app.customName?.isNotEmpty == true) ? app.customName! : app.appName;
+
+  void _toggleSelection(String pkg) {
+    setState(() {
+      if (_selected.contains(pkg)) {
+        _selected.remove(pkg);
+      } else {
+        _selected.add(pkg);
+      }
+      if (_selected.isEmpty) _selectionMode = false;
+    });
+  }
+
+  Future<void> _applyBulkMode(String mode) async {
+    if (_selected.isEmpty) return;
+    final pkgs = _selected.toList();
+    for (final pkg in pkgs) {
+      await _ss.setNotifModeForApp(pkg, mode);
+    }
+    if (!mounted) return;
+    setState(() {
+      _selectionMode = false;
+      _selected.clear();
+    });
+  }
+
+  Widget _modeChip(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(left: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          border: Border.all(
+              color: selected ? Colors.white : Colors.white24),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                color: selected ? Colors.black : Colors.white54,
+                fontSize: 11)),
+      ),
+    );
+  }
+
+  Widget _bulkActionBar() {
+    final s = S.of(context);
+    final allSelected = _selected.length == _apps.length;
+    return Container(
+      color: const Color(0xFF1A1A1A),
+      padding: EdgeInsets.fromLTRB(
+          12, 8, 12, 8 + MediaQuery.of(context).padding.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Text(s.selectedCount(_selected.length),
+                  style: const TextStyle(color: Colors.white, fontSize: 13)),
+              const Spacer(),
+              TextButton(
+                onPressed: () => setState(() {
+                  if (allSelected) {
+                    _selected.clear();
+                  } else {
+                    _selected
+                      ..clear()
+                      ..addAll(_apps.map((a) => a.packageName));
+                  }
+                }),
+                child: Text(
+                    allSelected ? s.actionDeselectAll : s.actionSelectAll,
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 12)),
+              ),
+              TextButton(
+                onPressed: () => setState(() {
+                  _selectionMode = false;
+                  _selected.clear();
+                }),
+                child: Text(s.actionCancel,
+                    style: const TextStyle(
+                        color: Colors.white54, fontSize: 12)),
+              ),
+            ],
+          ),
+          Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: 8,
+            children: [
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 6),
+                ),
+                onPressed: () => _applyBulkMode('allow'),
+                child: Text(s.notificationModeAllow,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.tealAccent,
+                  side: const BorderSide(color: Colors.tealAccent),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 6),
+                ),
+                onPressed: () => _applyBulkMode('batch'),
+                child: Text(s.notificationModeBatch,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 6),
+                ),
+                onPressed: () => _applyBulkMode('off'),
+                child: Text(s.actionOff,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,62 +176,87 @@ class _NotificationSettingsScreenState
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: Text(s.notificationSettingsTitle,
-            style: const TextStyle(color: Colors.white)),
+        title: _selectionMode
+            ? Text(s.selectedCount(_selected.length),
+                style: const TextStyle(color: Colors.white))
+            : Text(s.notificationSettingsTitle,
+                style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: !_selectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.checklist,
+                      color: Colors.white70, size: 20),
+                  tooltip: s.actionSelectAll,
+                  onPressed: () => setState(() => _selectionMode = true),
+                ),
+              ]
+            : null,
       ),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(color: Colors.white))
-          : ListView.builder(
-              itemCount: _apps.length,
-              itemBuilder: (_, i) {
-                final app = _apps[i];
-                final mode = _ss.notifModeForApp(app.packageName);
-                return ListTile(
-                  title: Text(_displayName(app),
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 14)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (final m in [
-                        ('allow', s.notificationModeAllow),
-                        ('batch', s.notificationModeBatch),
-                        ('off', s.actionOff),
-                      ])
-                        GestureDetector(
-                          onTap: () async {
-                            await _ss.setNotifModeForApp(
-                                app.packageName, m.$1);
-                            setState(() {});
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(left: 4),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: mode == m.$1
-                                  ? Colors.white
-                                  : Colors.transparent,
-                              border: Border.all(
-                                  color: mode == m.$1
-                                      ? Colors.white
-                                      : Colors.white24),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(m.$2,
-                                style: TextStyle(
-                                    color: mode == m.$1
-                                        ? Colors.black
-                                        : Colors.white54,
-                                    fontSize: 11)),
-                          ),
-                        ),
-                    ],
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _apps.length,
+                    itemBuilder: (_, i) {
+                      final app = _apps[i];
+                      final pkg = app.packageName;
+                      final mode = _ss.notifModeForApp(pkg);
+                      final isChecked = _selected.contains(pkg);
+                      return ListTile(
+                        onTap: _selectionMode
+                            ? () => _toggleSelection(pkg)
+                            : null,
+                        onLongPress: () {
+                          setState(() {
+                            _selectionMode = true;
+                            _selected.add(pkg);
+                          });
+                        },
+                        selected: isChecked,
+                        selectedTileColor: Colors.white.withOpacity(0.05),
+                        leading: _selectionMode
+                            ? Checkbox(
+                                value: isChecked,
+                                activeColor: Colors.tealAccent,
+                                checkColor: Colors.black,
+                                onChanged: (_) => _toggleSelection(pkg),
+                              )
+                            : null,
+                        title: Text(_displayName(app),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14)),
+                        trailing: _selectionMode
+                            ? null
+                            : Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _modeChip(s.notificationModeAllow,
+                                      mode == 'allow', () async {
+                                    await _ss.setNotifModeForApp(pkg, 'allow');
+                                    setState(() {});
+                                  }),
+                                  _modeChip(s.notificationModeBatch,
+                                      mode == 'batch', () async {
+                                    await _ss.setNotifModeForApp(pkg, 'batch');
+                                    setState(() {});
+                                  }),
+                                  _modeChip(s.actionOff, mode == 'off',
+                                      () async {
+                                    await _ss.setNotifModeForApp(pkg, 'off');
+                                    setState(() {});
+                                  }),
+                                ],
+                              ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+                if (_selectionMode) _bulkActionBar(),
+              ],
             ),
     );
   }
