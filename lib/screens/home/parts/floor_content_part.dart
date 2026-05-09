@@ -413,7 +413,11 @@ extension FloorContentMethods on _HomeScreenState {
                     return Opacity(opacity: opacity, child: child!);
                   },
                   child: _buildIndexSidebar(apps1F, sectionKeys),
-                ),
+                )
+              else if (widget.settingsService.showAlphabetIndex)
+                // Reserve the column even during search (when we skip building
+                // the sidebar) so the stair-nav doesn't slide right.
+                const SizedBox(width: 32),
             ],
           );
         })),
@@ -1184,8 +1188,15 @@ extension FloorContentMethods on _HomeScreenState {
               // Right-edge alphabet index. Build order in this Row guarantees
               // the Expanded child (and its _buildFloorWidgets walk) finishes
               // populating `sectionKeys` before we read it here.
+              //
+              // During animation / search we don't have a populated
+              // sectionKeys to read from, but we still reserve the same 32px
+              // column so the stair-nav buttons don't slide right into the
+              // index's slot mid-transition.
               if (sectionKeys != null && currentApps != null)
-                _buildIndexSidebar(currentApps, sectionKeys),
+                _buildIndexSidebar(currentApps, sectionKeys)
+              else if (widget.settingsService.showAlphabetIndex)
+                const SizedBox(width: 32),
             ],
           );
 
