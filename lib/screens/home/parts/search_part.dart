@@ -42,8 +42,9 @@ extension SearchMethods on _HomeScreenState {
 
   Widget _buildIndexSidebar(List<AppConfig> apps, Map<String, GlobalKey> sectionKeys) {
     if (!widget.settingsService.showAlphabetIndex) return const SizedBox.shrink();
-    // No artificial app-count threshold — the sidebar already self-suppresses
-    // (returning SizedBox.shrink later) when no sections are present.
+    // No artificial app-count threshold; we still want to reserve the same
+    // 32px column when the floor has no apps so the floor-move buttons stay
+    // pinned to the same horizontal position regardless of content.
 
     const normalOrder = [
       'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -61,7 +62,12 @@ extension SearchMethods on _HomeScreenState {
       }
     }
 
-    if (normalSorted.isEmpty && !hasEmergencyIndex) return const SizedBox.shrink();
+    if (normalSorted.isEmpty && !hasEmergencyIndex) {
+      // Empty floor / no apps yet: keep the 32px column anyway so the
+      // stair-nav buttons just inside it don't slide right when the floor
+      // has zero matching sections.
+      return const SizedBox(width: 32);
+    }
 
     void scrollTo(String key) {
       // 同じキーへの連続要求はハイライトだけ更新してスクロール再発火を抑える
