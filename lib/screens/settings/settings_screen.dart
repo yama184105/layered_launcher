@@ -593,15 +593,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required List<Widget> children,
   }) {
     final open = _expandedRows[key] ?? false;
+    // Same visual idiom as the top-level accordion sections, scaled down so
+    // a sub-group of related rows reads as one block:
+    //   * tinted background on both header + content
+    //   * a thin teal indicator down the left edge that runs through the
+    //     whole open block
+    //   * a slightly stronger divider after the open block so the next
+    //     sibling row clearly sits outside it
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Material(
-          color: Colors.transparent,
+          color: open ? Colors.white.withOpacity(0.05) : Colors.transparent,
           child: InkWell(
             onTap: () => setState(() => _expandedRows[key] = !open),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color:
+                        open ? Colors.tealAccent : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+              ),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
                   Expanded(
@@ -627,12 +644,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         if (open)
           Container(
-            color: Colors.white.withOpacity(0.02),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              border: const Border(
+                left: BorderSide(color: Colors.tealAccent, width: 2),
+              ),
+            ),
+            padding: const EdgeInsets.only(bottom: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: children,
             ),
           ),
+        // Stronger divider directly after an open block so the next sibling
+        // row is clearly outside it. Closed rows keep the very subtle
+        // baseline divider that's painted by their parent accordion.
+        if (open)
+          const Divider(
+              color: Colors.white24, height: 1, thickness: 0.6),
       ],
     );
   }
