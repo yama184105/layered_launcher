@@ -18,10 +18,10 @@ extension HomeContentMethods on _HomeScreenState {
     // can still grant access from device settings if/when they actually want
     // a feature that needs it.
     if (ss.notifPermDeferred) return;
-    // Don't even ask if no app uses notification batching; the only home-
-    // screen feature that actually needs notification access is the batch
-    // notification timer, so prompting before any app opts in is just noise.
-    if (ss.batchApps.isEmpty) return;
+    // Don't even ask if neither feature needs it. OFF blocking and batch
+    // capture are the two reasons we'd want notification listener access,
+    // so if no app opts in we stay quiet.
+    if (ss.batchApps.isEmpty && ss.notifOffApps.isEmpty) return;
     final enabled = await _native.isNotificationServiceEnabled();
     if (!enabled && mounted) {
       showDialog(

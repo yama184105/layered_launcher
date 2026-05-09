@@ -20,6 +20,8 @@ class _NotificationSettingsScreenState
   bool _loading = true;
   bool _selectionMode = false;
   final Set<String> _selected = {};
+  final NativeService _native = NativeService();
+  bool _listenerEnabled = false;
   SettingsService get _ss => widget.settingsService;
 
   @override
@@ -35,6 +37,57 @@ class _NotificationSettingsScreenState
         _loading = false;
       });
     });
+    _refreshListenerState();
+  }
+
+  Future<void> _refreshListenerState() async {
+    final v = await _native.isNotificationServiceEnabled();
+    if (!mounted) return;
+    setState(() => _listenerEnabled = v);
+  }
+
+  /// Asks the user to grant notification listener access. Returns whether
+  /// the listener is now enabled (false if user dismissed the dialog or
+  /// returned without enabling).
+  Future<bool> _ensureListenerOrPrompt() async {
+    if (_listenerEnabled) return true;
+    final ok = await _native.isNotificationServiceEnabled();
+    if (ok) {
+      if (mounted) setState(() => _listenerEnabled = true);
+      return true;
+    }
+    if (!mounted) return false;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Text(S.of(ctx).notificationAccessTitle,
+            style: const TextStyle(color: Colors.white)),
+        content: Text(S.of(ctx).notificationAccessMessage,
+            style:
+                const TextStyle(color: Colors.white70, fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(S.of(ctx).actionLater,
+                style: const TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(S.of(ctx).openSettings,
+                style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (go == true) {
+      await _native.openNotificationAccessSettings();
+      // We can't await the user, just refresh next time the screen
+      // becomes visible — for now, optimistically mark dirty so the
+      // banner re-checks.
+      Future.delayed(const Duration(seconds: 1), _refreshListenerState);
+    }
+    return false;
   }
 
   String _displayName(AppConfig app) =>
@@ -51,11 +104,23 @@ class _NotificationSettingsScreenState
     });
   }
 
+  Future<void> _setMode(String pkg, String mode) async {
+    await _ss.setNotifModeForApp(pkg, mode);
+    if (mode == 'batch' || mode == 'off') {
+      // Don't block the UI — fire-and-check.
+      unawaited(_ensureListenerOrPrompt());
+    }
+    if (mounted) setState(() {});
+  }
+
   Future<void> _applyBulkMode(String mode) async {
     if (_selected.isEmpty) return;
     final pkgs = _selected.toList();
     for (final pkg in pkgs) {
       await _ss.setNotifModeForApp(pkg, mode);
+    }
+    if (mode == 'batch' || mode == 'off') {
+      unawaited(_ensureListenerOrPrompt());
     }
     if (!mounted) return;
     setState(() {
@@ -80,6 +145,43 @@ class _NotificationSettingsScreenState
             style: TextStyle(
                 color: selected ? Colors.black : Colors.white54,
                 fontSize: 11)),
+      ),
+    );
+  }
+
+  /// Persistent banner that explains the notification-access requirement.
+  /// Visible when the listener is disabled — without it neither OFF nor
+  /// batch capture can do anything.
+  Widget _accessBanner() {
+    final s = S.of(context);
+    return Material(
+      color: Colors.amber.withOpacity(0.10),
+      child: InkWell(
+        onTap: () async {
+          await _native.openNotificationAccessSettings();
+          Future.delayed(const Duration(seconds: 1), _refreshListenerState);
+        },
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded,
+                  color: Colors.amber, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(s.notificationAccessMessage,
+                    style: const TextStyle(
+                        color: Colors.amber, fontSize: 12)),
+              ),
+              const SizedBox(width: 6),
+              Text(s.openSettings,
+                  style: const TextStyle(
+                      color: Colors.amber,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -198,6 +300,7 @@ class _NotificationSettingsScreenState
               child: CircularProgressIndicator(color: Colors.white))
           : Column(
               children: [
+                if (!_listenerEnabled) _accessBanner(),
                 Expanded(
                   child: ListView.builder(
                     itemCount: _apps.length,
@@ -235,20 +338,13 @@ class _NotificationSettingsScreenState
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   _modeChip(s.notificationModeAllow,
-                                      mode == 'allow', () async {
-                                    await _ss.setNotifModeForApp(pkg, 'allow');
-                                    setState(() {});
-                                  }),
+                                      mode == 'allow',
+                                      () => _setMode(pkg, 'allow')),
                                   _modeChip(s.notificationModeBatch,
-                                      mode == 'batch', () async {
-                                    await _ss.setNotifModeForApp(pkg, 'batch');
-                                    setState(() {});
-                                  }),
+                                      mode == 'batch',
+                                      () => _setMode(pkg, 'batch')),
                                   _modeChip(s.actionOff, mode == 'off',
-                                      () async {
-                                    await _ss.setNotifModeForApp(pkg, 'off');
-                                    setState(() {});
-                                  }),
+                                      () => _setMode(pkg, 'off')),
                                 ],
                               ),
                       );
