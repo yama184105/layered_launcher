@@ -646,5 +646,13 @@
   "blockedHistoryEmpty": "No blocked notifications",
   "blockedHistoryClear": "Clear history",
   "blockedHistoryClearConfirm": "Delete all blocked history?",
-  "blockedHistoryCount": "{count} item(s)"
+  "blockedHistoryCount": "{count} item(s)",
+
+  "batchPendingTitle": "Batch queue",
+  "batchPendingEmpty": "No pending notifications",
+  "batchPendingNoGroups": "No batch groups",
+  "batchPendingItems": "{count} item(s)",
+  "batchPendingNextFire": "next {time}",
+  "batchPendingNoFireScheduled": "no next fire",
+  "batchPendingGroupEmpty": "empty"
 }

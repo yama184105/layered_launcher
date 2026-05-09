@@ -35,6 +35,16 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
             setState(() {});
           }),
           _rowDivider,
+          _settingRow(s.batchPendingTitle, '', () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => _BatchPendingScreen(appService: _as),
+              ),
+            );
+            if (mounted) setState(() {});
+          }),
+          _rowDivider,
           _settingRow(s.blockedHistoryTitle, '', () async {
             await Navigator.push(
               context,

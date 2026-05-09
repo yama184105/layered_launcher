@@ -984,5 +984,19 @@
   "blockedHistoryCount": "{count}件",
   "@blockedHistoryCount": {
     "placeholders": { "count": { "type": "int" } }
-  }
+  },
+
+  "batchPendingTitle": "バッチ予定",
+  "batchPendingEmpty": "保留中の通知はありません",
+  "batchPendingNoGroups": "バッチグループがありません",
+  "batchPendingItems": "{count}件",
+  "@batchPendingItems": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "batchPendingNextFire": "次回 {time}",
+  "@batchPendingNextFire": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "batchPendingNoFireScheduled": "次回未定",
+  "batchPendingGroupEmpty": "保留なし"
 }

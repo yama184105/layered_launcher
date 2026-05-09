@@ -812,3 +812,189 @@ class _BlockedHistoryScreenState extends State<_BlockedHistoryScreen> {
     );
   }
 }
+
+// ── Batch Pending Screen ────────────────────────────────────────────────────
+// Shows what's currently queued for each batch group along with the next
+// scheduled delivery time. Useful for verifying that batch capture is
+// actually intercepting the apps the user expects, and for previewing
+// what will be re-posted at the next fire.
+
+class _BatchPendingScreen extends StatefulWidget {
+  final AppService appService;
+  const _BatchPendingScreen({required this.appService});
+  @override
+  State<_BatchPendingScreen> createState() => _BatchPendingScreenState();
+}
+
+class _BatchPendingScreenState extends State<_BatchPendingScreen> {
+  final NativeService _native = NativeService();
+  List<Map<String, dynamic>> _queues = [];
+  Map<String, String> _appLabels = {};
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final qs = await _native.getBatchQueues();
+    final apps = await widget.appService.getAllApps();
+    final labels = <String, String>{};
+    for (final a in apps) {
+      labels[a.packageName] =
+          (a.customName?.isNotEmpty == true) ? a.customName! : a.appName;
+    }
+    if (!mounted) return;
+    setState(() {
+      _queues = qs;
+      _appLabels = labels;
+      _loading = false;
+    });
+  }
+
+  String _fmtNextFire(int? ms, S s) {
+    if (ms == null || ms <= 0) return s.batchPendingNoFireScheduled;
+    final dt = DateTime.fromMillisecondsSinceEpoch(ms);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dtDay = DateTime(dt.year, dt.month, dt.day);
+    final hm =
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    if (dtDay == today) return s.batchPendingNextFire(hm);
+    final tomorrow = today.add(const Duration(days: 1));
+    if (dtDay == tomorrow) return s.batchPendingNextFire('${hm} (+1d)');
+    return s.batchPendingNextFire('${dt.month}/${dt.day} $hm');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: Text(s.batchPendingTitle,
+            style: const TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white70),
+            onPressed: _load,
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.white))
+          : _queues.isEmpty
+              ? Center(
+                  child: Text(s.batchPendingNoGroups,
+                      style: const TextStyle(
+                          color: Colors.white38, fontSize: 13)))
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(
+                    children: [
+                      for (final g in _queues) _groupSection(s, g),
+                    ],
+                  ),
+                ),
+    );
+  }
+
+  Widget _groupSection(S s, Map<String, dynamic> g) {
+    final name = (g['name'] as String?)?.isNotEmpty == true
+        ? g['name'] as String
+        : s.batchGroupNewName;
+    final items = (g['items'] as List?)?.cast<Map<String, dynamic>>() ??
+        const <Map<String, dynamic>>[];
+    final nextFireMs = (g['nextFireMs'] as num?)?.toInt();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          color: Colors.white.withOpacity(0.04),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(name,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500)),
+              ),
+              Text(s.batchPendingItems(items.length),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              const SizedBox(width: 8),
+              Text(_fmtNextFire(nextFireMs, s),
+                  style:
+                      const TextStyle(color: Colors.tealAccent, fontSize: 11)),
+            ],
+          ),
+        ),
+        if (items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+            child: Text(s.batchPendingGroupEmpty,
+                style: const TextStyle(color: Colors.white24, fontSize: 12)),
+          )
+        else
+          for (final it in items.reversed) _itemRow(it),
+        const Divider(color: Colors.white12, height: 1),
+      ],
+    );
+  }
+
+  Widget _itemRow(Map<String, dynamic> it) {
+    final pkg = it['pkg'] as String? ?? '';
+    final title = it['title'] as String? ?? '';
+    final text = it['text'] as String? ?? '';
+    final postedAt = (it['postedAt'] as num?)?.toInt() ?? 0;
+    final label = _appLabels[pkg] ?? pkg;
+    final rel = formatLastUsedRelative(context, postedAt);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(title.isNotEmpty ? title : label,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 13),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ),
+              if (rel != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(rel,
+                      style: const TextStyle(
+                          color: Colors.white38, fontSize: 11)),
+                ),
+            ],
+          ),
+          if (text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(text,
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 12),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(label,
+                style: const TextStyle(color: Colors.white38, fontSize: 11)),
+          ),
+        ],
+      ),
+    );
+  }
+}

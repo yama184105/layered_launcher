@@ -134,6 +134,63 @@ class MainActivity : FlutterActivity() {
                         } else true
                         result.success(ok)
                     }
+                    "getBatchQueues" -> {
+                        // Per-group preview of pending notifications. Returns
+                        // a List<Map> where each entry has:
+                        //   id, name, scheduleType, nextFireMs (nullable),
+                        //   items: List<{pkg, title, text, postedAt}>
+                        val sp = getSharedPreferences(
+                            NotificationService.PREFS_NAME,
+                            Context.MODE_PRIVATE,
+                        )
+                        val groupsRaw = sp.getString(
+                            NotificationService.KEY_BATCH_GROUPS,
+                            null,
+                        )
+                        val out = mutableListOf<Map<String, Any?>>()
+                        if (groupsRaw != null) {
+                            try {
+                                val groups = org.json.JSONArray(groupsRaw)
+                                val now = System.currentTimeMillis()
+                                for (i in 0 until groups.length()) {
+                                    val g = groups.optJSONObject(i) ?: continue
+                                    val gid = g.optString("id")
+                                    val items = mutableListOf<Map<String, Any?>>()
+                                    val savedRaw = sp.getString(
+                                        NotificationService.savedNotifsKeyFor(gid),
+                                        null,
+                                    )
+                                    if (savedRaw != null) {
+                                        try {
+                                            val arr = org.json.JSONArray(savedRaw)
+                                            for (j in 0 until arr.length()) {
+                                                val o = arr.optJSONObject(j) ?: continue
+                                                items.add(
+                                                    mapOf(
+                                                        "pkg" to o.optString("pkg"),
+                                                        "title" to o.optString("title"),
+                                                        "text" to o.optString("text"),
+                                                        "postedAt" to o.optLong("postedAt"),
+                                                    ),
+                                                )
+                                            }
+                                        } catch (_: Exception) {}
+                                    }
+                                    out.add(
+                                        mapOf(
+                                            "id" to gid,
+                                            "name" to g.optString("name"),
+                                            "scheduleType" to g.optString("scheduleType"),
+                                            "nextFireMs" to BatchAlarms
+                                                .computeNextFireTimeMs(g, now),
+                                            "items" to items,
+                                        ),
+                                    )
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        result.success(out)
+                    }
                     "getBlockedHistory" -> {
                         // Return the OFF-blocked history as List<Map>
                         // (newest entry last, matching insertion order). The

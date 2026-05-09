@@ -126,6 +126,25 @@ class NativeService {
     } catch (_) {}
   }
 
+  /// Returns one entry per batch group with its pending captured items
+  /// (queued for delivery at the group's next fire time). Each entry:
+  /// `{id, name, scheduleType, nextFireMs, items: [{pkg, title, text, postedAt}]}`.
+  Future<List<Map<String, dynamic>>> getBatchQueues() async {
+    try {
+      final raw = await _channel.invokeMethod('getBatchQueues');
+      if (raw == null) return [];
+      return (raw as List).map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        m['items'] = (m['items'] as List? ?? const [])
+            .map((it) => Map<String, dynamic>.from(it as Map))
+            .toList();
+        return m;
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<bool> isNotificationServiceEnabled() async {
     try {
       final result = await _channel
