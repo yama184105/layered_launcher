@@ -640,3 +640,175 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
   }
 }
 
+
+// ── Blocked History Screen ──────────────────────────────────────────────────
+// Shows the list of notifications that were intercepted and dismissed
+// because their source app is in OFF mode. Newest first. Persistent —
+// survives app restarts (stored in SharedPreferences on the native side,
+// capped to MAX_BLOCKED_HISTORY entries).
+
+class _BlockedHistoryScreen extends StatefulWidget {
+  final AppService appService;
+  const _BlockedHistoryScreen({required this.appService});
+  @override
+  State<_BlockedHistoryScreen> createState() => _BlockedHistoryScreenState();
+}
+
+class _BlockedHistoryScreenState extends State<_BlockedHistoryScreen> {
+  final NativeService _native = NativeService();
+  List<Map<String, dynamic>> _history = [];
+  Map<String, String> _appLabels = {};
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final hist = await _native.getBlockedHistory();
+    final apps = await widget.appService.getAllApps();
+    final labels = <String, String>{};
+    for (final a in apps) {
+      labels[a.packageName] =
+          (a.customName?.isNotEmpty == true) ? a.customName! : a.appName;
+    }
+    if (!mounted) return;
+    setState(() {
+      _history = hist.reversed.toList(); // newest first
+      _appLabels = labels;
+      _loading = false;
+    });
+  }
+
+  Future<void> _clear() async {
+    final s = S.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        content: Text(s.blockedHistoryClearConfirm,
+            style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(s.actionCancel,
+                style: const TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(s.actionDelete,
+                style: const TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await _native.clearBlockedHistory();
+    if (!mounted) return;
+    setState(() => _history = []);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        title: Text(s.blockedHistoryTitle,
+            style: const TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          if (_history.isNotEmpty)
+            TextButton(
+              onPressed: _clear,
+              child: Text(s.blockedHistoryClear,
+                  style: const TextStyle(
+                      color: Colors.redAccent, fontSize: 12)),
+            ),
+        ],
+      ),
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.white))
+          : _history.isEmpty
+              ? Center(
+                  child: Text(s.blockedHistoryEmpty,
+                      style: const TextStyle(
+                          color: Colors.white38, fontSize: 13)))
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.separated(
+                    itemCount: _history.length + 1,
+                    separatorBuilder: (_, __) => const Divider(
+                        height: 1,
+                        color: Colors.white12,
+                        indent: 16,
+                        endIndent: 16),
+                    itemBuilder: (_, i) {
+                      if (i == 0) {
+                        return Padding(
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                          child: Text(
+                              s.blockedHistoryCount(_history.length),
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 12)),
+                        );
+                      }
+                      final e = _history[i - 1];
+                      final pkg = e['pkg'] as String? ?? '';
+                      final label = _appLabels[pkg] ?? pkg;
+                      final title = (e['title'] as String?) ?? '';
+                      final text = (e['text'] as String?) ?? '';
+                      final blockedAt = (e['blockedAt'] as num?)?.toInt() ?? 0;
+                      final rel = formatLastUsedRelative(context, blockedAt);
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title.isNotEmpty ? title : label,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 14),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (rel != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Text(rel,
+                                    style: const TextStyle(
+                                        color: Colors.white38,
+                                        fontSize: 11)),
+                              ),
+                          ],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (text.isNotEmpty)
+                              Text(text,
+                                  style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 2),
+                            Text(label,
+                                style: const TextStyle(
+                                    color: Colors.white38, fontSize: 11)),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+    );
+  }
+}

@@ -975,5 +975,14 @@
       "time": { "type": "String" },
       "appCount": { "type": "int" }
     }
+  },
+
+  "blockedHistoryTitle": "ブロック履歴",
+  "blockedHistoryEmpty": "ブロックされた通知はありません",
+  "blockedHistoryClear": "履歴をクリア",
+  "blockedHistoryClearConfirm": "ブロック履歴を全て削除しますか？",
+  "blockedHistoryCount": "{count}件",
+  "@blockedHistoryCount": {
+    "placeholders": { "count": { "type": "int" } }
   }
 }

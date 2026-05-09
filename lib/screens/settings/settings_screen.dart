@@ -14,7 +14,8 @@ import '../../models/app_config.dart';
 import '../../services/app_service.dart';
 import '../../services/native_service.dart';
 import '../../services/settings_service.dart';
-import '../home/home_screen.dart' show floorLabel, showStrictTimerDialog;
+import '../home/home_screen.dart'
+    show floorLabel, showStrictTimerDialog, formatLastUsedRelative;
 import 'automove_screen.dart';
 
 part 'app_block_screen.dart';

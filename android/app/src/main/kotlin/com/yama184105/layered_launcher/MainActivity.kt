@@ -134,6 +134,45 @@ class MainActivity : FlutterActivity() {
                         } else true
                         result.success(ok)
                     }
+                    "getBlockedHistory" -> {
+                        // Return the OFF-blocked history as List<Map>
+                        // (newest entry last, matching insertion order). The
+                        // Flutter side reverses for display.
+                        val sp = getSharedPreferences(
+                            NotificationService.PREFS_NAME,
+                            Context.MODE_PRIVATE,
+                        )
+                        val raw = sp.getString(
+                            NotificationService.KEY_BLOCKED_HISTORY,
+                            null,
+                        )
+                        val out = mutableListOf<Map<String, Any?>>()
+                        if (raw != null) {
+                            try {
+                                val arr = org.json.JSONArray(raw)
+                                for (i in 0 until arr.length()) {
+                                    val o = arr.optJSONObject(i) ?: continue
+                                    out.add(
+                                        mapOf(
+                                            "pkg" to o.optString("pkg"),
+                                            "title" to o.optString("title"),
+                                            "text" to o.optString("text"),
+                                            "blockedAt" to o.optLong("blockedAt"),
+                                        ),
+                                    )
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        result.success(out)
+                    }
+                    "clearBlockedHistory" -> {
+                        val sp = getSharedPreferences(
+                            NotificationService.PREFS_NAME,
+                            Context.MODE_PRIVATE,
+                        )
+                        sp.edit().remove(NotificationService.KEY_BLOCKED_HISTORY).apply()
+                        result.success(null)
+                    }
                     "openExactAlarmSettings" -> {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)

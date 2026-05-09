@@ -640,5 +640,11 @@
   "batchGroupSummaryInterval": "every {minutes}m · {appCount} app(s)",
   "batchGroupSummaryHourly": "every {hours}h · {appCount} app(s)",
   "batchGroupSummaryFixed": "{count} times · {appCount} app(s)",
-  "batchGroupSummaryDaily": "{time} · {appCount} app(s)"
+  "batchGroupSummaryDaily": "{time} · {appCount} app(s)",
+
+  "blockedHistoryTitle": "Blocked history",
+  "blockedHistoryEmpty": "No blocked notifications",
+  "blockedHistoryClear": "Clear history",
+  "blockedHistoryClearConfirm": "Delete all blocked history?",
+  "blockedHistoryCount": "{count} item(s)"
 }

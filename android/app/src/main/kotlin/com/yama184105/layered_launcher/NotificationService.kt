@@ -13,6 +13,9 @@ class NotificationService : NotificationListenerService() {
         const val PREFS_NAME = "notif_filter"
         const val KEY_OFF_PACKAGES = "off_packages"
         const val KEY_BATCH_GROUPS = "batch_groups"
+        /** History log of OFF-blocked notifications, JSON array of
+         *  { pkg, title, text, blockedAt }. Capped to MAX_BLOCKED_HISTORY. */
+        const val KEY_BLOCKED_HISTORY = "blocked_history"
 
         /** Per-group queue of intercepted notification payloads, persisted
          *  so they survive Flutter being killed and the device rebooting. */
@@ -25,6 +28,9 @@ class NotificationService : NotificationListenerService() {
         /** Cap per-group queue length to keep SharedPreferences from
          *  growing unbounded if the user never opens the app. */
         private const val MAX_SAVED_PER_GROUP = 50
+        /** Cap for the OFF-blocked history shown to the user. Older
+         *  entries are trimmed when the cap is exceeded. */
+        private const val MAX_BLOCKED_HISTORY = 500
     }
 
     private fun isOffPackage(pkg: String): Boolean {
@@ -55,6 +61,31 @@ class NotificationService : NotificationListenerService() {
             null
         } catch (_: Exception) {
             null
+        }
+    }
+
+    /** Append an entry to the OFF-blocked history log. Trims oldest
+     *  entries when the cap is exceeded. */
+    private fun appendBlockedHistory(sbn: StatusBarNotification) {
+        try {
+            val sp = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val existing = sp.getString(KEY_BLOCKED_HISTORY, null)
+            val arr = if (existing != null) JSONArray(existing) else JSONArray()
+            val ex = sbn.notification.extras
+            val title = ex.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
+            val text = ex.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+            val bigText = ex.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+            val effectiveText = if (!bigText.isNullOrEmpty()) bigText else text
+            arr.put(JSONObject().apply {
+                put("pkg", sbn.packageName)
+                put("title", title)
+                put("text", effectiveText)
+                put("blockedAt", System.currentTimeMillis())
+            })
+            while (arr.length() > MAX_BLOCKED_HISTORY) arr.remove(0)
+            sp.edit().putString(KEY_BLOCKED_HISTORY, arr.toString()).apply()
+        } catch (e: Exception) {
+            Log.w(TAG, "appendBlockedHistory failed", e)
         }
     }
 
@@ -98,8 +129,9 @@ class NotificationService : NotificationListenerService() {
             for (sbn in activeNotifications) {
                 if (sbn.isOngoing) continue
                 if (isOffPackage(sbn.packageName)) {
-                    // Carry over enforcement to notifications that already
-                    // existed when our listener connected.
+                    // Notifications that arrived while we were unbound count
+                    // as blocked from the user's perspective — log them.
+                    appendBlockedHistory(sbn)
                     try { cancelNotification(sbn.key) } catch (_: Exception) {}
                     continue
                 }
@@ -118,6 +150,7 @@ class NotificationService : NotificationListenerService() {
         // Off mode: dismiss immediately. The notification flashes very briefly
         // (between post and cancel) but is then gone from the shade.
         if (isOffPackage(sbn.packageName)) {
+            if (!sbn.isOngoing) appendBlockedHistory(sbn)
             try { cancelNotification(sbn.key) } catch (_: Exception) {}
             return
         }

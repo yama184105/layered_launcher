@@ -105,6 +105,27 @@ class NativeService {
     } catch (_) {}
   }
 
+  /// Returns the OFF-blocked notification history captured by
+  /// NotificationService. Each entry: `{pkg, title, text, blockedAt}`
+  /// (epochMs). Order is oldest-first; the UI flips it for display.
+  Future<List<Map<String, dynamic>>> getBlockedHistory() async {
+    try {
+      final raw = await _channel.invokeMethod('getBlockedHistory');
+      if (raw == null) return [];
+      return (raw as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> clearBlockedHistory() async {
+    try {
+      await _channel.invokeMethod('clearBlockedHistory');
+    } catch (_) {}
+  }
+
   Future<bool> isNotificationServiceEnabled() async {
     try {
       final result = await _channel

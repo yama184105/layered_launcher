@@ -34,6 +34,16 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
             );
             setState(() {});
           }),
+          _rowDivider,
+          _settingRow(s.blockedHistoryTitle, '', () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => _BlockedHistoryScreen(appService: _as),
+              ),
+            );
+            if (mounted) setState(() {});
+          }),
         ],
       ),
       _rowDivider,
