@@ -85,24 +85,80 @@ extension GestureSettings on SettingsService {
   }
 
   // ── Notification Mode ──────────────────────────────────────────────────────
+  //
+  // Per-app mode is stored as one of three explicit-override sets (off,
+  // batch, allow) plus a `defaultNotifMode` setting that applies to any
+  // package not in any of those sets. This lets the user say e.g. "block
+  // every new app's notifications by default" without having to enumerate
+  // every package that's ever installed.
+  //
+  // - Default 'allow' (the historical behavior): apps not in batch or off
+  //   sets are permitted; allowApps is unused.
+  // - Default 'off' / 'batch': any unknown app falls into that mode at
+  //   runtime; allowApps is the explicit allowlist.
 
-  /// Returns the notification mode for a package: 'allow' | 'batch' | 'off'
+  /// Default mode for apps without an explicit override.
+  /// Values: 'allow' | 'batch' | 'off'.
+  String get defaultNotifMode =>
+      (_box.get('defaultNotifMode') as String?) ?? 'allow';
+  Future<void> setDefaultNotifMode(String mode) async {
+    await _box.put('defaultNotifMode', mode);
+    // Native layer needs the new policy immediately.
+    await _syncNotifPolicy();
+  }
+
+  /// Explicit allowlist used when the default mode is 'batch' or 'off'.
+  Set<String> get notifAllowApps {
+    final raw = _box.get('notifAllowApps') as List<dynamic>?;
+    if (raw == null) return {};
+    return raw.map((e) => e.toString()).toSet();
+  }
+  Future<void> _setNotifAllowApps(Set<String> v) async {
+    await _box.put('notifAllowApps', v.toList());
+  }
+
+  /// Returns the effective notification mode for [pkg]: 'allow' | 'batch' |
+  /// 'off'. Checks explicit override sets first, then falls back to
+  /// [defaultNotifMode].
   String notifModeForApp(String pkg) {
     if (notifOffApps.contains(pkg)) return 'off';
     if (batchApps.contains(pkg)) return 'batch';
-    return 'allow';
+    if (notifAllowApps.contains(pkg)) return 'allow';
+    return defaultNotifMode;
   }
 
-  /// Sets notification mode for a package, updating notifOffApps and batchApps.
+  /// Pushes the current per-app override sets + default to native so the
+  /// notification listener can resolve any package's mode without consulting
+  /// Flutter.
+  Future<void> _syncNotifPolicy() async {
+    await onNotifPolicyChanged?.call(
+      defaultNotifMode,
+      notifOffApps,
+      notifAllowApps,
+    );
+  }
+
+  /// Sets notification mode for a package, updating notifOffApps, batchApps,
+  /// and notifAllowApps so that the chain in [notifModeForApp] resolves to
+  /// [mode] for [pkg].
   Future<void> setNotifModeForApp(String pkg, String mode) async {
     final off = notifOffApps;
     final batch = batchApps;
+    final allow = notifAllowApps;
     off.remove(pkg);
     batch.remove(pkg);
-    if (mode == 'off') off.add(pkg);
-    if (mode == 'batch') batch.add(pkg);
+    allow.remove(pkg);
+    // Only store an explicit override when the requested mode differs from
+    // the current default — otherwise the override-less fallback reaches
+    // the same answer and we keep the override sets minimal.
+    if (mode != defaultNotifMode) {
+      if (mode == 'off') off.add(pkg);
+      if (mode == 'batch') batch.add(pkg);
+      if (mode == 'allow') allow.add(pkg);
+    }
     await _box.put('notifOffApps', off.toList());
     await setBatchApps(batch);
+    await _setNotifAllowApps(allow);
     // Keep batch groups in sync: auto-add to first group when entering batch
     // mode (so the user immediately gets the Daywise behavior), and remove
     // from every group when leaving batch mode.
@@ -137,9 +193,9 @@ extension GestureSettings on SettingsService {
       // Use the public setter so native sync fires.
       await setBatchGroups(groups);
     }
-    // Push the new OFF list to the native notification listener so it
-    // actually starts dismissing those apps' notifications.
-    await onOffPackagesChanged?.call(off);
+    // Push the full notif policy (default, off, allow) to native so its
+    // listener can resolve any package's effective mode.
+    await _syncNotifPolicy();
     // The user just opted into a feature that needs notification access, so
     // un-defer the prompt so the home screen can ask again on next launch.
     if (mode == 'batch') {

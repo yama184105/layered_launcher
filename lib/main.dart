@@ -28,16 +28,24 @@ void main() async {
   final settingsService = SettingsService();
   await settingsService.init();
 
-  // Wire SettingsService → native notification listener so OFF-mode apps
-  // get their notifications dismissed in real-time, batch groups get armed
-  // via AlarmManager, and both lists stay in sync after every change.
-  // Sync once on startup too in case anything changed since last launch.
+  // Wire SettingsService → native notification listener so the policy
+  // (default mode + OFF set + allow set) and batch groups stay in sync
+  // after every change. Push the current state once on startup too in
+  // case anything changed since last launch.
   final nativeService = NativeService();
-  settingsService.onOffPackagesChanged =
-      (offPackages) => nativeService.setOffPackages(offPackages);
+  settingsService.onNotifPolicyChanged = (def, off, allow) =>
+      nativeService.setNotifPolicy(
+        defaultMode: def,
+        offPackages: off,
+        allowPackages: allow,
+      );
   settingsService.onBatchGroupsChanged =
       (groups) => nativeService.setBatchGroups(groups);
-  await nativeService.setOffPackages(settingsService.notifOffApps);
+  await nativeService.setNotifPolicy(
+    defaultMode: settingsService.defaultNotifMode,
+    offPackages: settingsService.notifOffApps,
+    allowPackages: settingsService.notifAllowApps,
+  );
   await nativeService.setBatchGroups(settingsService.batchGroups);
 
   runApp(LayeredLauncherApp(

@@ -12,6 +12,12 @@ class NotificationService : NotificationListenerService() {
     companion object {
         const val PREFS_NAME = "notif_filter"
         const val KEY_OFF_PACKAGES = "off_packages"
+        /** Explicit allow-overrides used when KEY_DEFAULT_MODE is 'off' or
+         *  'batch'. Apps in this set bypass the default. */
+        const val KEY_ALLOW_PACKAGES = "allow_packages"
+        /** 'allow' | 'batch' | 'off' — default mode for apps without an
+         *  explicit override. Defaults to 'allow' for backward compat. */
+        const val KEY_DEFAULT_MODE = "default_mode"
         const val KEY_BATCH_GROUPS = "batch_groups"
         /** History log of OFF-blocked notifications, JSON array of
          *  { pkg, title, text, blockedAt }. Capped to MAX_BLOCKED_HISTORY. */
@@ -33,15 +39,6 @@ class NotificationService : NotificationListenerService() {
         private const val MAX_BLOCKED_HISTORY = 500
     }
 
-    private fun isOffPackage(pkg: String): Boolean {
-        return try {
-            val sp = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            sp.getStringSet(KEY_OFF_PACKAGES, emptySet())?.contains(pkg) == true
-        } catch (_: Exception) {
-            false
-        }
-    }
-
     /** Returns the id of the first batch group containing [pkg], or null
      *  if [pkg] isn't part of any group. */
     private fun groupIdForPackage(pkg: String): String? {
@@ -61,6 +58,38 @@ class NotificationService : NotificationListenerService() {
             null
         } catch (_: Exception) {
             null
+        }
+    }
+
+    /** Returns the id of the first batch group regardless of contents — the
+     *  fallback target for apps that get caught by a 'batch' default mode. */
+    private fun firstBatchGroupId(): String? {
+        return try {
+            val sp = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val raw = sp.getString(KEY_BATCH_GROUPS, null) ?: return null
+            val arr = JSONArray(raw)
+            if (arr.length() == 0) return null
+            arr.optJSONObject(0)?.optString("id")
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Public for MainActivity's setNotifPolicy sweep. Resolves a package's
+     *  effective mode using the same priority chain as Flutter's
+     *  notifModeForApp:
+     *    explicit OFF > batch group membership > explicit allow > default. */
+    fun resolveModeFor(pkg: String): String {
+        return try {
+            val sp = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val off = sp.getStringSet(KEY_OFF_PACKAGES, emptySet()) ?: emptySet()
+            if (off.contains(pkg)) return "off"
+            if (groupIdForPackage(pkg) != null) return "batch"
+            val allow = sp.getStringSet(KEY_ALLOW_PACKAGES, emptySet()) ?: emptySet()
+            if (allow.contains(pkg)) return "allow"
+            sp.getString(KEY_DEFAULT_MODE, "allow") ?: "allow"
+        } catch (_: Exception) {
+            "allow"
         }
     }
 
@@ -122,48 +151,45 @@ class NotificationService : NotificationListenerService() {
         }
     }
 
+    /** Apply the resolved mode for [sbn]. Single source of policy logic
+     *  used by both onListenerConnected (snapshot replay) and
+     *  onNotificationPosted (live event). */
+    private fun handleSbn(sbn: StatusBarNotification) {
+        if (sbn.isOngoing) return
+        val pkg = sbn.packageName
+        val mode = resolveModeFor(pkg)
+        when (mode) {
+            "off" -> {
+                appendBlockedHistory(sbn)
+                try { cancelNotification(sbn.key) } catch (_: Exception) {}
+            }
+            "batch" -> {
+                // Pick the explicit group if any, otherwise the first one
+                // (the user-defined fallback target for default-batch).
+                val groupId = groupIdForPackage(pkg) ?: firstBatchGroupId()
+                if (groupId == null) {
+                    // Default 'batch' but no groups exist — degrade to allow
+                    // so we never silently lose a notification.
+                    counts[pkg] = (counts[pkg] ?: 0) + 1
+                    return
+                }
+                saveNotification(groupId, sbn)
+                try { cancelNotification(sbn.key) } catch (_: Exception) {}
+            }
+            else -> counts[pkg] = (counts[pkg] ?: 0) + 1
+        }
+    }
+
     override fun onListenerConnected() {
         instance = this
         counts.clear()
         try {
-            for (sbn in activeNotifications) {
-                if (sbn.isOngoing) continue
-                if (isOffPackage(sbn.packageName)) {
-                    // Notifications that arrived while we were unbound count
-                    // as blocked from the user's perspective — log them.
-                    appendBlockedHistory(sbn)
-                    try { cancelNotification(sbn.key) } catch (_: Exception) {}
-                    continue
-                }
-                val gid = groupIdForPackage(sbn.packageName)
-                if (gid != null) {
-                    saveNotification(gid, sbn)
-                    try { cancelNotification(sbn.key) } catch (_: Exception) {}
-                    continue
-                }
-                counts[sbn.packageName] = (counts[sbn.packageName] ?: 0) + 1
-            }
+            for (sbn in activeNotifications) handleSbn(sbn)
         } catch (_: Exception) {}
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        // Off mode: dismiss immediately. The notification flashes very briefly
-        // (between post and cancel) but is then gone from the shade.
-        if (isOffPackage(sbn.packageName)) {
-            if (!sbn.isOngoing) appendBlockedHistory(sbn)
-            try { cancelNotification(sbn.key) } catch (_: Exception) {}
-            return
-        }
-        // Daywise-style batch capture: if this app belongs to a batch group,
-        // save its content for replay at the group's scheduled time and
-        // dismiss the live notification so the user isn't interrupted now.
-        val groupId = groupIdForPackage(sbn.packageName)
-        if (groupId != null && !sbn.isOngoing) {
-            saveNotification(groupId, sbn)
-            try { cancelNotification(sbn.key) } catch (_: Exception) {}
-            return
-        }
-        if (!sbn.isOngoing) counts[sbn.packageName] = (counts[sbn.packageName] ?: 0) + 1
+        handleSbn(sbn)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {

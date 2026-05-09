@@ -422,6 +422,8 @@
   "batchSummary": "Batch {label}",
   "notificationSection": "Notifications",
   "notificationLimit": "Notification limits",
+  "defaultNotifModeLabel": "Default",
+  "defaultNotifModeHint": "Applied to apps with no per-app override",
   "appBlock": "App block",
 
   "mindfulDelayEnable": "Enable mindful delay",

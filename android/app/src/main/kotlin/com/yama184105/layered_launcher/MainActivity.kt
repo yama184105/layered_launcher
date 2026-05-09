@@ -54,28 +54,38 @@ class MainActivity : FlutterActivity() {
                     "getNotificationCounts" -> {
                         result.success(NotificationService.counts.toMap())
                     }
-                    "setOffPackages" -> {
-                        // Persist the list of OFF-mode packages where
-                        // NotificationService can read it on each posted
-                        // notification. Stored in SharedPreferences so it
-                        // survives even if the Flutter engine is killed.
-                        val pkgs = (call.arguments as? List<*>)
-                            ?.filterIsInstance<String>()
-                            ?.toSet()
-                            ?: emptySet()
+                    "setNotifPolicy" -> {
+                        // Persist the full notification policy: default mode
+                        // ('allow'/'batch'/'off') applied to apps without an
+                        // explicit override, the explicit OFF set, and the
+                        // explicit allow set. NotificationService consults
+                        // these on every posted notification — stored in
+                        // SharedPreferences so it survives Flutter dying.
+                        val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+                        val defaultMode = (args["defaultMode"] as? String) ?: "allow"
+                        val offPkgs = (args["offPackages"] as? List<*>)
+                            ?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                        val allowPkgs = (args["allowPackages"] as? List<*>)
+                            ?.filterIsInstance<String>()?.toSet() ?: emptySet()
                         val sp = getSharedPreferences(
                             NotificationService.PREFS_NAME,
                             Context.MODE_PRIVATE,
                         )
                         sp.edit()
-                            .putStringSet(NotificationService.KEY_OFF_PACKAGES, pkgs)
+                            .putString(NotificationService.KEY_DEFAULT_MODE, defaultMode)
+                            .putStringSet(NotificationService.KEY_OFF_PACKAGES, offPkgs)
+                            .putStringSet(NotificationService.KEY_ALLOW_PACKAGES, allowPkgs)
                             .apply()
-                        // Sweep currently-active notifications too, so apps
-                        // moved into OFF after they posted get cleared.
+                        // Sweep currently-active notifications: anything that
+                        // resolves to OFF under the new policy gets cleared
+                        // immediately so apps moved into OFF after they
+                        // posted don't linger.
                         try {
                             val service = NotificationService.instance
                             service?.activeNotifications?.forEach { sbn ->
-                                if (pkgs.contains(sbn.packageName)) {
+                                if (sbn.isOngoing) return@forEach
+                                val effectiveMode = service.resolveModeFor(sbn.packageName)
+                                if (effectiveMode == "off") {
                                     try { service.cancelNotification(sbn.key) } catch (_: Exception) {}
                                 }
                             }

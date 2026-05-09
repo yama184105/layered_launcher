@@ -186,6 +186,66 @@ class _NotificationSettingsScreenState
     );
   }
 
+  /// Header strip that lets the user pick the default mode applied to apps
+  /// without an explicit per-app override.
+  Widget _defaultModeHeader() {
+    final s = S.of(context);
+    final current = _ss.defaultNotifMode;
+    Widget chip(String value, String label, Color color) {
+      final selected = current == value;
+      return GestureDetector(
+        onTap: () async {
+          await _ss.setDefaultNotifMode(value);
+          if (mounted) setState(() {});
+        },
+        child: Container(
+          margin: const EdgeInsets.only(left: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: selected ? color.withOpacity(0.20) : Colors.transparent,
+            border: Border.all(
+                color: selected ? color : Colors.white24),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  color: selected ? color : Colors.white54,
+                  fontSize: 11)),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.white12),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(s.defaultNotifModeLabel,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(s.defaultNotifModeHint,
+                    style: const TextStyle(
+                        color: Colors.white38, fontSize: 11)),
+              ],
+            ),
+          ),
+          chip('allow', s.notificationModeAllow, Colors.white),
+          chip('batch', s.notificationModeBatch, Colors.tealAccent),
+          chip('off', s.actionOff, Colors.redAccent),
+        ],
+      ),
+    );
+  }
+
   Widget _bulkActionBar() {
     final s = S.of(context);
     final allSelected = _selected.length == _apps.length;
@@ -301,6 +361,7 @@ class _NotificationSettingsScreenState
           : Column(
               children: [
                 if (!_listenerEnabled) _accessBanner(),
+                _defaultModeHeader(),
                 Expanded(
                   child: ListView.builder(
                     itemCount: _apps.length,

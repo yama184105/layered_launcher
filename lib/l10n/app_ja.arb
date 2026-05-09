@@ -594,6 +594,8 @@
   },
   "notificationSection": "通知",
   "notificationLimit": "通知制限",
+  "defaultNotifModeLabel": "デフォルト",
+  "defaultNotifModeHint": "個別設定がないアプリに適用されます",
   "appBlock": "アプリブロック",
 
   "mindfulDelayEnable": "マインドフルディレイを有効にする",

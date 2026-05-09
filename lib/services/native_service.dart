@@ -67,12 +67,22 @@ class NativeService {
     }
   }
 
-  /// Push the current set of OFF-mode packages to the native side so that
-  /// NotificationService can dismiss new notifications from those apps and
-  /// our SharedPreferences-backed list survives Flutter being killed.
-  Future<void> setOffPackages(Set<String> packages) async {
+  /// Push the full notification policy to native: which mode applies by
+  /// default to apps without an explicit override, the explicit OFF set,
+  /// and the explicit allow set. All three are persisted on the kotlin
+  /// side so NotificationService can resolve any package's effective mode
+  /// even when Flutter is dead.
+  Future<void> setNotifPolicy({
+    required String defaultMode,
+    required Set<String> offPackages,
+    required Set<String> allowPackages,
+  }) async {
     try {
-      await _channel.invokeMethod('setOffPackages', packages.toList());
+      await _channel.invokeMethod('setNotifPolicy', {
+        'defaultMode': defaultMode,
+        'offPackages': offPackages.toList(),
+        'allowPackages': allowPackages.toList(),
+      });
     } catch (_) {}
   }
 

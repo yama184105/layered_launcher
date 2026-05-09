@@ -17,11 +17,15 @@ class SettingsService {
   static const String unsplashAccessKey = 'YOUR_UNSPLASH_ACCESS_KEY';
   late Box<dynamic> _box;
 
-  /// Hook invoked whenever the OFF-mode package set changes. main.dart wires
-  /// this to NativeService.setOffPackages so the kotlin notification listener
-  /// can stay in sync without SettingsService having to depend on
-  /// NativeService directly.
-  Future<void> Function(Set<String> offPackages)? onOffPackagesChanged;
+  /// Hook invoked whenever the per-app notification policy changes
+  /// (default mode, OFF set, or explicit-allow set). main.dart wires this
+  /// to NativeService.setNotifPolicy so the kotlin notification listener
+  /// can resolve any package's effective mode without consulting Flutter.
+  Future<void> Function(
+    String defaultMode,
+    Set<String> offPackages,
+    Set<String> allowPackages,
+  )? onNotifPolicyChanged;
 
   /// Hook invoked whenever the batch-groups config changes. main.dart wires
   /// this to NativeService.setBatchGroups so AlarmManager schedules and the
