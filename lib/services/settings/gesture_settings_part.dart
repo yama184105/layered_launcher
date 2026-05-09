@@ -103,6 +103,40 @@ extension GestureSettings on SettingsService {
     if (mode == 'batch') batch.add(pkg);
     await _box.put('notifOffApps', off.toList());
     await setBatchApps(batch);
+    // Keep batch groups in sync: auto-add to first group when entering batch
+    // mode (so the user immediately gets the Daywise behavior), and remove
+    // from every group when leaving batch mode.
+    final groups = batchGroups;
+    var groupsChanged = false;
+    if (mode == 'batch') {
+      final inAnyGroup = groups.any((g) {
+        final apps = ((g['apps'] as List?) ?? const []).map((e) => e.toString());
+        return apps.contains(pkg);
+      });
+      if (!inAnyGroup && groups.isNotEmpty) {
+        final firstApps = ((groups[0]['apps'] as List?) ?? const [])
+            .map((e) => e.toString())
+            .toList();
+        firstApps.add(pkg);
+        groups[0]['apps'] = firstApps;
+        groupsChanged = true;
+      }
+    } else {
+      // Removing from batch (mode 'allow' or 'off'): scrub from all groups.
+      for (final g in groups) {
+        final apps = ((g['apps'] as List?) ?? const [])
+            .map((e) => e.toString())
+            .toList();
+        if (apps.remove(pkg)) {
+          g['apps'] = apps;
+          groupsChanged = true;
+        }
+      }
+    }
+    if (groupsChanged) {
+      // Use the public setter so native sync fires.
+      await setBatchGroups(groups);
+    }
     // Push the new OFF list to the native notification listener so it
     // actually starts dismissing those apps' notifications.
     await onOffPackagesChanged?.call(off);
@@ -148,15 +182,20 @@ extension GestureSettings on SettingsService {
         .toList();
   }
 
-  Future<void> setBatchGroups(List<Map<String, dynamic>> groups) =>
-      _box.put('batchGroups', groups);
+  Future<void> setBatchGroups(List<Map<String, dynamic>> groups) async {
+    await _box.put('batchGroups', groups);
+    await onBatchGroupsChanged?.call(groups);
+  }
 
   Future<void> updateBatchGroupLastFire(String id, DateTime when) async {
     final groups = batchGroups;
     final i = groups.indexWhere((g) => g['id'] == id);
     if (i < 0) return;
     groups[i]['lastFireAt'] = when.millisecondsSinceEpoch;
-    await setBatchGroups(groups);
+    // Bypass the native-sync callback for this internal book-keeping write —
+    // it doesn't change the schedule, only the last-fire bookkeeping that
+    // native already tracks via SharedPreferences.
+    await _box.put('batchGroups', groups);
   }
 
   /// Initial migration from the legacy single-interval batch model. Runs once.

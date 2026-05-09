@@ -76,6 +76,35 @@ class NativeService {
     } catch (_) {}
   }
 
+  /// Push the full batch-group config to the native side. The native code
+  /// persists it (so NotificationService can intercept matching apps even
+  /// when Flutter is dead) and arms an AlarmManager wake-up for each
+  /// group's next delivery time so scheduled batches keep firing during
+  /// Doze and after device reboots.
+  Future<void> setBatchGroups(List<Map<String, dynamic>> groups) async {
+    try {
+      await _channel.invokeMethod('setBatchGroups', groups);
+    } catch (_) {}
+  }
+
+  /// Android 12+: returns whether SCHEDULE_EXACT_ALARM is granted. False
+  /// means batch alarms fall back to the inexact "while idle" path
+  /// (~9-15 min window during Doze).
+  Future<bool> canScheduleExactAlarms() async {
+    try {
+      final v = await _channel.invokeMethod<bool>('canScheduleExactAlarms');
+      return v ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> openExactAlarmSettings() async {
+    try {
+      await _channel.invokeMethod('openExactAlarmSettings');
+    } catch (_) {}
+  }
+
   Future<bool> isNotificationServiceEnabled() async {
     try {
       final result = await _channel

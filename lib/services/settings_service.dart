@@ -23,6 +23,11 @@ class SettingsService {
   /// NativeService directly.
   Future<void> Function(Set<String> offPackages)? onOffPackagesChanged;
 
+  /// Hook invoked whenever the batch-groups config changes. main.dart wires
+  /// this to NativeService.setBatchGroups so AlarmManager schedules and the
+  /// notification listener's app-to-group lookup stay in sync.
+  Future<void> Function(List<Map<String, dynamic>> groups)? onBatchGroupsChanged;
+
   Future<void> init() async {
     _box = await Hive.openBox<dynamic>(_boxName);
     await migrateBatchGroupsIfNeeded();

@@ -93,6 +93,54 @@ class MainActivity : FlutterActivity() {
                         startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                         result.success(null)
                     }
+                    "setBatchGroups" -> {
+                        // Persist the full list of batch groups (list of maps,
+                        // shape defined in lib/services/settings/gesture_settings_part.dart)
+                        // and arm an AlarmManager wake-up for the next fire of
+                        // each group. Replaces any previously scheduled alarms
+                        // so renames/edits don't leave orphans.
+                        val groupsArg = call.arguments as? List<*>
+                        val sp = getSharedPreferences(
+                            NotificationService.PREFS_NAME,
+                            Context.MODE_PRIVATE,
+                        )
+                        // Cancel previously scheduled alarms.
+                        sp.getString(NotificationService.KEY_BATCH_GROUPS, null)?.let { prevRaw ->
+                            try {
+                                val prev = org.json.JSONArray(prevRaw)
+                                for (i in 0 until prev.length()) {
+                                    val gid = prev.optJSONObject(i)?.optString("id") ?: continue
+                                    BatchAlarms.cancelGroup(this, gid)
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        // Persist the new groups (json stringification).
+                        val arr = org.json.JSONArray()
+                        groupsArg?.forEach { item ->
+                            val m = item as? Map<*, *> ?: return@forEach
+                            arr.put(org.json.JSONObject(m))
+                        }
+                        sp.edit().putString(NotificationService.KEY_BATCH_GROUPS, arr.toString()).apply()
+                        // Arm alarms for the new set.
+                        for (i in 0 until arr.length()) {
+                            BatchAlarms.scheduleGroup(this, arr.getJSONObject(i))
+                        }
+                        result.success(null)
+                    }
+                    "canScheduleExactAlarms" -> {
+                        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            val am = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+                            am.canScheduleExactAlarms()
+                        } else true
+                        result.success(ok)
+                    }
+                    "openExactAlarmSettings" -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                .setData(Uri.parse("package:$packageName")))
+                        }
+                        result.success(null)
+                    }
                     "lockScreen" -> {
                         val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
                         val admin = ComponentName(this, DeviceAdminReceiver::class.java)
