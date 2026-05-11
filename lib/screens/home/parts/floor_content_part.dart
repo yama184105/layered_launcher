@@ -23,24 +23,24 @@ extension FloorContentMethods on _HomeScreenState {
           context: context,
           builder: (ctx) => AlertDialog(
             backgroundColor: const Color(0xFF1A1A1A),
-            title: const Text('デバイス管理者権限が必要',
-                style: TextStyle(color: Colors.white)),
-            content: const Text(
-              '画面オフ機能を使用するには、デバイス管理者権限が必要です。設定を開きますか？',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+            title: Text(S.of(ctx).deviceAdminRequired,
+                style: const TextStyle(color: Colors.white)),
+            content: Text(
+              S.of(ctx).screenOffNeedsAdmin,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('キャンセル',
-                      style: TextStyle(color: Colors.white54))),
+                  child: Text(S.of(ctx).actionCancel,
+                      style: const TextStyle(color: Colors.white54))),
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
                   _native.openDeviceAdminSettings();
                 },
-                child: const Text('設定を開く',
-                    style: TextStyle(color: Colors.white)),
+                child: Text(S.of(ctx).openSettings,
+                    style: const TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -144,10 +144,10 @@ extension FloorContentMethods on _HomeScreenState {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('本当に開きますか？',
-                      style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text(S.of(ctx).confirmOpenApp,
+                      style: const TextStyle(color: Colors.white70, fontSize: 14)),
                   const SizedBox(height: 12),
-                  Text('$remaining秒後に起動',
+                  Text(S.of(ctx).launchInSeconds(remaining),
                       style: const TextStyle(
                           color: Colors.amber,
                           fontSize: 24,
@@ -162,8 +162,8 @@ extension FloorContentMethods on _HomeScreenState {
                     _mindfulTimer = null;
                     if (ctx.mounted) Navigator.of(ctx).pop();
                   },
-                  child: const Text('キャンセル',
-                      style: TextStyle(color: Colors.redAccent)),
+                  child: Text(S.of(ctx).actionCancel,
+                      style: const TextStyle(color: Colors.redAccent)),
                 ),
               ],
             ),
@@ -347,6 +347,15 @@ extension FloorContentMethods on _HomeScreenState {
         // Page 1: 1F + stair nav
         _buildFloorBackground(1, child: Builder(builder: (ctx) {
           final statusBarH = MediaQuery.of(ctx).padding.top;
+          // Eagerly walk _buildFloorWidgets so sectionKeys is populated
+          // before the index sidebar reads it (Row's children are
+          // constructed synchronously, so we can't rely on build order).
+          Map<String, GlobalKey>? sectionKeys;
+          List<Widget>? prebuiltItems;
+          if (_searchQuery.isEmpty) {
+            sectionKeys = <String, GlobalKey>{};
+            prebuiltItems = _buildFloorWidgets(1, apps1F, sectionKeys);
+          }
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -372,7 +381,9 @@ extension FloorContentMethods on _HomeScreenState {
                     Expanded(
                       child: _searchQuery.isNotEmpty
                           ? _buildSearchResults()
-                          : _floorContent(1, apps1F),
+                          : _floorContent(1, apps1F,
+                              externalSectionKeys: sectionKeys,
+                              prebuiltListItems: prebuiltItems),
                     ),
                   ],
                 ),
@@ -387,10 +398,26 @@ extension FloorContentMethods on _HomeScreenState {
                   return Opacity(opacity: opacity, child: child!);
                 },
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(4, statusBarH + 16, 8, 16),
+                  padding: EdgeInsets.fromLTRB(4, statusBarH + 16, 4, 16),
                   child: _buildStairNav(),
                 ),
               ),
+              if (sectionKeys != null)
+                AnimatedBuilder(
+                  animation: _pageCtrl,
+                  builder: (ctx2, child) {
+                    double opacity = 0.0;
+                    if (_pageCtrl.hasClients && _pageCtrl.page != null) {
+                      opacity = _pageCtrl.page!.clamp(0.0, 1.0);
+                    }
+                    return Opacity(opacity: opacity, child: child!);
+                  },
+                  child: _buildIndexSidebar(apps1F, sectionKeys),
+                )
+              else if (widget.settingsService.showAlphabetIndex)
+                // Reserve the column even during search (when we skip building
+                // the sidebar) so the stair-nav doesn't slide right.
+                const SizedBox(width: 32),
             ],
           );
         })),
@@ -485,6 +512,7 @@ extension FloorContentMethods on _HomeScreenState {
               if (ss.lastUsedDisplayApps.contains(app.packageName))
                 Builder(builder: (_) {
                   final label = formatLastUsedRelative(
+                      context,
                       _lastUsedMap[app.packageName],
                       now: _now);
                   if (label == null) return const SizedBox.shrink();
@@ -554,7 +582,7 @@ extension FloorContentMethods on _HomeScreenState {
                   style: TextStyle(
                       color: textColor.withOpacity(0.70), fontSize: ss.fontSize)),
               const SizedBox(width: 6),
-              Text('(${apps.length}件)',
+              Text(S.of(context).folderItemsCount(apps.length),
                   style: TextStyle(
                       color: textColor.withOpacity(0.38), fontSize: 12)),
               const Spacer(),
@@ -619,6 +647,7 @@ extension FloorContentMethods on _HomeScreenState {
               if (ss.lastUsedDisplayApps.contains(app.packageName))
                 Builder(builder: (_) {
                   final label = formatLastUsedRelative(
+                      context,
                       _lastUsedMap[app.packageName],
                       now: _now);
                   if (label == null) return const SizedBox.shrink();
@@ -691,6 +720,13 @@ extension FloorContentMethods on _HomeScreenState {
         final ka = _sortKey(nameA);
         final kb = _sortKey(nameB);
         if (ka != kb) return ka.compareTo(kb);
+        // Case-insensitive within ASCII so 'iGPSPORT' and 'iPhone' interleave
+        // alphabetically with 'Instagram' / 'Maps' instead of all-uppercase
+        // sorting before all-lowercase.
+        final lowA = nameA.toLowerCase();
+        final lowB = nameB.toLowerCase();
+        final c = lowA.compareTo(lowB);
+        if (c != 0) return c;
         return nameA.compareTo(nameB);
       });
 
@@ -726,7 +762,7 @@ extension FloorContentMethods on _HomeScreenState {
       if (ib == -1) return -1;
       return ia.compareTo(ib);
     });
-    alphFolders.sort();
+    alphFolders.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final bottomOrder = ss.getFixedBottomFolderOrder(floor);
     bottomFolders.sort((a, b) {
       final ia = bottomOrder.indexOf(a);
@@ -748,7 +784,7 @@ extension FloorContentMethods on _HomeScreenState {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text('🆕 最近追加',
+            child: Text(S.of(context).recentlyAddedSection,
                 style: TextStyle(
                     color: _effectiveFloorText(floor).withOpacity(0.54),
                     fontSize: 12)),
@@ -776,7 +812,7 @@ extension FloorContentMethods on _HomeScreenState {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('🚨 緊急アプリ',
+              child: Text(S.of(context).emergencyAppsSection,
                   style: TextStyle(color: emgColor.withOpacity(0.7), fontSize: 12)),
             ),
           ),
@@ -861,7 +897,7 @@ extension FloorContentMethods on _HomeScreenState {
             padding: const EdgeInsets.only(right: 8),
             child: TextButton(
               onPressed: () => setState(() => _reorderingFolderKey = null),
-              child: const Text('完了', style: TextStyle(color: Colors.white)),
+              child: Text(S.of(context).actionDone, style: const TextStyle(color: Colors.white)),
             ),
           ),
         ));
@@ -887,8 +923,8 @@ extension FloorContentMethods on _HomeScreenState {
       final hasFld = fldIdx < alphFolders.length;
       final bool takeApp;
       if (hasApp && hasFld) {
-        takeApp = _displayName(ungrouped[appIdx])
-                .compareTo(alphFolders[fldIdx]) <=
+        takeApp = _displayName(ungrouped[appIdx]).toLowerCase()
+                .compareTo(alphFolders[fldIdx].toLowerCase()) <=
             0;
       } else {
         takeApp = hasApp;
@@ -929,22 +965,35 @@ extension FloorContentMethods on _HomeScreenState {
 
     if (widgets.isEmpty) {
       widgets.add(const SizedBox(height: 32));
-      widgets.add(const Center(
-        child: Text('この階にアプリがありません',
-            style: TextStyle(color: Colors.white24, fontSize: 14)),
+      widgets.add(Center(
+        child: Text(S.of(context).noAppsOnFloor,
+            style: const TextStyle(color: Colors.white24, fontSize: 14)),
       ));
     }
     return widgets;
   }
 
-  Widget _floorContent(int floor, List<AppConfig> apps) {
+  Widget _floorContent(int floor, List<AppConfig> apps,
+      {Map<String, GlobalKey>? externalSectionKeys,
+      List<Widget>? prebuiltListItems}) {
     if (floor == _HomeScreenState._homeFloor) return _buildHomeContent();
 
     final isCurrent = floor == _currentFloor;
     final isCurrentAndStill = isCurrent && !_isAnimating;
 
-    final sectionKeys = isCurrentAndStill ? <String, GlobalKey>{} : null;
-    final listItems = _buildFloorWidgets(floor, apps, sectionKeys);
+    // Use the external map (passed in by _buildFloorWithNavInner so the outer
+    // index sidebar can resolve the same keys). Fall back to a fresh local
+    // map only if the caller didn't supply one and we're the current static
+    // floor — but in that case nobody will read the keys, so it's effectively
+    // a throwaway.
+    final sectionKeys = externalSectionKeys ??
+        (isCurrentAndStill ? <String, GlobalKey>{} : null);
+    // If the caller already walked _buildFloorWidgets eagerly (so sectionKeys
+    // is populated before the index sidebar reads it), reuse those items —
+    // we can't call _buildFloorWidgets twice on the same map because it
+    // creates duplicate GlobalKeys.
+    final listItems = prebuiltListItems ??
+        _buildFloorWidgets(floor, apps, sectionKeys);
 
     final navBarH = MediaQuery.of(context).viewPadding.bottom;
     final selectionBarH = _selectionMode ? 100.0 : 0.0;
@@ -959,24 +1008,18 @@ extension FloorContentMethods on _HomeScreenState {
     //
     // Attach _scrollController to the current floor's listView even *during*
     // animation, so the controller's position survives the tree change too.
-    final listView = ListView(
+    return ListView(
       key: PageStorageKey<int>(floor),
       controller: isCurrent ? _scrollController : null,
       padding: EdgeInsets.only(bottom: navBarH + 16 + selectionBarH),
       physics: const ClampingScrollPhysics(),
+      // Keep many off-screen items in the element tree so the alphabet
+      // index sidebar's Scrollable.ensureVisible target contexts resolve
+      // even when the section is far from the current viewport.
+      cacheExtent: 99999,
       children: [
         for (final item in listItems)
           Align(alignment: Alignment.centerLeft, child: item),
-      ],
-    );
-
-    if (!isCurrentAndStill) return listView;
-
-    // Add alphabet/あいうえお index sidebar for current non-animating floor
-    return Row(
-      children: [
-        Expanded(child: listView),
-        _buildIndexSidebar(apps, sectionKeys!),
       ],
     );
   }
@@ -985,7 +1028,9 @@ extension FloorContentMethods on _HomeScreenState {
 
   // ── content animation (unified with background movement) ────────────────────
 
-  Widget _buildAnimatedContent(double floorH) {
+  Widget _buildAnimatedContent(double floorH,
+      {Map<String, GlobalKey>? externalSectionKeys,
+      List<Widget>? prebuiltListItems}) {
     // For slide/stair: content slides in sync with the background (unified box).
     // For fade/zoom: content crossfades at fixed position.
     // For horizontal slide (HOME ↔ 1F): content slides horizontally.
@@ -1004,7 +1049,9 @@ extension FloorContentMethods on _HomeScreenState {
           final p = animation.value;
 
           if (!_isAnimating) {
-            return _floorContent(_currentFloor, currentApps);
+            return _floorContent(_currentFloor, currentApps,
+                externalSectionKeys: externalSectionKeys,
+                prebuiltListItems: prebuiltListItems);
           }
 
           // Horizontal slide (HOME ↔ 1F): slide content left/right
@@ -1083,6 +1130,25 @@ extension FloorContentMethods on _HomeScreenState {
     // cover the entire display including status bar and nav bar areas.
     final fullH = MediaQuery.of(context).size.height;
 
+    // For the current static floor we lift sectionKeys up to this level so
+    // we can put the alphabet index sidebar at the very right edge of the
+    // screen (easier to thumb-reach), with the floor-move buttons just inside
+    // it. We must walk _buildFloorWidgets EAGERLY here (not via the build
+    // closures inside the Row) — Row evaluates its children list synchronously
+    // at construction time, so by the time _buildIndexSidebar would read
+    // sectionKeys it would still be empty if we relied on build order.
+    Map<String, GlobalKey>? sectionKeys;
+    List<AppConfig>? currentApps;
+    List<Widget>? prebuiltItems;
+    if (!_isAnimating &&
+        _searchQuery.isEmpty &&
+        _currentFloor != _HomeScreenState._homeFloor) {
+      sectionKeys = <String, GlobalKey>{};
+      currentApps = _appsForFloor(_currentFloor);
+      prebuiltItems =
+          _buildFloorWidgets(_currentFloor, currentApps, sectionKeys);
+    }
+
     // UI row (transparent — backgrounds handled at this level)
     // Content crossfades at fixed position; backgrounds slide with fullH.
     final uiContent = (_searchQuery.isNotEmpty && !_isAnimating)
@@ -1105,14 +1171,32 @@ extension FloorContentMethods on _HomeScreenState {
                     // Keep search bar in layout during animation (invisible but
                     // maintaining size) so the app list position doesn't shift.
                     Opacity(opacity: _isAnimating ? 0.0 : 1.0, child: _searchBar()),
-                    Expanded(child: _buildAnimatedContent(fullH)),
+                    Expanded(
+                      child: _buildAnimatedContent(
+                        fullH,
+                        externalSectionKeys: sectionKeys,
+                        prebuiltListItems: prebuiltItems,
+                      ),
+                    ),
                   ],
                 ),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(4, statusBarH + 16, 8, 16),
+                padding: EdgeInsets.fromLTRB(4, statusBarH + 16, 4, 16),
                 child: _buildStairNav(),
               ),
+              // Right-edge alphabet index. Build order in this Row guarantees
+              // the Expanded child (and its _buildFloorWidgets walk) finishes
+              // populating `sectionKeys` before we read it here.
+              //
+              // During animation / search we don't have a populated
+              // sectionKeys to read from, but we still reserve the same 32px
+              // column so the stair-nav buttons don't slide right into the
+              // index's slot mid-transition.
+              if (sectionKeys != null && currentApps != null)
+                _buildIndexSidebar(currentApps, sectionKeys)
+              else if (widget.settingsService.showAlphabetIndex)
+                const SizedBox(width: 32),
             ],
           );
 
@@ -1234,7 +1318,7 @@ extension FloorContentMethods on _HomeScreenState {
                       color: _floorText(_currentFloor),
                       fontSize: 13,
                       fontWeight: FontWeight.bold)),
-              Text('現在',
+              Text(S.of(context).currentFloor,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       color: _floorText(_currentFloor).withOpacity(0.54),
@@ -1299,25 +1383,25 @@ extension FloorContentMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('緊急アプリを追加', style: TextStyle(color: Colors.redAccent, fontSize: 14)),
+        title: Text(S.of(ctx).emergencyAddTitle, style: const TextStyle(color: Colors.redAccent, fontSize: 14)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.all_inclusive, color: Colors.redAccent, size: 20),
-              title: const Text('全アプリを1Fに追加', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyAddAllOn1F, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'all')),
             ListTile(dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.star, color: Colors.orangeAccent, size: 20),
-              title: const Text('登録済み緊急アプリから追加', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyAddFromRegistered, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'registered')),
             ListTile(dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.apps, color: Colors.white54, size: 20),
-              title: const Text('アプリ一覧から選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyAppListPick, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'pick')),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54)))],
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)))],
       ),
     );
     if (choice == null || !mounted) return;
@@ -1329,7 +1413,7 @@ extension FloorContentMethods on _HomeScreenState {
       final registered = ss.getEmergencyApps();
       if (registered.isEmpty) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('緊急アプリが登録されていません')));
+            SnackBar(content: Text(S.of(context).noEmergencyAppsRegistered)));
         return;
       }
       final candidates = _allApps
@@ -1338,20 +1422,20 @@ extension FloorContentMethods on _HomeScreenState {
         ..sort((a, b) =>
             a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
       final picked =
-          await _showAppCheckboxDialog('登録済み緊急アプリから追加', candidates);
+          await _showAppCheckboxDialog(S.of(context).emergencyAddFromRegistered, candidates);
       if (picked == null || picked.isEmpty || !mounted) return;
       newPkgs = picked;
     } else if (choice == 'pick') {
       final apps = List<AppConfig>.from(_allApps)
         ..sort((a, b) =>
             a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
-      final picked = await _showAppCheckboxDialog('アプリを選択', apps);
+      final picked = await _showAppCheckboxDialog(S.of(context).selectApp, apps);
       if (picked == null || picked.isEmpty || !mounted) return;
       newPkgs = picked;
     }
     if (newPkgs == null || newPkgs.isEmpty || !mounted) return;
 
-    final block = ss.checkEmergencyLimit(choice, newPkgs.toList());
+    final block = ss.checkEmergencyLimit(S.of(context), choice, newPkgs.toList());
     if (block != null) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -1462,13 +1546,13 @@ extension FloorContentMethods on _HomeScreenState {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('キャンセル',
-                    style: TextStyle(color: Colors.white54))),
+                child: Text(S.of(ctx).actionCancel,
+                    style: const TextStyle(color: Colors.white54))),
             TextButton(
                 onPressed: () =>
                     Navigator.pop(ctx, Set<String>.from(selected)),
-                child: const Text('決定',
-                    style: TextStyle(color: Colors.white))),
+                child: Text(S.of(ctx).actionDecide,
+                    style: const TextStyle(color: Colors.white))),
           ],
         ),
       ),
@@ -1480,7 +1564,7 @@ extension FloorContentMethods on _HomeScreenState {
     if (!ss.canActivateEmergency()) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ss.emergencyLimitBlockMessage)));
+          SnackBar(content: Text(ss.emergencyLimitBlockMessage(S.of(context)))));
       }
       return;
     }
@@ -1488,35 +1572,35 @@ extension FloorContentMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('緊急使用', style: TextStyle(color: Colors.redAccent, fontSize: 15)),
+        title: Text(S.of(ctx).emergencyUseTitle, style: const TextStyle(color: Colors.redAccent, fontSize: 15)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('対象アプリを1Fにも一時表示します。元のフロアからは消えません。',
-                style: TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(S.of(ctx).emergencyUseDescription,
+                style: const TextStyle(color: Colors.white54, fontSize: 11)),
             const SizedBox(height: 12),
             ListTile(
               dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.all_inclusive, color: Colors.redAccent, size: 20),
-              title: const Text('全アプリを1Fに表示', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyShowAllOn1F, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'all'),
             ),
             ListTile(
               dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.star, color: Colors.orangeAccent, size: 20),
-              title: const Text('登録済み緊急アプリから選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyChooseRegistered, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'registered'),
             ),
             ListTile(
               dense: true, contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.apps, color: Colors.white54, size: 20),
-              title: const Text('アプリ一覧から選択', style: TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(S.of(ctx).emergencyAppListPick, style: const TextStyle(color: Colors.white, fontSize: 13)),
               onTap: () => Navigator.pop(ctx, 'pick'),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
         ],
       ),
     );
@@ -1530,7 +1614,7 @@ extension FloorContentMethods on _HomeScreenState {
       if (registered.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('緊急アプリが登録されていません。設定 → アプリ管理 → 緊急アプリ登録から登録してください。')));
+            SnackBar(content: Text(S.of(context).emergencyAppsRegisterHelp)));
         }
         return;
       }
@@ -1542,21 +1626,21 @@ extension FloorContentMethods on _HomeScreenState {
         ..sort((a, b) =>
             a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
       final picked = await _showAppCheckboxDialog(
-          '登録済み緊急アプリから選択', candidates);
+          S.of(context).emergencyChooseRegistered, candidates);
       if (picked == null || picked.isEmpty || !mounted) return;
       targetPkgs = picked;
     } else if (choice == 'pick') {
       final apps = List<AppConfig>.from(_allApps)
         ..sort((a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
       final picked =
-          await _showAppCheckboxDialog('緊急使用するアプリを選択', apps);
+          await _showAppCheckboxDialog(S.of(context).emergencyChooseTargetApps, apps);
       if (picked == null || picked.isEmpty || !mounted) return;
       targetPkgs = picked;
     }
     if (targetPkgs == null || targetPkgs.isEmpty) return;
 
     // Detailed limit check now that we know the chosen apps.
-    final block = ss.checkEmergencyLimit(choice, targetPkgs.toList());
+    final block = ss.checkEmergencyLimit(S.of(context), choice, targetPkgs.toList());
     if (block != null) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -1570,14 +1654,14 @@ extension FloorContentMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('使用時間を選択', style: TextStyle(color: Colors.redAccent, fontSize: 14)),
-        content: const Text('選択した時間だけ1Fにも表示されます。使用記録が残ります。',
-            style: TextStyle(color: Colors.white70, fontSize: 12)),
+        title: Text(S.of(ctx).selectDuration, style: const TextStyle(color: Colors.redAccent, fontSize: 14)),
+        content: Text(S.of(ctx).emergencyDurationDescription,
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
-          TextButton(onPressed: () => Navigator.pop(ctx, 15), child: const Text('15分', style: TextStyle(color: Colors.orangeAccent))),
-          TextButton(onPressed: () => Navigator.pop(ctx, 30), child: const Text('30分', style: TextStyle(color: Colors.orangeAccent))),
-          TextButton(onPressed: () => Navigator.pop(ctx, 60), child: const Text('60分', style: TextStyle(color: Colors.redAccent))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
+          TextButton(onPressed: () => Navigator.pop(ctx, 15), child: Text(S.of(ctx).minutesShort15, style: const TextStyle(color: Colors.orangeAccent))),
+          TextButton(onPressed: () => Navigator.pop(ctx, 30), child: Text(S.of(ctx).minutesShort30, style: const TextStyle(color: Colors.orangeAccent))),
+          TextButton(onPressed: () => Navigator.pop(ctx, 60), child: Text(S.of(ctx).minutesShort60, style: const TextStyle(color: Colors.redAccent))),
         ],
       ),
     );

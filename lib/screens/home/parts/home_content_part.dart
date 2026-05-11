@@ -13,30 +13,43 @@ extension HomeContentMethods on _HomeScreenState {
   Future<void> _checkNotifPerm() async {
     if (_notifPermAsked) return;
     _notifPermAsked = true;
+    final ss = widget.settingsService;
+    // Skip if the user previously dismissed the prompt with "Later" — they
+    // can still grant access from device settings if/when they actually want
+    // a feature that needs it.
+    if (ss.notifPermDeferred) return;
+    // Don't even ask if neither feature needs it. OFF blocking and batch
+    // capture are the two reasons we'd want notification listener access,
+    // so if no app opts in we stay quiet.
+    if (ss.batchApps.isEmpty && ss.notifOffApps.isEmpty) return;
     final enabled = await _native.isNotificationServiceEnabled();
     if (!enabled && mounted) {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('通知アクセスを許可',
-              style: TextStyle(color: Colors.white)),
-          content: const Text(
-            '通知バッジを表示するには、通知アクセス権限が必要です。設定画面を開きますか？',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+          title: Text(S.of(ctx).notificationAccessTitle,
+              style: const TextStyle(color: Colors.white)),
+          content: Text(
+            S.of(ctx).notificationAccessMessage,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('後で',
-                    style: TextStyle(color: Colors.white54))),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  // Remember the deferral so we don't pester them again.
+                  await ss.setNotifPermDeferred(true);
+                },
+                child: Text(S.of(ctx).actionLater,
+                    style: const TextStyle(color: Colors.white54))),
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
                 _native.openNotificationAccessSettings();
               },
-              child: const Text('設定を開く',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).openSettings,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -44,47 +57,16 @@ extension HomeContentMethods on _HomeScreenState {
     }
   }
 
-  // ── batch timer ───────────────────────────────────────────────
+  // ── batch delivery ────────────────────────────────────────────
+  // Daywise-style: native NotificationListenerService captures matching
+  // notifications, AlarmManager wakes us up at the configured times, and a
+  // BroadcastReceiver re-posts them. Flutter doesn't run any timer for this
+  // anymore — see android/.../BatchAlarms.kt + BatchAlarmReceiver.kt.
 
   void _startBatchTimer() {
+    // Kept as a no-op stub so HomeScreen.initState() doesn't have to change.
     _batchTimer?.cancel();
-    final ss = widget.settingsService;
-    final interval =
-        Duration(minutes: ss.batchIntervalMinutes);
-    _batchTimer = Timer.periodic(interval, (_) => _processBatchNotifs());
-  }
-
-  Future<void> _processBatchNotifs() async {
-    final ss = widget.settingsService;
-    final batchApps = ss.batchApps;
-    if (batchApps.isEmpty) return;
-    final counts = await _native.getNotificationCounts();
-    for (final pkg in batchApps) {
-      final count = counts[pkg] ?? 0;
-      if (count > 0) {
-        final app = _allApps.firstWhere(
-          (a) => a.packageName == pkg,
-          orElse: () =>
-              AppConfig(packageName: pkg, appName: pkg, floor: 1),
-        );
-        final name = (app.customName?.isNotEmpty == true)
-            ? app.customName!
-            : app.appName;
-        await _flnp.show(
-          pkg.hashCode,
-          '$nameの通知',
-          '$count件の通知があります',
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'batch_channel',
-              'バッチ通知',
-              importance: Importance.defaultImportance,
-              priority: Priority.defaultPriority,
-            ),
-          ),
-        );
-      }
-    }
+    _batchTimer = null;
   }
 
   // ── home widget loading ───────────────────────────────────────
@@ -166,7 +148,8 @@ extension HomeContentMethods on _HomeScreenState {
   }
 
   String _formatDate() {
-    const wd = ['月', '火', '水', '木', '金', '土', '日'];
+    final s = S.of(context);
+    final wd = [s.weekdayMon, s.weekdayTue, s.weekdayWed, s.weekdayThu, s.weekdayFri, s.weekdaySat, s.weekdaySun];
     final ss = widget.settingsService;
     final fmt = ss.dateFormatString;
     // Simple substitution-based formatter
@@ -251,10 +234,11 @@ extension HomeContentMethods on _HomeScreenState {
 
   String _fmtScreenTime(int minutes) {
     if (minutes < 0) return '';
+    final s = S.of(context);
     final h = minutes ~/ 60;
     final m = minutes % 60;
-    if (h > 0) return '$h時間$m分';
-    return '$m分';
+    if (h > 0) return s.screenTimeHM(h, m);
+    return s.screenTimeM(m);
   }
 
   String _fmt(Duration d) {
@@ -418,7 +402,7 @@ extension HomeContentMethods on _HomeScreenState {
         if (!_usagePermGranted)
           GestureDetector(
             onTap: () => _native.openUsageStatsSettings(),
-            child: Text('使用統計の許可が必要',
+            child: Text(S.of(context).usageStatsPermissionRequired,
                 style: TextStyle(color: Colors.amber.withOpacity(0.8), fontSize: 11)),
           ),
       ],
@@ -433,11 +417,11 @@ extension HomeContentMethods on _HomeScreenState {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(bottom: 6),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
               child: Text(
-                'ドラッグして順番を変更',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
+                S.of(context).dragToReorder,
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
             ),
             ReorderableListView(
@@ -468,8 +452,8 @@ extension HomeContentMethods on _HomeScreenState {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => setState(() => _reorderMode = false),
-                child: const Text('完了',
-                    style: TextStyle(color: Colors.white)),
+                child: Text(S.of(context).actionDone,
+                    style: const TextStyle(color: Colors.white)),
               ),
             ),
           ],

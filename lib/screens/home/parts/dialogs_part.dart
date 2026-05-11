@@ -34,7 +34,7 @@ extension DialogsMethods on _HomeScreenState {
                 ),
               ),
               const Divider(color: Colors.white12, height: 1),
-              _sheetItem(ctx, Icons.checklist, '複数選択モードに切り替え', () {
+              _sheetItem(ctx, Icons.checklist, S.of(ctx).switchToMultiSelect, () {
                 Navigator.pop(ctx);
                 setState(() {
                   _selectionMode = true;
@@ -43,33 +43,33 @@ extension DialogsMethods on _HomeScreenState {
                   _selectedPackages.add(app.packageName);
                 });
               }),
-              _sheetItem(ctx, Icons.edit, '名前を変更', () {
+              _sheetItem(ctx, Icons.edit, S.of(ctx).renameApp, () {
                 Navigator.pop(ctx);
                 _showRenameDialog(app);
               }),
-              _sheetItem(ctx, Icons.stairs, '階層を移動', () {
+              _sheetItem(ctx, Icons.stairs, S.of(ctx).moveFloor, () {
                 Navigator.pop(ctx);
                 _showMoveFloorDialog(app);
               }),
-              _sheetItem(ctx, Icons.folder_open, 'フォルダに追加', () {
+              _sheetItem(ctx, Icons.folder_open, S.of(ctx).addToFolder, () {
                 Navigator.pop(ctx);
                 _showFolderPicker(app, floor);
               }),
               if (app.isPinned)
-                _sheetItem(ctx, Icons.star, 'お気に入りを解除', () {
+                _sheetItem(ctx, Icons.star, S.of(ctx).removeFromFavorites, () {
                   Navigator.pop(ctx);
                   _unpinFromHome(app);
                 }, color: Colors.amberAccent)
               else
-                _sheetItem(ctx, Icons.star_outline, 'お気に入りに追加', () {
+                _sheetItem(ctx, Icons.star_outline, S.of(ctx).addToFavorites, () {
                   Navigator.pop(ctx);
                   _pinToHome(app);
                 }),
-              _sheetItem(ctx, Icons.info_outline, 'アプリ情報', () {
+              _sheetItem(ctx, Icons.info_outline, S.of(ctx).appInfo, () {
                 Navigator.pop(ctx);
                 DeviceApps.openAppSettings(app.packageName);
               }),
-              _sheetItem(ctx, Icons.schedule, '自動移動',  () {
+              _sheetItem(ctx, Icons.schedule, S.of(ctx).autoMove,  () {
                 Navigator.pop(ctx);
                 Navigator.push(
                   context,
@@ -82,7 +82,7 @@ extension DialogsMethods on _HomeScreenState {
                   ),
                 ).then((_) { if (mounted) _loadApps(); });
               }),
-              _sheetItem(ctx, Icons.delete_outline, 'アンインストール', () {
+              _sheetItem(ctx, Icons.delete_outline, S.of(ctx).uninstall, () {
                 Navigator.pop(ctx);
                 _confirmUninstall(app);
               }, color: Colors.redAccent),
@@ -131,19 +131,19 @@ extension DialogsMethods on _HomeScreenState {
               ),
             ),
             const Divider(color: Colors.white12, height: 1),
-            _sheetItem(ctx, Icons.edit, 'フォルダ名を変更', () {
+            _sheetItem(ctx, Icons.edit, S.of(ctx).renameFolder, () {
               Navigator.pop(ctx);
               _showRenameFolderDialog(folderName, apps, floor);
             }),
-            _sheetItem(ctx, Icons.star_outline, 'お気に入りに追加', () {
+            _sheetItem(ctx, Icons.star_outline, S.of(ctx).addToFavorites, () {
               Navigator.pop(ctx);
               _pinFolderToHome(folderName);
             }),
-            _sheetItem(ctx, Icons.swap_vert, 'フォルダの位置', () {
+            _sheetItem(ctx, Icons.swap_vert, S.of(ctx).folderPosition, () {
               Navigator.pop(ctx);
               _showFolderPositionDialog(folderName, apps);
             }),
-            _sheetItem(ctx, Icons.delete_outline, 'フォルダを削除', () {
+            _sheetItem(ctx, Icons.delete_outline, S.of(ctx).deleteFolder, () {
               Navigator.pop(ctx);
               _deleteFolderConfirm(folderName, apps);
             }, color: Colors.redAccent),
@@ -190,8 +190,8 @@ extension DialogsMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('名前を変更',
-            style: TextStyle(color: Colors.white)),
+        title: Text(S.of(ctx).renameApp,
+            style: const TextStyle(color: Colors.white)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -212,8 +212,8 @@ extension DialogsMethods on _HomeScreenState {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('キャンセル',
-                style: TextStyle(color: Colors.white54)),
+            child: Text(S.of(ctx).actionCancel,
+                style: const TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () async {
@@ -224,8 +224,8 @@ extension DialogsMethods on _HomeScreenState {
               if (ctx.mounted) Navigator.pop(ctx);
               _loadApps();
             },
-            child: const Text('完了',
-                style: TextStyle(color: Colors.white)),
+            child: Text(S.of(ctx).actionDone,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -246,7 +246,7 @@ extension DialogsMethods on _HomeScreenState {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: Text('階層を移動 — ${_displayName(app)}',
+          title: Text(S.of(ctx).moveFloorWithName(_displayName(app)),
               style: const TextStyle(
                   color: Colors.white, fontSize: 14)),
           content: Wrap(
@@ -278,8 +278,8 @@ extension DialogsMethods on _HomeScreenState {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: () async {
@@ -290,7 +290,7 @@ extension DialogsMethods on _HomeScreenState {
                     if (ctx.mounted) Navigator.pop(ctx);
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('フロア移動がロックされています')));
+                        SnackBar(content: Text(S.of(context).floorMoveLockedAll)));
                     }
                     return;
                   }
@@ -310,8 +310,8 @@ extension DialogsMethods on _HomeScreenState {
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadApps();
               },
-              child: const Text('完了',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionDone,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -339,19 +339,19 @@ extension DialogsMethods on _HomeScreenState {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('フォルダに追加',
-              style: TextStyle(color: Colors.white)),
+          title: Text(S.of(ctx).addToFolder,
+              style: const TextStyle(color: Colors.white)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (existing.isNotEmpty) ...[
-                  const Text('既存のフォルダを選択',
-                      style: TextStyle(
+                  Text(S.of(ctx).selectExistingFolder,
+                      style: const TextStyle(
                           color: Colors.white54, fontSize: 12)),
                   const SizedBox(height: 8),
-                  _folderOption(null, selected, '📂  フォルダなし',
+                  _folderOption(null, selected, S.of(ctx).noFolderEmoji,
                       () => setInner(() {
                             selected = null;
                             ctrl.clear();
@@ -369,8 +369,8 @@ extension DialogsMethods on _HomeScreenState {
                   const Divider(color: Colors.white12),
                   const SizedBox(height: 8),
                 ],
-                const Text('新しいフォルダ名',
-                    style: TextStyle(
+                Text(S.of(ctx).newFolderName,
+                    style: const TextStyle(
                         color: Colors.white54, fontSize: 12)),
                 const SizedBox(height: 6),
                 TextField(
@@ -378,7 +378,7 @@ extension DialogsMethods on _HomeScreenState {
                   style: const TextStyle(
                       color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'フォルダ名を入力...',
+                    hintText: S.of(ctx).folderNameHint,
                     hintStyle: const TextStyle(
                         color: Colors.white38, fontSize: 12),
                     filled: true,
@@ -400,8 +400,8 @@ extension DialogsMethods on _HomeScreenState {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: () async {
@@ -416,8 +416,8 @@ extension DialogsMethods on _HomeScreenState {
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadApps();
               },
-              child: const Text('完了',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionDone,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -483,7 +483,7 @@ extension DialogsMethods on _HomeScreenState {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: Text('${_selectedPackages.length}個のアプリを移動',
+          title: Text(S.of(ctx).moveAppsCount(_selectedPackages.length),
               style: const TextStyle(color: Colors.white, fontSize: 14)),
           content: Wrap(
             spacing: 8,
@@ -513,15 +513,15 @@ extension DialogsMethods on _HomeScreenState {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: selectedFloor != null
                   ? () => Navigator.pop(ctx, selectedFloor)
                   : null,
-              child: const Text('移動',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionMove,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -548,7 +548,7 @@ extension DialogsMethods on _HomeScreenState {
         if (anyBlock) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('一部のアプリはフロア移動がロックされています')));
+              SnackBar(content: Text(S.of(context).floorMoveLockedSome)));
           }
         } else {
           // Timer mode
@@ -609,7 +609,7 @@ extension DialogsMethods on _HomeScreenState {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: Text('${_selectedPackages.length}個をフォルダに追加',
+          title: Text(S.of(ctx).addAppsToFolder(_selectedPackages.length),
               style: const TextStyle(color: Colors.white, fontSize: 14)),
           content: SingleChildScrollView(
             child: Column(
@@ -617,8 +617,8 @@ extension DialogsMethods on _HomeScreenState {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (existing.isNotEmpty) ...[
-                  const Text('既存のフォルダを選択',
-                      style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(S.of(ctx).selectExistingFolder,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   const SizedBox(height: 8),
                   ...existing.map((name) => _folderOption(
                         name, selected, '📁  $name',
@@ -628,14 +628,14 @@ extension DialogsMethods on _HomeScreenState {
                   const Divider(color: Colors.white12),
                   const SizedBox(height: 8),
                 ],
-                const Text('新しいフォルダ名',
-                    style: TextStyle(color: Colors.white54, fontSize: 12)),
+                Text(S.of(ctx).newFolderName,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: ctrl,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'フォルダ名を入力...',
+                    hintText: S.of(ctx).folderNameHint,
                     hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
                     filled: true,
                     fillColor: Colors.white.withOpacity(0.07),
@@ -656,8 +656,8 @@ extension DialogsMethods on _HomeScreenState {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: selected != null || ctrl.text.isNotEmpty
@@ -668,8 +668,8 @@ extension DialogsMethods on _HomeScreenState {
                             : selected,
                       )
                   : null,
-              child: const Text('完了',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionDone,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -705,22 +705,22 @@ extension DialogsMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: Text('「$name」はブロック中',
+        title: Text(S.of(ctx).appBlockedTitle(name),
             style: const TextStyle(color: Colors.white, fontSize: 15)),
-        content: const Text(
-          'このアプリは現在ブロックされています。',
-          style: TextStyle(color: Colors.white70, fontSize: 13),
+        content: Text(
+          S.of(ctx).appBlockedMessage,
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('閉じる',
-                style: TextStyle(color: Colors.white54)),
+            child: Text(S.of(ctx).actionClose,
+                style: const TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('緊急解除',
-                style: TextStyle(color: Colors.redAccent)),
+            child: Text(S.of(ctx).emergencyOverride,
+                style: const TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -730,22 +730,22 @@ extension DialogsMethods on _HomeScreenState {
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('本当に解除しますか？',
-              style: TextStyle(color: Colors.white)),
-          content: const Text(
-            '解除の記録が残ります。',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+          title: Text(S.of(ctx).confirmOverrideTitle,
+              style: const TextStyle(color: Colors.white)),
+          content: Text(
+            S.of(ctx).overrideRecorded,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('解除して起動',
-                  style: TextStyle(color: Colors.redAccent)),
+              child: Text(S.of(ctx).overrideAndLaunch,
+                  style: const TextStyle(color: Colors.redAccent)),
             ),
           ],
         ),
@@ -775,14 +775,14 @@ extension DialogsMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('フォルダ名を変更',
-            style: TextStyle(color: Colors.white)),
+        title: Text(S.of(ctx).renameFolder,
+            style: const TextStyle(color: Colors.white)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
-            hintText: 'フォルダ名',
+            hintText: S.of(ctx).folderName,
             hintStyle:
                 const TextStyle(color: Colors.white38),
             filled: true,
@@ -798,8 +798,8 @@ extension DialogsMethods on _HomeScreenState {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('キャンセル',
-                style: TextStyle(color: Colors.white54)),
+            child: Text(S.of(ctx).actionCancel,
+                style: const TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () async {
@@ -815,8 +815,8 @@ extension DialogsMethods on _HomeScreenState {
               if (ctx.mounted) Navigator.pop(ctx);
               _loadApps();
             },
-            child: const Text('完了',
-                style: TextStyle(color: Colors.white)),
+            child: Text(S.of(ctx).actionDone,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -830,23 +830,23 @@ extension DialogsMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: Text('「$folderName」を削除',
+        title: Text(S.of(ctx).deleteFolderTitle(folderName),
             style: const TextStyle(color: Colors.white)),
         content: Text(
-          'フォルダを削除します。${apps.length}件のアプリはフォルダなしになります。',
+          S.of(ctx).deleteFolderMessage(apps.length),
           style: const TextStyle(
               color: Colors.white70, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('キャンセル',
-                style: TextStyle(color: Colors.white54)),
+            child: Text(S.of(ctx).actionCancel,
+                style: const TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('削除',
-                style: TextStyle(color: Colors.redAccent)),
+            child: Text(S.of(ctx).actionDelete,
+                style: const TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -874,10 +874,11 @@ extension DialogsMethods on _HomeScreenState {
       String folderName, List<AppConfig> apps) async {
     final current =
         apps.isNotEmpty ? apps.first.folderPosition : 'alphabetical';
-    final options = [
-      ('top', '最上部に固定'),
-      ('alphabetical', '名前順（デフォルト）'),
-      ('bottom', '最下部に固定'),
+    final s0 = S.of(context);
+    final options = <(String, String)>[
+      ('top', s0.folderPositionTop),
+      ('alphabetical', s0.folderPositionAlphabetical),
+      ('bottom', s0.folderPositionBottom),
     ];
     String selected = current;
 
@@ -890,7 +891,7 @@ extension DialogsMethods on _HomeScreenState {
             children: [
               const Icon(Icons.swap_vert, color: Colors.white54, size: 18),
               const SizedBox(width: 8),
-              Text('「$folderName」の表示位置',
+              Text(S.of(ctx).folderPositionTitle(folderName),
                   style: const TextStyle(
                       color: Colors.white, fontSize: 14)),
             ],
@@ -930,16 +931,16 @@ extension DialogsMethods on _HomeScreenState {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
                 _setFolderPosition(apps, selected);
               },
-              child: const Text('完了',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionDone,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -979,7 +980,10 @@ extension DialogsMethods on _HomeScreenState {
 
     final currentOrder = List<String>.from(folders);
 
-    final titleText = positionType == 'top' ? '最上部固定フォルダの順番' : '最下部固定フォルダの順番';
+    final s0 = S.of(context);
+    final titleText = positionType == 'top'
+        ? s0.fixedTopFolderOrder
+        : s0.fixedBottomFolderOrder;
 
     await showDialog<void>(
       context: context,
@@ -993,11 +997,11 @@ extension DialogsMethods on _HomeScreenState {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 8),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
-                    'ドラッグして順番を変更',
-                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                    S.of(ctx).dragToReorder,
+                    style: const TextStyle(color: Colors.white38, fontSize: 12),
                   ),
                 ),
                 Flexible(
@@ -1068,11 +1072,11 @@ extension DialogsMethods on _HomeScreenState {
                                     builder: (c) => AlertDialog(
                                       backgroundColor:
                                           const Color(0xFF1A1A1A),
-                                      title: Text('「$fn」を削除',
+                                      title: Text(S.of(c).deleteFolderTitle(fn),
                                           style: const TextStyle(
                                               color: Colors.white)),
                                       content: Text(
-                                        'フォルダを削除します。${apps.length}件のアプリはフォルダなしになります。',
+                                        S.of(c).deleteFolderMessage(apps.length),
                                         style: const TextStyle(
                                             color: Colors.white70,
                                             fontSize: 13),
@@ -1081,15 +1085,15 @@ extension DialogsMethods on _HomeScreenState {
                                         TextButton(
                                           onPressed: () =>
                                               Navigator.pop(c, false),
-                                          child: const Text('キャンセル',
-                                              style: TextStyle(
+                                          child: Text(S.of(c).actionCancel,
+                                              style: const TextStyle(
                                                   color: Colors.white54)),
                                         ),
                                         TextButton(
                                           onPressed: () =>
                                               Navigator.pop(c, true),
-                                          child: const Text('削除',
-                                              style: TextStyle(
+                                          child: Text(S.of(c).actionDelete,
+                                              style: const TextStyle(
                                                   color: Colors.redAccent)),
                                         ),
                                       ],
@@ -1123,8 +1127,8 @@ extension DialogsMethods on _HomeScreenState {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: () async {
@@ -1136,8 +1140,8 @@ extension DialogsMethods on _HomeScreenState {
                 if (ctx.mounted) Navigator.pop(ctx);
                 setState(() {});
               },
-              child: const Text('完了',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionDone,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),

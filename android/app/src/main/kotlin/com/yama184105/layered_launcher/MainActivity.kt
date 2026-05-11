@@ -54,6 +54,44 @@ class MainActivity : FlutterActivity() {
                     "getNotificationCounts" -> {
                         result.success(NotificationService.counts.toMap())
                     }
+                    "setNotifPolicy" -> {
+                        // Persist the full notification policy: default mode
+                        // ('allow'/'batch'/'off') applied to apps without an
+                        // explicit override, the explicit OFF set, and the
+                        // explicit allow set. NotificationService consults
+                        // these on every posted notification — stored in
+                        // SharedPreferences so it survives Flutter dying.
+                        val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+                        val defaultMode = (args["defaultMode"] as? String) ?: "allow"
+                        val offPkgs = (args["offPackages"] as? List<*>)
+                            ?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                        val allowPkgs = (args["allowPackages"] as? List<*>)
+                            ?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                        val sp = getSharedPreferences(
+                            NotificationService.PREFS_NAME,
+                            Context.MODE_PRIVATE,
+                        )
+                        sp.edit()
+                            .putString(NotificationService.KEY_DEFAULT_MODE, defaultMode)
+                            .putStringSet(NotificationService.KEY_OFF_PACKAGES, offPkgs)
+                            .putStringSet(NotificationService.KEY_ALLOW_PACKAGES, allowPkgs)
+                            .apply()
+                        // Sweep currently-active notifications: anything that
+                        // resolves to OFF under the new policy gets cleared
+                        // immediately so apps moved into OFF after they
+                        // posted don't linger.
+                        try {
+                            val service = NotificationService.instance
+                            service?.activeNotifications?.forEach { sbn ->
+                                if (sbn.isOngoing) return@forEach
+                                val effectiveMode = service.resolveModeFor(sbn.packageName)
+                                if (effectiveMode == "off") {
+                                    try { service.cancelNotification(sbn.key) } catch (_: Exception) {}
+                                }
+                            }
+                        } catch (_: Exception) {}
+                        result.success(null)
+                    }
                     "isNotificationServiceEnabled" -> {
                         val enabled = Settings.Secure.getString(
                             contentResolver,
@@ -63,6 +101,150 @@ class MainActivity : FlutterActivity() {
                     }
                     "openNotificationAccessSettings" -> {
                         startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                        result.success(null)
+                    }
+                    "setBatchGroups" -> {
+                        // Persist the full list of batch groups (list of maps,
+                        // shape defined in lib/services/settings/gesture_settings_part.dart)
+                        // and arm an AlarmManager wake-up for the next fire of
+                        // each group. Replaces any previously scheduled alarms
+                        // so renames/edits don't leave orphans.
+                        val groupsArg = call.arguments as? List<*>
+                        val sp = getSharedPreferences(
+                            NotificationService.PREFS_NAME,
+                            Context.MODE_PRIVATE,
+                        )
+                        // Cancel previously scheduled alarms.
+                        sp.getString(NotificationService.KEY_BATCH_GROUPS, null)?.let { prevRaw ->
+                            try {
+                                val prev = org.json.JSONArray(prevRaw)
+                                for (i in 0 until prev.length()) {
+                                    val gid = prev.optJSONObject(i)?.optString("id") ?: continue
+                                    BatchAlarms.cancelGroup(this, gid)
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        // Persist the new groups (json stringification).
+                        val arr = org.json.JSONArray()
+                        groupsArg?.forEach { item ->
+                            val m = item as? Map<*, *> ?: return@forEach
+                            arr.put(org.json.JSONObject(m))
+                        }
+                        sp.edit().putString(NotificationService.KEY_BATCH_GROUPS, arr.toString()).apply()
+                        // Arm alarms for the new set.
+                        for (i in 0 until arr.length()) {
+                            BatchAlarms.scheduleGroup(this, arr.getJSONObject(i))
+                        }
+                        result.success(null)
+                    }
+                    "canScheduleExactAlarms" -> {
+                        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            val am = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+                            am.canScheduleExactAlarms()
+                        } else true
+                        result.success(ok)
+                    }
+                    "getBatchQueues" -> {
+                        // Per-group preview of pending notifications. Returns
+                        // a List<Map> where each entry has:
+                        //   id, name, scheduleType, nextFireMs (nullable),
+                        //   items: List<{pkg, title, text, postedAt}>
+                        val sp = getSharedPreferences(
+                            NotificationService.PREFS_NAME,
+                            Context.MODE_PRIVATE,
+                        )
+                        val groupsRaw = sp.getString(
+                            NotificationService.KEY_BATCH_GROUPS,
+                            null,
+                        )
+                        val out = mutableListOf<Map<String, Any?>>()
+                        if (groupsRaw != null) {
+                            try {
+                                val groups = org.json.JSONArray(groupsRaw)
+                                val now = System.currentTimeMillis()
+                                for (i in 0 until groups.length()) {
+                                    val g = groups.optJSONObject(i) ?: continue
+                                    val gid = g.optString("id")
+                                    val items = mutableListOf<Map<String, Any?>>()
+                                    val savedRaw = sp.getString(
+                                        NotificationService.savedNotifsKeyFor(gid),
+                                        null,
+                                    )
+                                    if (savedRaw != null) {
+                                        try {
+                                            val arr = org.json.JSONArray(savedRaw)
+                                            for (j in 0 until arr.length()) {
+                                                val o = arr.optJSONObject(j) ?: continue
+                                                items.add(
+                                                    mapOf(
+                                                        "pkg" to o.optString("pkg"),
+                                                        "title" to o.optString("title"),
+                                                        "text" to o.optString("text"),
+                                                        "postedAt" to o.optLong("postedAt"),
+                                                    ),
+                                                )
+                                            }
+                                        } catch (_: Exception) {}
+                                    }
+                                    out.add(
+                                        mapOf(
+                                            "id" to gid,
+                                            "name" to g.optString("name"),
+                                            "scheduleType" to g.optString("scheduleType"),
+                                            "nextFireMs" to BatchAlarms
+                                                .computeNextFireTimeMs(g, now),
+                                            "items" to items,
+                                        ),
+                                    )
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        result.success(out)
+                    }
+                    "getBlockedHistory" -> {
+                        // Return the OFF-blocked history as List<Map>
+                        // (newest entry last, matching insertion order). The
+                        // Flutter side reverses for display.
+                        val sp = getSharedPreferences(
+                            NotificationService.PREFS_NAME,
+                            Context.MODE_PRIVATE,
+                        )
+                        val raw = sp.getString(
+                            NotificationService.KEY_BLOCKED_HISTORY,
+                            null,
+                        )
+                        val out = mutableListOf<Map<String, Any?>>()
+                        if (raw != null) {
+                            try {
+                                val arr = org.json.JSONArray(raw)
+                                for (i in 0 until arr.length()) {
+                                    val o = arr.optJSONObject(i) ?: continue
+                                    out.add(
+                                        mapOf(
+                                            "pkg" to o.optString("pkg"),
+                                            "title" to o.optString("title"),
+                                            "text" to o.optString("text"),
+                                            "blockedAt" to o.optLong("blockedAt"),
+                                        ),
+                                    )
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        result.success(out)
+                    }
+                    "clearBlockedHistory" -> {
+                        val sp = getSharedPreferences(
+                            NotificationService.PREFS_NAME,
+                            Context.MODE_PRIVATE,
+                        )
+                        sp.edit().remove(NotificationService.KEY_BLOCKED_HISTORY).apply()
+                        result.success(null)
+                    }
+                    "openExactAlarmSettings" -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                .setData(Uri.parse("package:$packageName")))
+                        }
                         result.success(null)
                     }
                     "lockScreen" -> {

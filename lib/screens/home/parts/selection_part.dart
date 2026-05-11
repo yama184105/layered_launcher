@@ -4,6 +4,7 @@ extension SelectionMethods on _HomeScreenState {
   // ── selection bar ─────────────────────────────────────────────
 
   Widget _buildSelectionBar() {
+    final s = S.of(context);
     final empty = _selectedPackages.isEmpty;
     return Container(
       color: Colors.black.withOpacity(0.92),
@@ -17,7 +18,7 @@ extension SelectionMethods on _HomeScreenState {
             Row(
               children: [
                 Text(
-                  '${_selectedPackages.length}個選択中',
+                  s.selectedCount(_selectedPackages.length),
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
                 const Spacer(),
@@ -27,29 +28,34 @@ extension SelectionMethods on _HomeScreenState {
                     _selectionInFavorites = false;
                     _selectedPackages.clear();
                   }),
-                  child: const Text('キャンセル',
-                      style: TextStyle(color: Colors.white54, fontSize: 13)),
+                  child: Text(s.actionCancel,
+                      style: const TextStyle(color: Colors.white54, fontSize: 13)),
                 ),
               ],
             ),
-            // Row 2: action buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            // Row 2: action buttons. Wrap so that 4 buttons (or longer
+            // English labels) flow to a second line on narrow screens
+            // instead of overflowing — was causing a yellow-stripe error
+            // bar on Galaxy with the JA labels.
+            Wrap(
+              alignment: WrapAlignment.spaceEvenly,
+              spacing: 4,
+              runSpacing: 0,
               children: _selectionInFavorites
                   ? [
-                      _selBtn(Icons.star_border, 'お気に入り解除',
+                      _selBtn(Icons.star_border, s.removeFavorite,
                           empty ? null : _bulkUnpinFromHome,
                           color: Colors.amber),
                     ]
                   : [
-                      _selBtn(Icons.stairs, 'フロア移動',
+                      _selBtn(Icons.stairs, s.selectionFloorMove,
                           empty ? null : _showBulkMoveDialog),
-                      _selBtn(Icons.star_outline, 'お気に入り追加',
+                      _selBtn(Icons.star_outline, s.addFavorite,
                           empty ? null : _bulkPinToHome,
                           color: Colors.amber),
-                      _selBtn(Icons.folder_open, 'フォルダ追加',
+                      _selBtn(Icons.folder_open, s.selectionAddFolder,
                           empty ? null : _showBulkFolderDialog),
-                      _selBtn(Icons.schedule, '自動移動',
+                      _selBtn(Icons.schedule, s.autoMove,
                           empty ? null : _showBulkAutoMoveScreen),
                     ],
             ),

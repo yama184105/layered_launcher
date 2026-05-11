@@ -2,92 +2,96 @@ part of '../settings_screen.dart';
 
 extension AppManagementMethods on _SettingsScreenState {
   List<Widget> _appMgmtSettingRows() {
+    final s = S.of(context);
     final ss = _ss;
-    const limitLabels = {'unlimited': '無制限', 'daily': '1日1回', 'weekly': '週1回', 'yearly': '年1回'};
+    final limitLabels = <String, String>{
+      'unlimited': s.unlimited,
+      'daily': s.periodOnceDaily,
+      'weekly': s.periodOnceWeekly,
+      'yearly': s.periodOnceYearly,
+    };
     final current = ss.emergencyLimit;
     final emgAppCount = ss.getEmergencyApps().length;
     final emgSummary =
-        '${limitLabels[current] ?? current}・$emgAppCount個';
+        s.emergencySummary(limitLabels[current] ?? current, emgAppCount);
 
     return [
-      _settingRow('アプリ一覧', '', () {
+      _settingRow(s.appList, '', () {
         Navigator.push(context, MaterialPageRoute(
           builder: (_) => _AppListScreen(appService: _as, settingsService: ss),
         )).then((_) => _load());
       }),
       _rowDivider,
-      _settingRow('ランダム配置', '', _doRandomize),
+      _settingRow(s.randomPlacement, '', _doRandomize),
       _rowDivider,
-      _settingRow('フロア最適化を提案', '', _doFloorOptimization),
+      _settingRow(s.floorOptimizationProposal, '', _doFloorOptimization),
       _rowDivider,
       _expandableRow(
         key: 'appmgmt_emergency',
-        title: '緊急モード',
+        title: s.emergencyMode,
         summary: emgSummary,
         children: _emergencyChildren(ss, current, limitLabels),
-      ),
-      _rowDivider,
-      _settingRow(
-        '最終起動時刻を表示',
-        ss.lastUsedDisplayApps.isEmpty
-            ? '未設定'
-            : '${ss.lastUsedDisplayApps.length}個のアプリで表示',
-        () async {
-          final granted = await _native.isUsageStatsPermissionGranted();
-          if (!granted) {
-            if (!mounted) return;
-            final go = await showDialog<bool>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                backgroundColor: const Color(0xFF1A1A1A),
-                title: const Text('使用履歴へのアクセスが必要',
-                    style: TextStyle(color: Colors.white, fontSize: 14)),
-                content: const Text(
-                  '最終起動時刻を表示するには、設定から「使用履歴へのアクセス」を許可してください。',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('キャンセル',
-                        style: TextStyle(color: Colors.white54)),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('設定を開く',
-                        style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            );
-            if (go == true) await _native.openUsageStatsSettings();
-            return;
-          }
-          await _showLockAppSelector(
-              'lastUsedDisplayApps',
-              ss.lastUsedDisplayApps,
-              (v) => ss.setLastUsedDisplayApps(v));
-          setState(() {});
-        },
       ),
     ];
   }
 
+  /// Used by screentime section: lets the user pick which apps show their
+  /// "last launched" relative time on the home/floor list. Requires the
+  /// system "Usage access" permission, which we prompt for if missing.
+  Future<void> showLastUsedDisplayPicker() async {
+    final granted = await _native.isUsageStatsPermissionGranted();
+    if (!granted) {
+      if (!mounted) return;
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A1A),
+          title: Text(S.of(ctx).usageStatsAccessRequired,
+              style: const TextStyle(color: Colors.white, fontSize: 14)),
+          content: Text(
+            S.of(ctx).usageStatsAccessExplanation,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(S.of(ctx).openSettings,
+                  style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+      if (go == true) await _native.openUsageStatsSettings();
+      return;
+    }
+    await _showLockAppSelector(
+        'lastUsedDisplayApps',
+        _ss.lastUsedDisplayApps,
+        (v) => _ss.setLastUsedDisplayApps(v));
+    setState(() {});
+  }
+
   List<Widget> _emergencyChildren(SettingsService ss, String current,
       Map<String, String> limitLabels) {
+    final s = S.of(context);
     return [
       _expandableRow(
         key: 'emg_limits',
-        title: '使用制限',
+        title: s.emergencyUsageLimit,
         summary: _emgLimitsSummary(ss),
         children: _emgLimitChildren(ss),
       ),
       _rowDivider,
       _settingRow(
-        '緊急アプリ登録',
+        s.emergencyAppsRegister,
         ss.getEmergencyApps().isEmpty
-            ? '未登録'
-            : '${ss.getEmergencyApps().length}個登録済み',
+            ? s.notRegistered
+            : s.registeredCount(ss.getEmergencyApps().length),
         () async {
           await _showLockAppSelector(
               'emergencyApps',
@@ -97,21 +101,21 @@ extension AppManagementMethods on _SettingsScreenState {
         },
       ),
       _rowDivider,
-      _settingRow('フォント色', '', () async {
-        const colors = [
-          (0xFFFF5252, '赤'),
-          (0xFFFF9800, 'オレンジ'),
-          (0xFFFFEB3B, '黄色'),
-          (0xFFFFFFFF, '白（区別なし）'),
-          (0xFF69F0AE, '緑'),
-          (0xFF40C4FF, '水色'),
+      _settingRow(s.emergencyFontColor, '', () async {
+        final colors = [
+          (0xFFFF5252, s.colorRed),
+          (0xFFFF9800, s.colorOrange),
+          (0xFFFFEB3B, s.colorYellow),
+          (0xFFFFFFFF, s.colorWhiteNoDistinction),
+          (0xFF69F0AE, s.colorGreen),
+          (0xFF40C4FF, s.colorLightBlue),
         ];
         final v = await showDialog<int>(
           context: context,
           builder: (ctx) => AlertDialog(
             backgroundColor: const Color(0xFF1A1A1A),
-            title: const Text('緊急アプリのフォント色',
-                style: TextStyle(color: Colors.white, fontSize: 14)),
+            title: Text(S.of(ctx).emergencyFontColorTitle,
+                style: const TextStyle(color: Colors.white, fontSize: 14)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: colors
@@ -138,8 +142,8 @@ extension AppManagementMethods on _SettingsScreenState {
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('キャンセル',
-                      style: TextStyle(color: Colors.white54))),
+                  child: Text(S.of(ctx).actionCancel,
+                      style: const TextStyle(color: Colors.white54))),
             ],
           ),
         );
@@ -150,12 +154,14 @@ extension AppManagementMethods on _SettingsScreenState {
       }),
       _rowDivider,
       _settingRow(
-        '表示方法',
-        ss.emergencyAppDisplayMode == 'section' ? 'セクション表示' : '通常表示',
+        s.emergencyDisplayMethod,
+        ss.emergencyAppDisplayMode == 'section'
+            ? s.emergencyDisplaySection
+            : s.emergencyDisplayNormal,
         () async {
-          final v = await _showOptionsDialog('緊急アプリの表示方法', [
-            ('section', 'セクション表示（上部にまとめて表示）'),
-            ('normal', '通常表示（アルファベット順に混合）'),
+          final v = await _showOptionsDialog(s.emergencyDisplayMethodTitle, [
+            ('section', s.emergencyDisplaySectionDesc),
+            ('normal', s.emergencyDisplayNormalDesc),
           ], ss.emergencyAppDisplayMode);
           if (v != null) {
             await ss.setEmergencyAppDisplayMode(v);
@@ -166,10 +172,10 @@ extension AppManagementMethods on _SettingsScreenState {
       _rowDivider,
       SwitchListTile(
         contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-        title: const Text('セクション索引',
-            style: TextStyle(color: Colors.white, fontSize: 14)),
-        subtitle: const Text('サイドバーに「🚨」索引を追加',
-            style: TextStyle(color: Colors.white54, fontSize: 12)),
+        title: Text(s.emergencySectionIndex,
+            style: const TextStyle(color: Colors.white, fontSize: 14)),
+        subtitle: Text(s.emergencySectionIndexDesc,
+            style: const TextStyle(color: Colors.white54, fontSize: 12)),
         activeColor: Colors.tealAccent,
         value: ss.emergencyAppShowIndex,
         onChanged: (v) async {
@@ -183,21 +189,23 @@ extension AppManagementMethods on _SettingsScreenState {
   // ── Emergency-mode usage limits ──────────────────────────────────────────
 
   String _emgLimitsSummary(SettingsService ss) {
-    final all = ss.capSummary(ss.emergencyCapAll);
-    final pick = ss.capSummary(ss.emergencyCapPick);
-    final regGlobal = ss.capSummary(ss.emergencyCapRegisteredGlobal);
-    return '全:$all / 一覧:$pick / 登録:$regGlobal';
+    final s = S.of(context);
+    final all = ss.capSummary(s, ss.emergencyCapAll);
+    final pick = ss.capSummary(s, ss.emergencyCapPick);
+    final regGlobal = ss.capSummary(s, ss.emergencyCapRegisteredGlobal);
+    return s.emergencyLimitsSummary(all, pick, regGlobal);
   }
 
   List<Widget> _emgLimitChildren(SettingsService ss) {
+    final s = S.of(context);
     return [
       _settingRow(
-        '全アプリを1Fに表示',
-        ss.capSummary(ss.emergencyCapAll),
+        s.emergencyShowAllOn1F,
+        ss.capSummary(s, ss.emergencyCapAll),
         () async {
           final cap = ss.emergencyCapAll;
           final result = await _showCapDialog(
-              '「全アプリを1Fに表示」の使用制限',
+              s.emergencyShowAllOn1FLimit,
               (cap['count'] as num?)?.toInt() ?? 0,
               cap['period'] as String? ?? 'weekly');
           if (result == null) return;
@@ -207,12 +215,12 @@ extension AppManagementMethods on _SettingsScreenState {
       ),
       _rowDivider,
       _settingRow(
-        'アプリ一覧から選択',
-        ss.capSummary(ss.emergencyCapPick),
+        s.emergencyAppListPick,
+        ss.capSummary(s, ss.emergencyCapPick),
         () async {
           final cap = ss.emergencyCapPick;
           final result = await _showCapDialog(
-              '「アプリ一覧から選択」の使用制限',
+              s.emergencyAppListPickLimit,
               (cap['count'] as num?)?.toInt() ?? 0,
               cap['period'] as String? ?? 'daily');
           if (result == null) return;
@@ -223,17 +231,20 @@ extension AppManagementMethods on _SettingsScreenState {
       _rowDivider,
       _expandableRow(
         key: 'emg_limits_registered',
-        title: '登録済み緊急アプリ',
-        summary:
-            '全体:${ss.capSummary(ss.emergencyCapRegisteredGlobal)} / 個別:${_emgPerAppCount(ss)} / フォルダ:${ss.emergencyCapFolders.length}',
+        title: s.emergencyRegistered,
+        summary: s.emergencyRegisteredSummary(
+          ss.capSummary(s, ss.emergencyCapRegisteredGlobal),
+          _emgPerAppCount(ss),
+          ss.emergencyCapFolders.length,
+        ),
         children: [
           _settingRow(
-            '全体制限',
-            ss.capSummary(ss.emergencyCapRegisteredGlobal),
+            s.emergencyGlobalLimit,
+            ss.capSummary(s, ss.emergencyCapRegisteredGlobal),
             () async {
               final cap = ss.emergencyCapRegisteredGlobal;
               final result = await _showCapDialog(
-                  '登録済みアプリ全体の使用制限',
+                  s.emergencyRegisteredGlobalLimit,
                   (cap['count'] as num?)?.toInt() ?? 0,
                   cap['period'] as String? ?? 'daily');
               if (result == null) return;
@@ -244,14 +255,14 @@ extension AppManagementMethods on _SettingsScreenState {
           ),
           _rowDivider,
           _settingRow(
-            'アプリ個別制限',
-            '${_emgPerAppCount(ss)}個設定中',
+            s.emergencyPerAppLimit,
+            s.perAppLimitCount(_emgPerAppCount(ss)),
             () => _showPerAppCapsScreen(ss),
           ),
           _rowDivider,
           _settingRow(
-            'フォルダ単位制限',
-            '${ss.emergencyCapFolders.length}フォルダ',
+            s.emergencyFolderLimit,
+            s.folderCount(ss.emergencyCapFolders.length),
             () => _showFolderCapsScreen(ss),
           ),
         ],
@@ -272,12 +283,13 @@ extension AppManagementMethods on _SettingsScreenState {
       String title, int initialCount, String initialPeriod) async {
     int count = initialCount.clamp(0, 999);
     String period = initialPeriod;
-    const periods = [
-      ('hourly', '1時間'),
-      ('daily', '1日'),
-      ('weekly', '1週間'),
-      ('monthly', '1か月'),
-      ('yearly', '1年'),
+    final s = S.of(context);
+    final periods = <(String, String)>[
+      ('hourly', s.periodHourly),
+      ('daily', s.periodDaily),
+      ('weekly', s.periodWeekly),
+      ('monthly', s.periodMonthly),
+      ('yearly', s.periodYearly),
     ];
     final ctrl = TextEditingController(
         text: initialCount > 0 ? initialCount.toString() : '');
@@ -292,15 +304,15 @@ extension AppManagementMethods on _SettingsScreenState {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('回数（空欄＝無制限）',
-                  style: TextStyle(color: Colors.white54, fontSize: 12)),
+              Text(S.of(ctx).countWithEmptyUnlimitedHint,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
               const SizedBox(height: 6),
               TextField(
                 controller: ctrl,
                 keyboardType: TextInputType.number,
                 style: const TextStyle(color: Colors.white, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: '無制限',
+                  hintText: S.of(ctx).unlimited,
                   hintStyle: const TextStyle(color: Colors.white38),
                   filled: true,
                   fillColor: Colors.white.withOpacity(0.07),
@@ -315,8 +327,8 @@ extension AppManagementMethods on _SettingsScreenState {
                 },
               ),
               const SizedBox(height: 12),
-              const Text('期間',
-                  style: TextStyle(color: Colors.white54, fontSize: 12)),
+              Text(S.of(ctx).periodLabel,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -347,16 +359,16 @@ extension AppManagementMethods on _SettingsScreenState {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: () {
                 final c = int.tryParse(ctrl.text) ?? 0;
                 Navigator.pop(ctx, (c < 0 ? 0 : c, period));
               },
-              child:
-                  const Text('保存', style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionSave,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -380,7 +392,7 @@ extension AppManagementMethods on _SettingsScreenState {
 
   Future<void> _doRandomize() async {
     if (_ss.isLockCooldownActive) {
-      _showSnack('変更処理中です。クールダウン終了後に再試行してください。');
+      _showSnack(S.of(context).changeProcessingTryLater);
       return;
     }
     // Show app selection dialog
@@ -392,10 +404,11 @@ extension AppManagementMethods on _SettingsScreenState {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) {
+          final s = S.of(ctx);
           return AlertDialog(
             backgroundColor: const Color(0xFF1A1A1A),
-            title: const Text('ランダム配置するアプリを選択',
-                style: TextStyle(color: Colors.white, fontSize: 15)),
+            title: Text(s.randomPlacementSelectApps,
+                style: const TextStyle(color: Colors.white, fontSize: 15)),
             content: SizedBox(
               width: double.maxFinite,
               height: 420,
@@ -405,14 +418,14 @@ extension AppManagementMethods on _SettingsScreenState {
                     children: [
                       TextButton(
                         onPressed: () => setInner(() => selected.addAll(nonPinned.map((a) => a.packageName))),
-                        child: const Text('全て選択', style: TextStyle(color: Colors.tealAccent, fontSize: 12)),
+                        child: Text(s.actionAllSelect, style: const TextStyle(color: Colors.tealAccent, fontSize: 12)),
                       ),
                       TextButton(
                         onPressed: () => setInner(() => selected.clear()),
-                        child: const Text('全て解除', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                        child: Text(s.actionAllDeselect, style: const TextStyle(color: Colors.white54, fontSize: 12)),
                       ),
                       Expanded(
-                        child: Text('${selected.length}/${nonPinned.length}件',
+                        child: Text(s.selectedItemsCount(selected.length, nonPinned.length),
                             textAlign: TextAlign.right,
                             style: const TextStyle(color: Colors.white38, fontSize: 12)),
                       ),
@@ -451,10 +464,10 @@ extension AppManagementMethods on _SettingsScreenState {
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
+                  child: Text(s.actionCancel, style: const TextStyle(color: Colors.white54))),
               TextButton(
                   onPressed: selected.isEmpty ? null : () => Navigator.pop(ctx, true),
-                  child: const Text('実行', style: TextStyle(color: Colors.white))),
+                  child: Text(s.actionExecute, style: const TextStyle(color: Colors.white))),
             ],
           );
         },
@@ -470,10 +483,10 @@ extension AppManagementMethods on _SettingsScreenState {
       for (final e in floorMap.entries) {
         await _ss.requestFloorChange(e.key, e.value);
       }
-      _showSnack('${floorMap.length}件を3分後にランダム配置します');
+      if (mounted) _showSnack(S.of(context).randomScheduledCount(floorMap.length));
     } else {
       await _as.applyFloorMap(floorMap);
-      _showSnack('${floorMap.length}件をランダム配置しました');
+      if (mounted) _showSnack(S.of(context).randomDoneCount(floorMap.length));
     }
     await _load();
   }
@@ -486,6 +499,7 @@ extension AppManagementMethods on _SettingsScreenState {
 
     final suggestions = <Map<String, dynamic>>[];
 
+    final s = S.of(context);
     for (final app in _apps) {
       final usage = stats[app.packageName] ?? 0;
       // Apps with >60 min on floor 2+ → suggest floor 1
@@ -494,7 +508,7 @@ extension AppManagementMethods on _SettingsScreenState {
           'app': app,
           'currentFloor': app.floor,
           'suggestedFloor': 1,
-          'reason': '使用時間 $usage分 → 1Fへ',
+          'reason': s.minutesUsedToFloor1(usage),
           'approved': true,
         });
       }
@@ -504,14 +518,14 @@ extension AppManagementMethods on _SettingsScreenState {
           'app': app,
           'currentFloor': app.floor,
           'suggestedFloor': 3,
-          'reason': '使用時間なし → 3Fへ',
+          'reason': s.noUsageToFloor3,
           'approved': true,
         });
       }
     }
 
     if (suggestions.isEmpty) {
-      _showSnack('最適化の提案はありません');
+      _showSnack(s.floorOptimizationNoProposals);
       return;
     }
 
@@ -520,8 +534,8 @@ extension AppManagementMethods on _SettingsScreenState {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('フロア最適化の提案',
-              style: TextStyle(color: Colors.white)),
+          title: Text(S.of(ctx).floorOptimizationProposalDialog,
+              style: const TextStyle(color: Colors.white)),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
@@ -560,14 +574,14 @@ extension AppManagementMethods on _SettingsScreenState {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('キャンセル',
-                    style: TextStyle(color: Colors.white54))),
+                child: Text(S.of(ctx).actionCancel,
+                    style: const TextStyle(color: Colors.white54))),
             TextButton(
               onPressed: () async {
-                for (final s in suggestions) {
-                  if (s['approved'] == true) {
-                    final app = s['app'] as AppConfig;
-                    final newFloor = s['suggestedFloor'] as int;
+                for (final sg in suggestions) {
+                  if (sg['approved'] == true) {
+                    final app = sg['app'] as AppConfig;
+                    final newFloor = sg['suggestedFloor'] as int;
                     if (_ss.lockModeEnabled) {
                       await _ss.requestFloorChange(
                           app.packageName, newFloor);
@@ -579,10 +593,10 @@ extension AppManagementMethods on _SettingsScreenState {
                 }
                 if (ctx.mounted) Navigator.pop(ctx);
                 await _load();
-                _showSnack('フロアを最適化しました');
+                if (mounted) _showSnack(S.of(context).floorOptimizationDone);
               },
-              child: const Text('適用',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionApply,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -669,7 +683,7 @@ class _AppListScreenState extends State<_AppListScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
-          _floorChip(null, '全て'),
+          _floorChip(null, S.of(context).allFloors),
           // Underground floors (deepest first → BnF .. B1F).
           for (int i = underFloors; i >= 1; i--)
             _floorChip(-i, floorLabel(-i)),
@@ -751,8 +765,8 @@ class _AppListScreenState extends State<_AppListScreen> {
             ),
           ),
           if (hasPending)
-            const Text('(変更予定)',
-                style: TextStyle(color: Colors.amber, fontSize: 11)),
+            Text(S.of(context).pendingChange,
+                style: const TextStyle(color: Colors.amber, fontSize: 11)),
           if (folder != null)
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -768,25 +782,22 @@ class _AppListScreenState extends State<_AppListScreen> {
             const Icon(Icons.push_pin,
                 color: Colors.blueAccent, size: 13),
           if (app.mindfulDelay)
-            const Text('[ディレイ]',
-                style:
-                    TextStyle(color: Colors.tealAccent, fontSize: 11)),
+            Text(S.of(context).delayBadge,
+                style: const TextStyle(color: Colors.tealAccent, fontSize: 11)),
           if (isBatch)
-            const Text('[バッチ]',
-                style: TextStyle(
+            Text(S.of(context).batchBadge,
+                style: const TextStyle(
                     color: Colors.purpleAccent, fontSize: 11)),
           if (isBlocked)
-            const Text('[ブロック]',
-                style: TextStyle(
+            Text(S.of(context).blockBadge,
+                style: const TextStyle(
                     color: Colors.redAccent, fontSize: 11)),
           if (activeEmg)
-            const Text('[緊急中]',
-                style:
-                    TextStyle(color: Colors.redAccent, fontSize: 11)),
+            Text(S.of(context).emergencyActiveBadge,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
           if (_ss.isEmergencyApp(app.packageName) && !activeEmg)
-            const Text('[緊急指定]',
-                style:
-                    TextStyle(color: Colors.white24, fontSize: 11)),
+            Text(S.of(context).emergencyDesignatedBadge,
+                style: const TextStyle(color: Colors.white24, fontSize: 11)),
         ],
       ),
       selected: isSelected,
@@ -833,15 +844,16 @@ class _AppListScreenState extends State<_AppListScreen> {
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredApps;
+    final s = S.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         title: _selectionMode
-            ? Text('${_selectedPkgs.length}個選択中',
+            ? Text(s.selectedCount(_selectedPkgs.length),
                 style: const TextStyle(color: Colors.white))
-            : const Text('アプリ一覧',
-                style: TextStyle(color: Colors.white)),
+            : Text(s.appList,
+                style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: _selectionMode
             ? [
@@ -849,16 +861,16 @@ class _AppListScreenState extends State<_AppListScreen> {
                   onPressed: () => setState(() {
                     _selectedPkgs.addAll(filtered.map((a) => a.packageName));
                   }),
-                  child: const Text('すべて選択',
-                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  child: Text(s.actionSelectAll,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ),
                 TextButton(
                   onPressed: () => setState(() {
                     _selectionMode = false;
                     _selectedPkgs.clear();
                   }),
-                  child: const Text('解除',
-                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  child: Text(s.actionDeselectAll,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ),
               ]
             : null,
@@ -872,7 +884,7 @@ class _AppListScreenState extends State<_AppListScreen> {
               style:
                   const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
-                hintText: 'アプリを検索...',
+                hintText: s.appSearchHint,
                 hintStyle: const TextStyle(
                     color: Colors.white38, fontSize: 13),
                 prefixIcon: const Icon(Icons.search,
@@ -901,7 +913,7 @@ class _AppListScreenState extends State<_AppListScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'アプリ一覧  ${filtered.length}件',
+                s.appListCount(filtered.length),
                 style: const TextStyle(
                     color: Colors.white54, fontSize: 12),
               ),
@@ -934,7 +946,7 @@ class _AppListScreenState extends State<_AppListScreen> {
                           backgroundColor: Colors.white12,
                           foregroundColor: Colors.white),
                       icon: const Icon(Icons.layers, size: 16),
-                      label: const Text('フロア変更', style: TextStyle(fontSize: 12)),
+                      label: Text(s.floorChange, style: const TextStyle(fontSize: 12)),
                       onPressed: () async {
                         int? selectedFloor;
                         final result = await showDialog<int>(
@@ -942,7 +954,7 @@ class _AppListScreenState extends State<_AppListScreen> {
                           builder: (ctx) => StatefulBuilder(
                             builder: (ctx, si) => AlertDialog(
                               backgroundColor: const Color(0xFF1A1A1A),
-                              title: Text('${_selectedPkgs.length}個を移動',
+                              title: Text(S.of(ctx).moveCount(_selectedPkgs.length),
                                   style: const TextStyle(color: Colors.white, fontSize: 14)),
                               content: Wrap(
                                 spacing: 8,
@@ -968,10 +980,10 @@ class _AppListScreenState extends State<_AppListScreen> {
                                 }),
                               ),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
                                 TextButton(
                                   onPressed: selectedFloor != null ? () => Navigator.pop(ctx, selectedFloor) : null,
-                                  child: const Text('移動', style: TextStyle(color: Colors.white)),
+                                  child: Text(S.of(ctx).actionMove, style: const TextStyle(color: Colors.white)),
                                 ),
                               ],
                             ),
@@ -998,7 +1010,7 @@ class _AppListScreenState extends State<_AppListScreen> {
                           backgroundColor: Colors.white12,
                           foregroundColor: Colors.white),
                       icon: const Icon(Icons.hourglass_bottom, size: 16),
-                      label: const Text('ディレイ切替', style: TextStyle(fontSize: 12)),
+                      label: Text(s.delaySwitch, style: const TextStyle(fontSize: 12)),
                       onPressed: () async {
                         // Toggle: if all selected have delay, turn off; otherwise turn on
                         final allOn = _selectedPkgs.every((pkg) {
@@ -1020,7 +1032,7 @@ class _AppListScreenState extends State<_AppListScreen> {
                           backgroundColor: Colors.white12,
                           foregroundColor: Colors.white),
                       icon: const Icon(Icons.push_pin, size: 16),
-                      label: const Text('ピン切替', style: TextStyle(fontSize: 12)),
+                      label: Text(s.pinSwitch, style: const TextStyle(fontSize: 12)),
                       onPressed: () async {
                         final allPinned = _selectedPkgs.every((pkg) {
                           final app = _apps.firstWhere((a) => a.packageName == pkg, orElse: () => AppConfig(packageName: pkg, appName: pkg));
@@ -1067,12 +1079,7 @@ class _AppDetailScreen extends StatefulWidget {
 
 class _AppDetailScreenState extends State<_AppDetailScreen> {
   late int _selectedFloor;
-  late bool _isEmergency;
-  late int _emergencyMinutes;
-  late bool _emergencyActive;
   late bool _isPinned;
-  late bool _mindfulDelay;
-  late bool _batchEnabled;
 
   late TextEditingController _customNameCtrl;
   late TextEditingController _folderCtrl;
@@ -1089,20 +1096,7 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
     super.initState();
     final app = widget.app;
     _selectedFloor = _ss.pendingFloorChanges?[app.packageName] ?? app.floor;
-    _isEmergency = _ss.isEmergencyApp(app.packageName);
-    _emergencyMinutes = (app.emergencyUntil != null &&
-            app.emergencyUntil!.isAfter(DateTime.now()))
-        ? app.emergencyUntil!
-            .difference(DateTime.now())
-            .inMinutes
-            .clamp(1, 120)
-        : 30;
-    _emergencyActive = app.isEmergency &&
-        app.emergencyUntil != null &&
-        app.emergencyUntil!.isAfter(DateTime.now());
     _isPinned = app.isPinned;
-    _mindfulDelay = app.mindfulDelay;
-    _batchEnabled = _ss.batchApps.contains(app.packageName);
     _customNameCtrl =
         TextEditingController(text: app.customName ?? '');
     _folderCtrl =
@@ -1173,48 +1167,15 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
     // isPinned
     app.isPinned = _isPinned;
 
-    // mindfulDelay
-    app.mindfulDelay = _mindfulDelay;
-
-    // batch
-    final batches = _ss.batchApps;
-    if (_batchEnabled) {
-      batches.add(app.packageName);
-    } else {
-      batches.remove(app.packageName);
-    }
-    await _ss.setBatchApps(batches);
-
     // Floor change
     if (!_lockBlocked && _selectedFloor != app.floor) {
       if (_ss.lockModeEnabled) {
         final ok = await _ss.requestFloorChange(
             app.packageName, _selectedFloor);
-        if (!ok) _showSnack('クールダウン中です。変更できません。');
+        if (!ok && mounted) _showSnack(S.of(context).cooldownActive);
       } else {
         app.floor = _selectedFloor;
       }
-    }
-
-    // Emergency — unified save
-    app.isEmergency = _isEmergency;
-    if (_isEmergency) {
-      await _ss.addEmergencyApp(app.packageName);
-    } else {
-      await _ss.removeEmergencyApp(app.packageName);
-    }
-    if (_isEmergency && _emergencyActive) {
-      if (!_ss.canActivateEmergency()) {
-        _showSnack(_ss.emergencyLimitBlockMessage);
-        await _as.saveConfig(app);
-        if (mounted) Navigator.pop(context);
-        return;
-      }
-      app.emergencyUntil = DateTime.now()
-          .add(Duration(minutes: _emergencyMinutes));
-      await _ss.recordEmergencyUseV2('registered', [app.packageName]);
-    } else if (!_emergencyActive) {
-      app.emergencyUntil = null;
     }
 
     await _as.saveConfig(app);
@@ -1238,8 +1199,8 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Custom name ──
-            const Text('表示名',
-                style: TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(S.of(context).displayNameLabel,
+                style: const TextStyle(color: Colors.white70, fontSize: 13)),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -1277,13 +1238,13 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
             const SizedBox(height: 16),
 
             // ── Floor picker ──
-            const Text('フロア',
-                style: TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(S.of(context).floorLabel,
+                style: const TextStyle(color: Colors.white70, fontSize: 13)),
             if (_lockBlocked)
-              const Padding(
-                padding: EdgeInsets.only(top: 6, bottom: 2),
-                child: Text('クールダウン中のため変更できません',
-                    style: TextStyle(
+              Padding(
+                padding: const EdgeInsets.only(top: 6, bottom: 2),
+                child: Text(S.of(context).cooldownChangeBlocked,
+                    style: const TextStyle(
                         color: Colors.amber, fontSize: 12)),
               )
             else ...[
@@ -1302,8 +1263,8 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
             const SizedBox(height: 16),
 
             // ── Folder picker ──
-            const Text('フォルダ',
-                style: TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(S.of(context).folderLabel,
+                style: const TextStyle(color: Colors.white70, fontSize: 13)),
             const SizedBox(height: 8),
             if (_existingFolders.isNotEmpty) ...[
               Wrap(
@@ -1328,7 +1289,7 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
                                 : Colors.white38),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Text('なし',
+                      child: Text(S.of(context).noneLabel,
                           style: TextStyle(
                               color: _selectedFolder == null
                                   ? Colors.black
@@ -1378,7 +1339,7 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
               controller: _folderCtrl,
               style: const TextStyle(color: Colors.white, fontSize: 13),
               decoration: InputDecoration(
-                hintText: '新しいフォルダ名（任意）',
+                hintText: S.of(context).newFolderHint,
                 hintStyle: const TextStyle(
                     color: Colors.white24, fontSize: 12),
                 filled: true,
@@ -1397,53 +1358,13 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
             const SizedBox(height: 16),
 
             // ── Switches ──
-            _switchRow('この階に固定する', _isPinned, Colors.blueAccent,
+            // Only "pin to this floor" stays here — that's a position concept.
+            // Mindful delay / notification batch / emergency designation /
+            // usage-count floor rules are configured from the corresponding
+            // sections in Settings, not per-app from this list, since they
+            // are typically applied in bulk.
+            _switchRow(S.of(context).pinToThisFloor, _isPinned, Colors.blueAccent,
                 (v) => setState(() => _isPinned = v)),
-            _switchRow('マインドフルディレイ', _mindfulDelay, Colors.tealAccent,
-                (v) => setState(() => _mindfulDelay = v)),
-            _switchRow('通知バッチ処理', _batchEnabled, Colors.purpleAccent,
-                (v) => setState(() => _batchEnabled = v)),
-            _switchRow('緊急アプリに指定', _isEmergency, Colors.redAccent,
-                (v) => setState(() => _isEmergency = v)),
-
-            if (_isEmergency) ...[
-              const SizedBox(height: 8),
-              const Text('緊急継続時間（分）',
-                  style: TextStyle(
-                      color: Colors.white70, fontSize: 13)),
-              Row(
-                children: [
-                  Expanded(
-                    child: Slider(
-                      value: _emergencyMinutes.toDouble(),
-                      min: 1,
-                      max: 120,
-                      divisions: 119,
-                      activeColor: Colors.redAccent,
-                      inactiveColor: Colors.white24,
-                      label: '$_emergencyMinutes分',
-                      onChanged: (v) =>
-                          setState(() => _emergencyMinutes = v.round()),
-                    ),
-                  ),
-                  Text('$_emergencyMinutes分',
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 13)),
-                ],
-              ),
-              _switchRow('緊急モード ON/OFF', _emergencyActive, Colors.redAccent,
-                  (v) => setState(() => _emergencyActive = v)),
-            ],
-
-            const SizedBox(height: 16),
-
-            // ── Usage Count Floor Rules ──
-            _UsageCountRulesSection(
-              pkg: app.packageName,
-              settingsService: _ss,
-              maxFloors: _ss.maxFloors,
-              undergroundFloors: _ss.undergroundFloors,
-            ),
 
             const SizedBox(height: 32),
 
@@ -1457,7 +1378,7 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
                     side: const BorderSide(color: Colors.white24),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('キャンセル'),
+                  child: Text(S.of(context).actionCancel),
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
@@ -1466,7 +1387,7 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
                     foregroundColor: Colors.black,
                   ),
                   onPressed: _save,
-                  child: const Text('保存'),
+                  child: Text(S.of(context).actionSave),
                 ),
               ],
             ),
@@ -1497,202 +1418,6 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
   }
 }
 
-// ── Usage Count Floor Rules Section ──────────────────────────────────────────
-
-class _UsageCountRulesSection extends StatefulWidget {
-  final String pkg;
-  final SettingsService settingsService;
-  final int maxFloors;
-  final int undergroundFloors;
-
-  const _UsageCountRulesSection({
-    required this.pkg,
-    required this.settingsService,
-    required this.maxFloors,
-    required this.undergroundFloors,
-  });
-
-  @override
-  State<_UsageCountRulesSection> createState() => _UsageCountRulesSectionState();
-}
-
-class _UsageCountRulesSectionState extends State<_UsageCountRulesSection> {
-  SettingsService get _ss => widget.settingsService;
-
-  Future<void> _addOrEditRule({Map<String, int>? existing, int? editIndex}) async {
-    final rules = _ss.usageCountFloorRules(widget.pkg);
-    int threshold = existing?['threshold'] ?? 5;
-    int floor = existing?['floor'] ?? 2;
-    final threshCtrl = TextEditingController(text: threshold.toString());
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setInner) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          title: Text(existing == null ? 'ルールを追加' : 'ルールを編集',
-              style: const TextStyle(color: Colors.white, fontSize: 14)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('起動回数の閾値:', style: TextStyle(color: Colors.white54, fontSize: 12)),
-              const SizedBox(height: 4),
-              TextField(
-                controller: threshCtrl,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.white.withOpacity(0.07),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(4),
-                    borderSide: BorderSide.none,
-                  ),
-                  suffixText: '回以上',
-                  suffixStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                ),
-                onChanged: (v) => threshold = int.tryParse(v) ?? threshold,
-              ),
-              const SizedBox(height: 12),
-              const Text('移動先フロア:', style: TextStyle(color: Colors.white54, fontSize: 12)),
-              const SizedBox(height: 4),
-              StatefulBuilder(
-                builder: (_, setWrap) {
-                  Widget chip(int f) {
-                    final sel = floor == f;
-                    return GestureDetector(
-                      onTap: () => setWrap(() => floor = f),
-                      child: Container(
-                        width: 44,
-                        height: 30,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: sel ? Colors.white : Colors.transparent,
-                          border: Border.all(
-                              color: sel ? Colors.white : Colors.white38),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(floorLabel(f),
-                            style: TextStyle(
-                                color:
-                                    sel ? Colors.black : Colors.white54,
-                                fontSize: 11)),
-                      ),
-                    );
-                  }
-
-                  return Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (int i = widget.undergroundFloors; i >= 1; i--)
-                        chip(-i),
-                      for (int i = 1; i <= widget.maxFloors; i++) chip(i),
-                    ],
-                  );
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
-            TextButton(
-              onPressed: () {
-                threshold = int.tryParse(threshCtrl.text) ?? threshold;
-                Navigator.pop(ctx, true);
-              },
-              child: const Text('保存', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
-    final updated = [...rules];
-    final newRule = {'threshold': threshold, 'floor': floor};
-    if (editIndex != null) {
-      updated[editIndex] = newRule;
-    } else {
-      updated.add(newRule);
-    }
-    updated.sort((a, b) => a['threshold']!.compareTo(b['threshold']!));
-    await _ss.setUsageCountFloorRules(widget.pkg, updated);
-    setState(() {});
-  }
-
-  Future<void> _deleteRule(int index) async {
-    final rules = [..._ss.usageCountFloorRules(widget.pkg)];
-    rules.removeAt(index);
-    await _ss.setUsageCountFloorRules(widget.pkg, rules);
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final rules = _ss.usageCountFloorRules(widget.pkg);
-    final todayCount = _ss.dailyLaunchCount(widget.pkg);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('起動回数フロア変更',
-                style: TextStyle(color: Colors.white70, fontSize: 13)),
-            TextButton.icon(
-              onPressed: () => _addOrEditRule(),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              icon: const Icon(Icons.add, color: Colors.tealAccent, size: 16),
-              label: const Text('追加', style: TextStyle(color: Colors.tealAccent, fontSize: 12)),
-            ),
-          ],
-        ),
-        Text('今日の起動回数: $todayCount回',
-            style: const TextStyle(color: Colors.white38, fontSize: 11)),
-        const SizedBox(height: 4),
-        if (rules.isEmpty)
-          const Text('ルールなし', style: TextStyle(color: Colors.white24, fontSize: 12))
-        else
-          ...rules.asMap().entries.map((e) {
-            final i = e.key;
-            final rule = e.value;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${rule['threshold']}回以上 → ${floorLabel(rule['floor']!)}',
-                      style: const TextStyle(color: Colors.white60, fontSize: 12),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _addOrEditRule(existing: rule, editIndex: i),
-                    child: const Icon(Icons.edit, color: Colors.white38, size: 16),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => _deleteRule(i),
-                    child: const Icon(Icons.delete, color: Colors.redAccent, size: 16),
-                  ),
-                ],
-              ),
-            );
-          }),
-      ],
-    );
-  }
-}
-
 // ── Emergency per-app caps screen ───────────────────────────────────────────
 
 class _EmergencyPerAppCapsScreen extends StatefulWidget {
@@ -1717,7 +1442,7 @@ class _EmergencyPerAppCapsScreenState
   Future<void> _editCap(AppConfig app) async {
     final cap = _ss.emergencyCapForApp(app.packageName);
     final result = await _showCapDialogStandalone(
-        context, '${_displayName(app)} の使用制限',
+        context, S.of(context).appLimitTitle(_displayName(app)),
         (cap?['count'] as num?)?.toInt() ?? 0,
         (cap?['period'] as String?) ?? 'daily');
     if (result == null) return;
@@ -1727,6 +1452,7 @@ class _EmergencyPerAppCapsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     final registered = _ss.getEmergencyApps();
     final apps = widget.allApps
         .where((a) => registered.contains(a.packageName))
@@ -1738,13 +1464,13 @@ class _EmergencyPerAppCapsScreenState
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D0D0D),
         foregroundColor: Colors.white,
-        title: const Text('アプリ個別の使用制限',
-            style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text(s.emergencyPerAppLimitTitle,
+            style: const TextStyle(color: Colors.white, fontSize: 16)),
       ),
       body: apps.isEmpty
-          ? const Center(
-              child: Text('登録済み緊急アプリがありません',
-                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+          ? Center(
+              child: Text(s.noEmergencyRegistered,
+                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
             )
           : ListView.separated(
               itemCount: apps.length,
@@ -1754,8 +1480,8 @@ class _EmergencyPerAppCapsScreenState
                 final app = apps[i];
                 final cap = _ss.emergencyCapForApp(app.packageName);
                 final summary = cap == null
-                    ? '未設定（無制限）'
-                    : _ss.capSummary(cap);
+                    ? s.notSetUnlimited
+                    : _ss.capSummary(s, cap);
                 return ListTile(
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -1825,12 +1551,13 @@ class _EmergencyFolderCapsScreenState
       ..sort((a, b) =>
           _displayName(a).toLowerCase().compareTo(_displayName(b).toLowerCase()));
 
-    const periods = [
-      ('hourly', '1時間'),
-      ('daily', '1日'),
-      ('weekly', '1週間'),
-      ('monthly', '1か月'),
-      ('yearly', '1年'),
+    final s0 = S.of(context);
+    final periods = <(String, String)>[
+      ('hourly', s0.periodHourly),
+      ('daily', s0.periodDaily),
+      ('weekly', s0.periodWeekly),
+      ('monthly', s0.periodMonthly),
+      ('yearly', s0.periodYearly),
     ];
 
     final result = await showDialog<Map<String, dynamic>>(
@@ -1838,7 +1565,7 @@ class _EmergencyFolderCapsScreenState
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: Text(isEdit ? 'フォルダ編集' : 'フォルダ追加',
+          title: Text(isEdit ? S.of(ctx).folderEdit : S.of(ctx).folderAdd,
               style: const TextStyle(color: Colors.white, fontSize: 14)),
           content: SizedBox(
             width: double.maxFinite,
@@ -1847,16 +1574,15 @@ class _EmergencyFolderCapsScreenState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('名前',
-                      style:
-                          TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(S.of(ctx).nameLabel,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   const SizedBox(height: 4),
                   TextField(
                     controller: nameCtrl,
                     style: const TextStyle(
                         color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(
-                      hintText: '例: SNS',
+                      hintText: S.of(ctx).nameHintSns,
                       hintStyle: const TextStyle(color: Colors.white38),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.07),
@@ -1868,9 +1594,8 @@ class _EmergencyFolderCapsScreenState
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text('回数（空欄＝無制限）',
-                      style:
-                          TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(S.of(ctx).countWithEmptyUnlimitedHint,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   const SizedBox(height: 4),
                   TextField(
                     controller: countCtrl,
@@ -1878,7 +1603,7 @@ class _EmergencyFolderCapsScreenState
                     style: const TextStyle(
                         color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(
-                      hintText: '無制限',
+                      hintText: S.of(ctx).unlimited,
                       hintStyle: const TextStyle(color: Colors.white38),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.07),
@@ -1890,9 +1615,8 @@ class _EmergencyFolderCapsScreenState
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text('期間',
-                      style:
-                          TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(S.of(ctx).periodLabel,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 6,
@@ -1922,13 +1646,12 @@ class _EmergencyFolderCapsScreenState
                     }).toList(),
                   ),
                   const SizedBox(height: 12),
-                  const Text('対象アプリ',
-                      style:
-                          TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(S.of(ctx).targetApps,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   const SizedBox(height: 4),
                   if (candidates.isEmpty)
-                    const Text('登録済み緊急アプリがありません',
-                        style: TextStyle(
+                    Text(S.of(ctx).noEmergencyRegistered,
+                        style: const TextStyle(
                             color: Colors.white38, fontSize: 12))
                   else
                     SizedBox(
@@ -1968,20 +1691,20 @@ class _EmergencyFolderCapsScreenState
               TextButton(
                 onPressed: () =>
                     Navigator.pop(ctx, <String, dynamic>{'__delete': true}),
-                child: const Text('削除',
-                    style: TextStyle(color: Colors.redAccent)),
+                child: Text(S.of(ctx).actionDelete,
+                    style: const TextStyle(color: Colors.redAccent)),
               ),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: () {
                 final name = nameCtrl.text.trim();
                 if (name.isEmpty) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(content: Text('名前を入力してください')));
+                      SnackBar(content: Text(S.of(ctx).pleaseEnterName)));
                   return;
                 }
                 final c = int.tryParse(countCtrl.text) ?? 0;
@@ -1992,8 +1715,8 @@ class _EmergencyFolderCapsScreenState
                   'period': period,
                 });
               },
-              child: const Text('保存',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(S.of(ctx).actionSave,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -2014,14 +1737,15 @@ class _EmergencyFolderCapsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     final folders = _ss.emergencyCapFolders;
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D0D0D),
         foregroundColor: Colors.white,
-        title: const Text('フォルダ単位の使用制限',
-            style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text(s.emergencyFolderLimitTitle,
+            style: const TextStyle(color: Colors.white, fontSize: 16)),
         actions: [
           IconButton(
             icon: const Icon(Icons.add, color: Colors.white),
@@ -2030,9 +1754,9 @@ class _EmergencyFolderCapsScreenState
         ],
       ),
       body: folders.isEmpty
-          ? const Center(
-              child: Text('右上の＋ボタンでフォルダを追加',
-                  style: TextStyle(color: Colors.white54, fontSize: 13)),
+          ? Center(
+              child: Text(s.folderAddTopRightHint,
+                  style: const TextStyle(color: Colors.white54, fontSize: 13)),
             )
           : ListView.separated(
               itemCount: folders.length,
@@ -2047,11 +1771,11 @@ class _EmergencyFolderCapsScreenState
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 4),
-                  title: Text(folder['name'] as String? ?? 'フォルダ',
+                  title: Text(folder['name'] as String? ?? s.folderLabel,
                       style: const TextStyle(
                           color: Colors.white, fontSize: 14)),
                   subtitle: Text(
-                      '${_ss.capSummary(folder)}・${apps.length}アプリ',
+                      s.folderAppSubtitle(_ss.capSummary(s, folder), apps.length),
                       style: const TextStyle(
                           color: Colors.white54, fontSize: 12)),
                   trailing: const Icon(Icons.chevron_right,
@@ -2074,12 +1798,13 @@ Future<(int, String)?> _showCapDialogStandalone(
   String initialPeriod,
 ) async {
   String period = initialPeriod;
-  const periods = [
-    ('hourly', '1時間'),
-    ('daily', '1日'),
-    ('weekly', '1週間'),
-    ('monthly', '1か月'),
-    ('yearly', '1年'),
+  final s0 = S.of(context);
+  final periods = <(String, String)>[
+    ('hourly', s0.periodHourly),
+    ('daily', s0.periodDaily),
+    ('weekly', s0.periodWeekly),
+    ('monthly', s0.periodMonthly),
+    ('yearly', s0.periodYearly),
   ];
   final ctrl = TextEditingController(
       text: initialCount > 0 ? initialCount.toString() : '');
@@ -2094,15 +1819,15 @@ Future<(int, String)?> _showCapDialogStandalone(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('回数（空欄＝無制限）',
-                style: TextStyle(color: Colors.white54, fontSize: 12)),
+            Text(S.of(ctx).countWithEmptyUnlimitedHint,
+                style: const TextStyle(color: Colors.white54, fontSize: 12)),
             const SizedBox(height: 6),
             TextField(
               controller: ctrl,
               keyboardType: TextInputType.number,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
-                hintText: '無制限',
+                hintText: S.of(ctx).unlimited,
                 hintStyle: const TextStyle(color: Colors.white38),
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.07),
@@ -2114,8 +1839,8 @@ Future<(int, String)?> _showCapDialogStandalone(
               ),
             ),
             const SizedBox(height: 12),
-            const Text('期間',
-                style: TextStyle(color: Colors.white54, fontSize: 12)),
+            Text(S.of(ctx).periodLabel,
+                style: const TextStyle(color: Colors.white54, fontSize: 12)),
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
@@ -2146,15 +1871,15 @@ Future<(int, String)?> _showCapDialogStandalone(
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('キャンセル',
-                style: TextStyle(color: Colors.white54)),
+            child: Text(S.of(ctx).actionCancel,
+                style: const TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () {
               final c = int.tryParse(ctrl.text) ?? 0;
               Navigator.pop(ctx, (c < 0 ? 0 : c, period));
             },
-            child: const Text('保存', style: TextStyle(color: Colors.white)),
+            child: Text(S.of(ctx).actionSave, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

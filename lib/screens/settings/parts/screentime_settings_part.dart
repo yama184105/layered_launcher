@@ -2,12 +2,10 @@ part of '../settings_screen.dart';
 
 extension ScreenTimeSettingsMethods on _SettingsScreenState {
   List<Widget> _screenTimeSettingRows() {
-    const intervalLabels = {30: '30分', 60: '1時間', 120: '2時間', 240: '4時間'};
+    final s = S.of(context);
     final ss = _ss;
-    final batchLabel =
-        intervalLabels[ss.batchIntervalMinutes] ?? '${ss.batchIntervalMinutes}分';
     return [
-      _settingRow('マインドフルディレイ設定', '', () {
+      _settingRow(s.mindfulDelaySettings, '', () {
         Navigator.push(context, MaterialPageRoute(
           builder: (_) => _MindfulDelaySettingsScreen(appService: _as, settingsService: ss),
         )).then((_) => _load());
@@ -15,36 +13,65 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
       _rowDivider,
       _expandableRow(
         key: 'screentime_notif',
-        title: '通知',
-        summary: 'バッチ $batchLabel',
+        title: s.notificationSection,
+        summary: s.batchGroupCount(ss.batchGroups.length),
         children: [
-          _settingRow('通知制限', '', () {
+          _settingRow(s.notificationLimit, '', () {
             Navigator.push(context, MaterialPageRoute(
               builder: (_) => _NotificationSettingsScreen(
                   appService: _as, settingsService: ss),
             ));
           }),
           _rowDivider,
-          _settingRow('バッチ通知間隔', batchLabel, () async {
-            final v = await _showOptionsDialog('バッチ通知間隔', [
-              (30, '30分'),
-              (60, '1時間'),
-              (120, '2時間'),
-              (240, '4時間'),
-            ], ss.batchIntervalMinutes);
-            if (v != null) {
-              await ss.setBatchIntervalMinutes(v);
-              setState(() {});
-            }
+          _settingRow(s.batchGroupsTitle,
+              s.batchGroupCount(ss.batchGroups.length), () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => _BatchGroupsScreen(
+                    appService: _as, settingsService: ss),
+              ),
+            );
+            setState(() {});
+          }),
+          _rowDivider,
+          _settingRow(s.batchPendingTitle, '', () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => _BatchPendingScreen(appService: _as),
+              ),
+            );
+            if (mounted) setState(() {});
+          }),
+          _rowDivider,
+          _settingRow(s.blockedHistoryTitle, '', () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => _BlockedHistoryScreen(appService: _as),
+              ),
+            );
+            if (mounted) setState(() {});
           }),
         ],
       ),
       _rowDivider,
-      _settingRow('アプリブロック', '', () {
+      _settingRow(s.appBlock, '', () {
         Navigator.push(context, MaterialPageRoute(
           builder: (_) => _AppBlockScreen(appService: _as, settingsService: ss),
         ));
       }),
+      _rowDivider,
+      _settingRow(
+        s.lastUsedDisplay,
+        ss.lastUsedDisplayApps.isEmpty
+            ? s.notSet
+            : s.displayedInAppsCount(ss.lastUsedDisplayApps.length),
+        () async {
+          await showLastUsedDisplayPicker();
+        },
+      ),
     ];
   }
 
@@ -145,12 +172,13 @@ class _MindfulDelaySettingsScreenState
     final customSecs = _ss.mindfulDelaySeconds;
     final isCustom = !presetSecs.contains(customSecs);
 
+    final s = S.of(context);
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('マインドフルディレイ設定',
-            style: TextStyle(color: Colors.white)),
+        title: Text(s.mindfulDelaySettings,
+            style: const TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
@@ -164,12 +192,10 @@ class _MindfulDelaySettingsScreenState
                 // Global toggle
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('マインドフルディレイを有効にする',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: const Text('ONにすると対象アプリ起動時に遅延が発生します',
-                      style:
-                          TextStyle(color: Colors.white38, fontSize: 11)),
+                  title: Text(s.mindfulDelayEnable,
+                      style: const TextStyle(color: Colors.white, fontSize: 14)),
+                  subtitle: Text(s.mindfulDelayHelp,
+                      style: const TextStyle(color: Colors.white38, fontSize: 11)),
                   activeColor: Colors.tealAccent,
                   value: _ss.mindfulDelayEnabled,
                   onChanged: (v) async {
@@ -179,22 +205,21 @@ class _MindfulDelaySettingsScreenState
                 ),
                 const Divider(color: Colors.white12),
                 const SizedBox(height: 8),
-                const Text('待機時間',
-                    style:
-                        TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(s.waitTime,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 8),
                 Wrap(
                   children: [
-                    ...presetSecs.map((s) => _chip(
-                          s < 60 ? '$s秒' : '${s ~/ 60}分',
-                          customSecs == s && !isCustom,
+                    ...presetSecs.map((sec) => _chip(
+                          sec < 60 ? s.secondsShort(sec) : s.minutesShortGeneric(sec ~/ 60),
+                          customSecs == sec && !isCustom,
                           () async {
-                            await _ss.setMindfulDelaySeconds(s);
+                            await _ss.setMindfulDelaySeconds(sec);
                             setState(() {});
                           },
                         )),
                     _chip(
-                        'カスタム',
+                        s.speedCustom,
                         isCustom,
                         () async {
                           _customSecsCtrl.text =
@@ -203,9 +228,8 @@ class _MindfulDelaySettingsScreenState
                             context: context,
                             builder: (ctx) => AlertDialog(
                               backgroundColor: const Color(0xFF1A1A1A),
-                              title: const Text('カスタム秒数',
-                                  style:
-                                      TextStyle(color: Colors.white)),
+                              title: Text(S.of(ctx).customSeconds,
+                                  style: const TextStyle(color: Colors.white)),
                               content: TextField(
                                 controller: _customSecsCtrl,
                                 keyboardType: TextInputType.number,
@@ -213,7 +237,7 @@ class _MindfulDelaySettingsScreenState
                                 style: const TextStyle(
                                     color: Colors.white),
                                 decoration: InputDecoration(
-                                  hintText: '秒数を入力',
+                                  hintText: S.of(ctx).enterSecondsHint,
                                   hintStyle: const TextStyle(
                                       color: Colors.white38),
                                   filled: true,
@@ -230,8 +254,8 @@ class _MindfulDelaySettingsScreenState
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.pop(ctx),
-                                  child: const Text('キャンセル',
-                                      style: TextStyle(
+                                  child: Text(S.of(ctx).actionCancel,
+                                      style: const TextStyle(
                                           color: Colors.white54)),
                                 ),
                                 TextButton(
@@ -242,8 +266,8 @@ class _MindfulDelaySettingsScreenState
                                       Navigator.pop(ctx, v);
                                     }
                                   },
-                                  child: const Text('完了',
-                                      style: TextStyle(
+                                  child: Text(S.of(ctx).actionDone,
+                                      style: const TextStyle(
                                           color: Colors.white)),
                                 ),
                               ],
@@ -257,14 +281,13 @@ class _MindfulDelaySettingsScreenState
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text('時間終了後の動作',
-                    style:
-                        TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(s.afterTimeoutAction,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 8),
                 ...[
-                  ('launch', 'そのままアプリを開く'),
-                  ('confirm', 'もう一度確認ダイアログを表示'),
-                  ('cancel', 'キャンセルしてホームに戻る'),
+                  ('launch', s.launchDirectly),
+                  ('confirm', s.showConfirmAgain),
+                  ('cancel', s.cancelToHome),
                 ].map((opt) {
                   final sel = _ss.mindfulDelayAction == opt.$1;
                   return InkWell(
@@ -315,7 +338,7 @@ class _MindfulDelaySettingsScreenState
               controller: _searchCtrl,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
-                hintText: 'アプリを検索...',
+                hintText: s.appSearchHint,
                 hintStyle: const TextStyle(
                     color: Colors.white38, fontSize: 13),
                 prefixIcon: const Icon(Icons.search,
@@ -343,7 +366,7 @@ class _MindfulDelaySettingsScreenState
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '以下のアプリに適用  ${_filteredApps.where((a) => a.mindfulDelay).length}件ON',
+                s.appliedToAppsCount(_filteredApps.where((a) => a.mindfulDelay).length),
                 style: const TextStyle(
                     color: Colors.white54, fontSize: 12),
               ),

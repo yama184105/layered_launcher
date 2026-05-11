@@ -42,6 +42,17 @@ android {
     }
 
     signingConfigs {
+        // Stable debug keystore so every CI debug build is signed with the
+        // same key. Without this, each fresh CI runner generates its own
+        // debug.keystore and Android refuses to update the previously
+        // installed APK (signature mismatch) — testers would have to
+        // uninstall first every time.
+        getByName("debug") {
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+        }
         if (hasReleaseSigning) {
             create("release") {
                 keyAlias = keystoreProperties.getProperty("keyAlias")

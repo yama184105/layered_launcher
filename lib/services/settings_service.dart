@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/app_config.dart';
 
 part 'settings/display_settings_part.dart';
@@ -16,8 +17,24 @@ class SettingsService {
   static const String unsplashAccessKey = 'YOUR_UNSPLASH_ACCESS_KEY';
   late Box<dynamic> _box;
 
+  /// Hook invoked whenever the per-app notification policy changes
+  /// (default mode, OFF set, or explicit-allow set). main.dart wires this
+  /// to NativeService.setNotifPolicy so the kotlin notification listener
+  /// can resolve any package's effective mode without consulting Flutter.
+  Future<void> Function(
+    String defaultMode,
+    Set<String> offPackages,
+    Set<String> allowPackages,
+  )? onNotifPolicyChanged;
+
+  /// Hook invoked whenever the batch-groups config changes. main.dart wires
+  /// this to NativeService.setBatchGroups so AlarmManager schedules and the
+  /// notification listener's app-to-group lookup stay in sync.
+  Future<void> Function(List<Map<String, dynamic>> groups)? onBatchGroupsChanged;
+
   Future<void> init() async {
     _box = await Hive.openBox<dynamic>(_boxName);
+    await migrateBatchGroupsIfNeeded();
   }
 
   /// App locale code: 'ja' or 'en'. Null = follow system locale.

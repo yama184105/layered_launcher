@@ -28,6 +28,14 @@
   "actionOpen": "開く",
   "actionEnabled": "有効",
   "actionDisabled": "無効",
+  "actionExecute": "実行",
+  "actionMove": "移動",
+  "actionEdit": "編集",
+  "actionReset": "リセット",
+  "actionSelectAll": "すべて選択",
+  "actionDeselectAll": "解除",
+  "actionAllSelect": "全て選択",
+  "actionAllDeselect": "全て解除",
 
   "selectColor": "色を選択",
   "customColor": "カスタムカラー",
@@ -95,5 +103,902 @@
       "minutes": { "type": "String" },
       "seconds": { "type": "String" }
     }
-  }
+  },
+
+  "appList": "アプリ一覧",
+  "appSearchHint": "アプリを検索...",
+  "appListCount": "アプリ一覧  {count}件",
+  "@appListCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "selectedItemsCount": "{selected}/{total}件",
+  "@selectedItemsCount": {
+    "placeholders": {
+      "selected": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "selectedCount": "{count}個選択中",
+  "@selectedCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "moveCount": "{count}個を移動",
+  "@moveCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "registeredCount": "{count}個登録済み",
+  "@registeredCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "displayedInAppsCount": "{count}個のアプリで表示",
+  "@displayedInAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "perAppLimitCount": "{count}個設定中",
+  "@perAppLimitCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "folderCount": "{count}フォルダ",
+  "@folderCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "minutesValue": "{minutes}分",
+  "@minutesValue": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "minutesUsedToFloor1": "使用時間 {minutes}分 → 1Fへ",
+  "@minutesUsedToFloor1": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "noUsageToFloor3": "使用時間なし → 3Fへ",
+  "todayLaunchCount": "今日の起動回数: {count}回",
+  "@todayLaunchCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "thresholdRule": "{threshold}回以上 → {floor}",
+  "@thresholdRule": {
+    "placeholders": {
+      "threshold": { "type": "int" },
+      "floor": { "type": "String" }
+    }
+  },
+  "randomScheduledCount": "{count}件を3分後にランダム配置します",
+  "@randomScheduledCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "randomDoneCount": "{count}件をランダム配置しました",
+  "@randomDoneCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "emergencySummary": "{limit}・{count}個",
+  "@emergencySummary": {
+    "placeholders": {
+      "limit": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "emergencyLimitsSummary": "全:{all} / 一覧:{pick} / 登録:{global}",
+  "@emergencyLimitsSummary": {
+    "placeholders": {
+      "all": { "type": "String" },
+      "pick": { "type": "String" },
+      "global": { "type": "String" }
+    }
+  },
+  "emergencyRegisteredSummary": "全体:{global} / 個別:{perApp} / フォルダ:{folders}",
+  "@emergencyRegisteredSummary": {
+    "placeholders": {
+      "global": { "type": "String" },
+      "perApp": { "type": "int" },
+      "folders": { "type": "int" }
+    }
+  },
+  "folderAppSubtitle": "{summary}・{count}アプリ",
+  "@folderAppSubtitle": {
+    "placeholders": {
+      "summary": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "appLimitTitle": "{name} の使用制限",
+  "@appLimitTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+
+  "floorChange": "フロア変更",
+  "delaySwitch": "ディレイ切替",
+  "pinSwitch": "ピン切替",
+  "noneLabel": "なし",
+  "displayNameLabel": "表示名",
+  "floorLabel": "フロア",
+  "folderLabel": "フォルダ",
+  "newFolderHint": "新しいフォルダ名（任意）",
+  "pinToThisFloor": "この階に固定する",
+  "mindfulDelayLabel": "マインドフルディレイ",
+  "notificationBatchLabel": "通知バッチ処理",
+  "markAsEmergency": "緊急アプリに指定",
+  "emergencyDuration": "緊急継続時間（分）",
+  "emergencyOnOff": "緊急モード ON/OFF",
+  "usageCountFloorChange": "起動回数フロア変更",
+  "noRules": "ルールなし",
+  "ruleAdd": "ルールを追加",
+  "ruleEdit": "ルールを編集",
+  "launchThresholdLabel": "起動回数の閾値:",
+  "thresholdSuffix": "回以上",
+  "targetFloorLabel": "移動先フロア:",
+  "cooldownChangeBlocked": "クールダウン中のため変更できません",
+  "cooldownActive": "クールダウン中です。変更できません。",
+  "changeProcessingTryLater": "変更処理中です。クールダウン終了後に再試行してください。",
+  "pendingChange": "(変更予定)",
+  "delayBadge": "[ディレイ]",
+  "batchBadge": "[バッチ]",
+  "blockBadge": "[ブロック]",
+  "emergencyActiveBadge": "[緊急中]",
+  "emergencyDesignatedBadge": "[緊急指定]",
+  "allFloors": "全て",
+
+  "randomPlacement": "ランダム配置",
+  "randomPlacementSelectApps": "ランダム配置するアプリを選択",
+  "floorOptimizationProposal": "フロア最適化を提案",
+  "floorOptimizationProposalDialog": "フロア最適化の提案",
+  "floorOptimizationDone": "フロアを最適化しました",
+  "floorOptimizationNoProposals": "最適化の提案はありません",
+
+  "emergencyMode": "緊急モード",
+  "emergencyAppsRegister": "緊急アプリ登録",
+  "notRegistered": "未登録",
+  "emergencyFontColor": "フォント色",
+  "emergencyFontColorTitle": "緊急アプリのフォント色",
+  "emergencyDisplayMethod": "表示方法",
+  "emergencyDisplayMethodTitle": "緊急アプリの表示方法",
+  "emergencyDisplaySection": "セクション表示",
+  "emergencyDisplaySectionDesc": "セクション表示（上部にまとめて表示）",
+  "emergencyDisplayNormal": "通常表示",
+  "emergencyDisplayNormalDesc": "通常表示（アルファベット順に混合）",
+  "emergencySectionIndex": "セクション索引",
+  "emergencySectionIndexDesc": "サイドバーに「🚨」索引を追加",
+  "emergencyUsageLimit": "使用制限",
+  "emergencyShowAllOn1F": "全アプリを1Fに表示",
+  "emergencyShowAllOn1FLimit": "「全アプリを1Fに表示」の使用制限",
+  "emergencyAppListPick": "アプリ一覧から選択",
+  "emergencyAppListPickLimit": "「アプリ一覧から選択」の使用制限",
+  "emergencyRegistered": "登録済み緊急アプリ",
+  "emergencyRegisteredGlobalLimit": "登録済みアプリ全体の使用制限",
+  "emergencyGlobalLimit": "全体制限",
+  "emergencyPerAppLimit": "アプリ個別制限",
+  "emergencyPerAppLimitTitle": "アプリ個別の使用制限",
+  "emergencyFolderLimit": "フォルダ単位制限",
+  "emergencyFolderLimitTitle": "フォルダ単位の使用制限",
+  "noEmergencyRegistered": "登録済み緊急アプリがありません",
+  "folderEdit": "フォルダ編集",
+  "folderAdd": "フォルダ追加",
+  "nameLabel": "名前",
+  "nameHintSns": "例: SNS",
+  "pleaseEnterName": "名前を入力してください",
+  "targetApps": "対象アプリ",
+  "countWithEmptyUnlimitedHint": "回数（空欄＝無制限）",
+  "unlimited": "無制限",
+  "periodLabel": "期間",
+  "folderAddTopRightHint": "右上の＋ボタンでフォルダを追加",
+  "notSetUnlimited": "未設定（無制限）",
+  "notSet": "未設定",
+
+  "periodHourly": "1時間",
+  "periodDaily": "1日",
+  "periodWeekly": "1週間",
+  "periodMonthly": "1か月",
+  "periodYearly": "1年",
+  "periodOnceDaily": "1日1回",
+  "periodOnceWeekly": "週1回",
+  "periodOnceYearly": "年1回",
+
+  "lastUsedDisplay": "最終起動時刻を表示",
+  "usageStatsAccessRequired": "使用履歴へのアクセスが必要",
+  "usageStatsAccessExplanation": "最終起動時刻を表示するには、設定から「使用履歴へのアクセス」を許可してください。",
+  "openSettings": "設定を開く",
+
+  "colorRed": "赤",
+  "colorOrange": "オレンジ",
+  "colorYellow": "黄色",
+  "colorWhiteNoDistinction": "白（区別なし）",
+  "colorGreen": "緑",
+  "colorLightBlue": "水色",
+
+  "actionDone": "完了",
+  "switchToMultiSelect": "複数選択モードに切り替え",
+  "renameApp": "名前を変更",
+  "moveFloor": "階層を移動",
+  "addToFolder": "フォルダに追加",
+  "addToFavorites": "お気に入りに追加",
+  "removeFromFavorites": "お気に入りを解除",
+  "appInfo": "アプリ情報",
+  "autoMove": "自動移動",
+  "uninstall": "アンインストール",
+  "renameFolder": "フォルダ名を変更",
+  "folderPosition": "フォルダの位置",
+  "deleteFolder": "フォルダを削除",
+  "moveFloorWithName": "階層を移動 — {name}",
+  "@moveFloorWithName": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "selectExistingFolder": "既存のフォルダを選択",
+  "newFolderName": "新しいフォルダ名",
+  "folderNameHint": "フォルダ名を入力...",
+  "folderName": "フォルダ名",
+  "noFolderEmoji": "📂  フォルダなし",
+  "moveAppsCount": "{count}個のアプリを移動",
+  "@moveAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "addAppsToFolder": "{count}個をフォルダに追加",
+  "@addAppsToFolder": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "floorMoveLockedAll": "フロア移動がロックされています",
+  "floorMoveLockedSome": "一部のアプリはフロア移動がロックされています",
+  "appBlockedTitle": "「{name}」はブロック中",
+  "@appBlockedTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "appBlockedMessage": "このアプリは現在ブロックされています。",
+  "emergencyOverride": "緊急解除",
+  "confirmOverrideTitle": "本当に解除しますか？",
+  "overrideRecorded": "解除の記録が残ります。",
+  "overrideAndLaunch": "解除して起動",
+  "deleteFolderTitle": "「{name}」を削除",
+  "@deleteFolderTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "deleteFolderMessage": "フォルダを削除します。{count}件のアプリはフォルダなしになります。",
+  "@deleteFolderMessage": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "folderPositionTitle": "「{name}」の表示位置",
+  "@folderPositionTitle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "folderPositionTop": "最上部に固定",
+  "folderPositionAlphabetical": "名前順（デフォルト）",
+  "folderPositionBottom": "最下部に固定",
+  "fixedTopFolderOrder": "最上部固定フォルダの順番",
+  "fixedBottomFolderOrder": "最下部固定フォルダの順番",
+  "dragToReorder": "ドラッグして順番を変更",
+
+  "animation": "アニメーション",
+  "animTypeSlide": "スライド",
+  "animTypeStair": "階段",
+  "animTypeFade": "フェード",
+  "animTypeZoom": "ズーム",
+  "animSummaryWithCustom": "{type} · {ms}ms · {count}件 個別",
+  "@animSummaryWithCustom": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "ms": { "type": "int" },
+      "count": { "type": "int" }
+    }
+  },
+  "animSummary": "{type} · {ms}ms",
+  "@animSummary": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "ms": { "type": "int" }
+    }
+  },
+
+  "singleFolderMode": "シングルフォルダモード",
+  "floorRange": "フロア範囲",
+  "alphabetIndex": "アルファベット索引",
+  "defaultNewAppFloor": "新規アプリのデフォルトフロア",
+  "maxFloorLabel": "最大フロア:",
+  "undergroundLabel": "地下:",
+
+  "recentlyAdded": "最近追加",
+  "recentlyAddedShow": "最近追加セクションを表示",
+  "judgmentDaysLabel": "判定日数:",
+  "daysValue": "{days}日",
+  "@daysValue": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "enabledWithDays": "有効 · {days}日",
+  "@enabledWithDays": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+
+  "bulkBackgroundChange": "背景一括変更",
+  "bulkApplyAllMessage": "ホーム・各階層・設定画面に一括適用します。",
+  "bulkOpacityTitle": "壁紙の透明度（一括）",
+  "floorBackground": "階層背景",
+  "bulkAllFloorChange": "全階層一括変更",
+  "bulkColorSet": "色を一括設定",
+  "bulkWallpaperSet": "壁紙を一括設定",
+  "bulkOpacitySet": "透明度を一括設定",
+  "noColorSet": "色未設定",
+
+  "colorPureBlack": "純黒",
+  "colorCharcoal": "チャコール",
+  "colorDarkGray": "ダークグレー",
+  "colorMediumGray": "ミディアムグレー",
+  "colorLightGray": "ライトグレー",
+  "colorWhite": "白",
+  "colorDarkRed": "ダークレッド",
+  "colorRedDeep": "レッド",
+  "colorOrangeRed": "オレンジレッド",
+  "colorDarkOrange": "ダークオレンジ",
+  "colorBrown": "ブラウン",
+  "colorBurgundy": "バーガンディ",
+  "colorDarkNavy": "ダークネイビー",
+  "colorNavy": "ネイビー",
+  "colorDarkBlue": "ダークブルー",
+  "colorMidnightBlue": "ミッドナイトブルー",
+  "colorTeal": "ティール",
+  "colorDarkCyan": "ダークシアン",
+  "colorForestGreen": "フォレストグリーン",
+  "colorDarkGreen": "ダークグリーン",
+  "colorOlive": "オリーブ",
+  "colorHunterGreen": "ハンターグリーン",
+  "colorDarkPurple": "ダークパープル",
+  "colorPurple": "パープル",
+  "colorIndigo": "インディゴ",
+  "colorPlum": "プラム",
+  "colorDarkMaroon": "ダークマルーン",
+  "colorDarkWine": "ダークワイン",
+  "colorDarkMauve": "ダークモーヴ",
+  "colorDarkSlate": "ダークスレート",
+  "colorDarkMoss": "ダークモス",
+
+  "background": "背景",
+  "backgroundSummaryAll": "一括 / ホーム / 階層 / 設定",
+  "fontSettings": "フォント設定",
+  "fontColor": "フォントカラー",
+  "fontSize": "フォントサイズ",
+  "rowSpacingLabel": "行間隔",
+  "fontStyle": "フォントスタイル",
+  "sizeLabel": "サイズ",
+  "spacingLabel": "間隔",
+
+  "animTypeLabel": "種類",
+  "animDefaultSpeed": "デフォルト速度",
+  "animPerPairSpeed": "フロア間ごとの個別速度",
+  "pairSetting": "{count}件 設定中",
+  "@pairSetting": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "speedWithMs": "{label} ({ms}ms)",
+  "@speedWithMs": {
+    "placeholders": {
+      "label": { "type": "String" },
+      "ms": { "type": "int" }
+    }
+  },
+  "speedCustom": "カスタム",
+  "speedCustomWithMs": "カスタム ({ms}ms)",
+  "@speedCustomWithMs": {
+    "placeholders": { "ms": { "type": "int" } }
+  },
+  "speedRangeHint": "50〜5000",
+  "customSpeedTitle": "カスタム速度 (ms)",
+  "actionDecide": "決定",
+  "pairSpeedTitle": "{label} の速度 (ms)",
+  "@pairSpeedTitle": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "pairDefaultLabel": "(デフォルト)",
+  "bulkReset": "一括リセット",
+  "restoreDefaults": "デフォルトに戻す",
+  "animationLocked": "アニメーション速度がロックされています",
+
+  "speedInstant": "瞬速",
+  "speedSuperFast": "超速",
+  "speedFast": "速い",
+  "speedSomewhatFast": "やや速い",
+  "speedNormal": "普通",
+  "speedSomewhatSlow": "やや遅い",
+  "speedSlow": "遅い",
+  "speedVerySlow": "とても遅い",
+  "speedSuperSlow": "超遅い",
+  "speedExtremelySlow": "極遅い",
+
+  "deviceAdminRequired": "デバイス管理者権限が必要",
+  "screenOffNeedsAdmin": "画面オフ機能を使用するには、デバイス管理者権限が必要です。設定を開きますか？",
+  "confirmOpenApp": "本当に開きますか？",
+  "launchInSeconds": "{seconds}秒後に起動",
+  "@launchInSeconds": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+  "noAppsOnFloor": "この階にアプリがありません",
+  "folderItemsCount": "({count}件)",
+  "@folderItemsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "recentlyAddedSection": "🆕 最近追加",
+  "emergencyAppsSection": "🚨 緊急アプリ",
+  "currentFloor": "現在",
+  "emergencyAddTitle": "緊急アプリを追加",
+  "emergencyAddAllOn1F": "全アプリを1Fに追加",
+  "emergencyAddFromRegistered": "登録済み緊急アプリから追加",
+  "noEmergencyAppsRegistered": "緊急アプリが登録されていません",
+  "emergencyUseTitle": "緊急使用",
+  "emergencyUseDescription": "対象アプリを1Fにも一時表示します。元のフロアからは消えません。",
+  "emergencyChooseRegistered": "登録済み緊急アプリから選択",
+  "emergencyAppsRegisterHelp": "緊急アプリが登録されていません。設定 → アプリ管理 → 緊急アプリ登録から登録してください。",
+  "emergencyChooseTargetApps": "緊急使用するアプリを選択",
+  "selectDuration": "使用時間を選択",
+  "emergencyDurationDescription": "選択した時間だけ1Fにも表示されます。使用記録が残ります。",
+  "minutesShort15": "15分",
+  "minutesShort30": "30分",
+  "minutesShort60": "60分",
+
+  "shortcutPhone": "電話",
+  "shortcutCamera": "カメラ",
+  "shortcutClock": "時計",
+  "shortcutAlarm": "アラーム",
+  "threeEnabled": "3つ有効",
+  "shortcuts": "ショートカット",
+  "phoneShortcut": "電話ショートカット",
+  "cameraShortcut": "カメラショートカット",
+  "alarmShortcut": "時計タップでアラーム",
+  "enabledWithApp": "有効 · {app}",
+  "@enabledWithApp": {
+    "placeholders": { "app": { "type": "String" } }
+  },
+  "defaultWithLabel": "デフォルト（{label}）",
+  "@defaultWithLabel": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "indentedLabel": "　{label}",
+  "@indentedLabel": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+
+  "clock": "時計",
+  "clockFormat": "時刻フォーマット",
+  "dateFormat": "日付フォーマット",
+  "clockSize": "時計のサイズ",
+  "clockSizeSmall": "小",
+  "clockSizeNormal": "標準",
+  "clockSizeLarge": "大",
+  "chargingAnimation": "充電アニメーション",
+  "clockSummary": "{format} · {size}",
+  "@clockSummary": {
+    "placeholders": {
+      "format": { "type": "String" },
+      "size": { "type": "String" }
+    }
+  },
+
+  "gestures": "ジェスチャー",
+  "gestureUp": "上",
+  "gestureDown": "下",
+  "gestureDoubleTap": "ダブルタップ",
+  "shortcutLocked": "ショートカットアプリの変更がロックされています",
+  "shortcutCooldown": "ショートカット変更のクールダウン中です",
+
+  "minutesShort30": "30分",
+  "hours1": "1時間",
+  "hours2": "2時間",
+  "hours4": "4時間",
+  "minutesShortGeneric": "{minutes}分",
+  "@minutesShortGeneric": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "secondsShort": "{seconds}秒",
+  "@secondsShort": {
+    "placeholders": { "seconds": { "type": "int" } }
+  },
+
+  "mindfulDelaySettings": "マインドフルディレイ設定",
+  "batchInterval": "バッチ通知間隔",
+  "batchSummary": "バッチ {label}",
+  "@batchSummary": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "notificationSection": "通知",
+  "notificationLimit": "通知制限",
+  "defaultNotifModeLabel": "デフォルト",
+  "defaultNotifModeHint": "個別設定がないアプリに適用されます",
+  "appBlock": "アプリブロック",
+
+  "mindfulDelayEnable": "マインドフルディレイを有効にする",
+  "mindfulDelayHelp": "ONにすると対象アプリ起動時に遅延が発生します",
+  "waitTime": "待機時間",
+  "customSeconds": "カスタム秒数",
+  "enterSecondsHint": "秒数を入力",
+  "afterTimeoutAction": "時間終了後の動作",
+  "launchDirectly": "そのままアプリを開く",
+  "showConfirmAgain": "もう一度確認ダイアログを表示",
+  "cancelToHome": "キャンセルしてホームに戻る",
+  "appliedToAppsCount": "以下のアプリに適用  {count}件ON",
+  "@appliedToAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "strictMode": "ストリクトモード",
+  "strictModeDesc": "各カテゴリごとに制限を設定できます",
+  "submodeLocked": "サブモード設定がロックされています",
+  "fullBlock": "完全ブロック",
+  "timer": "タイマー",
+  "timerWaitMinutes": "タイマー（{minutes}分待ち）",
+  "@timerWaitMinutes": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "timerMinutes": "タイマー（分）",
+  "minutesShortValue": "{minutes}分",
+  "@minutesShortValue": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "applyPending": "反映待ち",
+  "legacyLockMode": "レガシーロックモード",
+  "legacyLockModeDesc": "全フロア移動・全アニメ設定を一括でクールダウン制限する旧モード",
+  "selectLockedApps": "ロック対象アプリを選択",
+  "deselectAll": "全解除",
+  "selectAll": "全選択",
+  "targetAllApps": "対象アプリ：全アプリ（タップして選択）",
+  "targetAppsCount": "対象アプリ：{count}個選択済み",
+  "@targetAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "swipeUp": "上スワイプ",
+  "swipeDown": "下スワイプ",
+  "doubleTap": "ダブルタップ",
+  "gestureAction": "ジェスチャーアクション",
+  "gestureScreenOff": "画面オフ",
+  "gestureNotificationPanel": "通知パネルを表示",
+  "recommendedApps": "推奨アプリ",
+
+  "modeSchedule": "スケジュール制",
+  "modeIntervalRandom": "日数間隔ランダム",
+  "autoMoveAppsCount": "{count}アプリに自動移動が設定されています",
+  "@autoMoveAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "noAutoMoveApps": "自動移動が設定されているアプリはありません",
+  "selectAppsToConfigure": "アプリを選んで設定",
+  "configuredLabel": "設定済み",
+  "actionConfigure": "設定",
+  "selectionCountSuffix": "{count}個",
+  "@selectionCountSuffix": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "backupRestoreTitle": "バックアップ・復元",
+  "emailHint": "メールアドレスを入力...",
+  "backupSubject": "Layered Launcher バックアップ",
+  "backupBodyPrefix": "バックアップデータ:\n\n{json}",
+  "@backupBodyPrefix": {
+    "placeholders": { "json": { "type": "String" } }
+  },
+  "sendBackup": "バックアップを送信",
+  "restoreFromBackup": "バックアップから復元",
+  "restoreInstructions": "復元するには、バックアップメールを開いてデータをコピーしてください",
+
+  "notificationAccessTitle": "通知アクセスを許可",
+  "notificationAccessMessage": "通知バッジを表示するには、通知アクセス権限が必要です。設定画面を開きますか？",
+  "actionLater": "後で",
+  "appNotification": "{name}の通知",
+  "@appNotification": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "notificationCountBody": "{count}件の通知があります",
+  "@notificationCountBody": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "batchNotificationChannel": "バッチ通知",
+  "weekdayMon": "月",
+  "weekdayTue": "火",
+  "weekdayWed": "水",
+  "weekdayThu": "木",
+  "weekdayFri": "金",
+  "weekdaySat": "土",
+  "weekdaySun": "日",
+  "screenTimeHM": "{h}時間{m}分",
+  "@screenTimeHM": {
+    "placeholders": {
+      "h": { "type": "int" },
+      "m": { "type": "int" }
+    }
+  },
+  "screenTimeM": "{m}分",
+  "@screenTimeM": {
+    "placeholders": { "m": { "type": "int" } }
+  },
+  "usageStatsPermissionRequired": "使用統計の許可が必要",
+
+  "noMatchingApps": "該当するアプリがありません",
+
+  "removeFavorite": "お気に入り解除",
+  "addFavorite": "お気に入り追加",
+  "selectionFloorMove": "フロア移動",
+  "selectionAddFolder": "フォルダ追加",
+  "addedToFavorites": "{name} をお気に入りに追加しました",
+  "@addedToFavorites": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "removedFromFavorites": "{name} をお気に入りから解除しました",
+  "@removedFromFavorites": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "removeFromFavoritesShort": "お気に入りから削除",
+
+  "strictFloorMoveLabel": "アプリフロア移動ロック",
+  "strictAnimationLabel": "アニメーション速度ロック",
+  "strictSubmodeLabel": "サブモード設定ロック",
+  "strictEmergencyLabel": "緊急使用設定ロック",
+  "strictShortcutLabel": "ショートカットアプリ変更ロック",
+  "strictFloorMoveDesc": "選択したアプリのフロア移動を制限します",
+  "strictAnimationDesc": "アニメーション速度の変更を制限します",
+  "strictSubmodeDesc": "ストリクトモードの各設定の変更自体を制限します",
+  "strictEmergencyDesc": "緊急モードの使用制限設定の変更を制限します",
+  "strictShortcutDesc": "ホーム画面のショートカットアプリの変更を制限します",
+  "actionOff": "OFF",
+
+  "capCountInPeriod": "{period}に{count}回",
+  "@capCountInPeriod": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "limitOnceWeeklyLong": "1週間に1回",
+  "limitOnceYearlyLong": "1年間に1回",
+
+  "legacyEmergencyLimitDaily": "本日の緊急モード使用回数（1日1回）を超えました",
+  "legacyEmergencyLimitWeekly": "今週の緊急モード使用回数（1週間1回）を超えました",
+  "legacyEmergencyLimitYearly": "今年の緊急モード使用回数（1年1回）を超えました",
+  "legacyEmergencyLimitGeneric": "緊急モードの使用回数制限を超えました",
+  "emergencyShowAllOn1FExceeded": "「全アプリを1Fに表示」の上限（{period}に{count}回）に達しました",
+  "@emergencyShowAllOn1FExceeded": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "emergencyAppListPickExceeded": "「アプリ一覧から選択」の上限（{period}に{count}回）に達しました",
+  "@emergencyAppListPickExceeded": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "emergencyRegisteredGlobalExceeded": "登録済み緊急アプリ全体の上限（{period}に{count}回）に達しました",
+  "@emergencyRegisteredGlobalExceeded": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "emergencyAppCapExceeded": "このアプリの上限（{period}に{count}回）に達しました",
+  "@emergencyAppCapExceeded": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "emergencyFolderCapExceeded": "{name}フォルダの上限（{period}に{count}回）に達しました",
+  "@emergencyFolderCapExceeded": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "period": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+
+  "wallpaperCropTitle": "壁紙の位置を調整",
+  "actionConfirmShort": "確定",
+  "strictModeTimerTitle": "ストリクトモード",
+  "strictTimerWaitMessage": "変更を適用するにはタイマー完了後に確定してください。",
+  "strictTimerCanConfirm": "確定できます",
+
+  "relTimeJustNow": "たった今",
+  "relTimeMinutesAgo": "{n}分前",
+  "@relTimeMinutesAgo": {
+    "placeholders": { "n": { "type": "int" } }
+  },
+  "relTimeHoursAgo": "{n}時間前",
+  "@relTimeHoursAgo": {
+    "placeholders": { "n": { "type": "int" } }
+  },
+  "relTimeDaysAgo": "{n}日前",
+  "@relTimeDaysAgo": {
+    "placeholders": { "n": { "type": "int" } }
+  },
+
+  "emergencyBannerActive": "緊急モード  残り {time}  ({count}アプリ)",
+  "@emergencyBannerActive": {
+    "placeholders": {
+      "time": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "actionStop": "停止",
+
+  "appBlockTitle": "アプリブロック",
+  "blockedNow": "  ●ブロック中",
+  "notificationSettingsTitle": "通知制限",
+  "notificationModeAllow": "許可",
+  "notificationModeBatch": "バッチ",
+  "blockTypeAlways": "常時ブロック",
+  "blockTypeTimeRange": "時間帯",
+  "blockTypeDays": "曜日",
+  "blockSettingsForApp": "{name} のブロック設定",
+  "@blockSettingsForApp": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "blockTypeLabel": "ブロック種類",
+  "blockOptionNone": "なし",
+  "blockOptionAlways": "常時",
+  "timeRangeLabel": "時間帯",
+  "weekdaysLabel": "曜日",
+  "blockChangeAfter": "変更は {minutes}分{seconds}秒後に反映されます",
+  "@blockChangeAfter": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "seconds": { "type": "int" }
+    }
+  },
+
+  "automoveStrictModeTitle": "ストリクトモード",
+  "automoveStrictModeMessage": "このアプリはフロア移動ロック中です。ブロック/タイマーを適用しますか？",
+  "automoveTitleMulti": "自動移動 ({count}アプリ)",
+  "@automoveTitleMulti": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "automoveTitleSingle": "自動移動 - {name}",
+  "@automoveTitleSingle": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "tabSchedule": "スケジュール制",
+  "tabIntervalRandom": "日数間隔ランダム",
+  "actionRelease": "解除",
+  "intervalRandomDesc": "指定日数ごとにランダムなフロアに配置",
+  "intervalLabel": "間隔: ",
+  "intervalDays": " 日ごと",
+  "intervalDaysHint": "(0=毎日)",
+  "targetFloorsLabel": "対象フロア:",
+  "defaultFloorLabel": "デフォルトフロア",
+  "defaultFloorDesc": "スケジュール外の時間帯に適用されるフロアです",
+  "scheduleLabel": "スケジュール",
+  "addSchedule": "＋ 追加",
+  "noScheduleHint": "スケジュールなし（デフォルトフロアが常に適用されます）",
+  "scheduleEdit": "スケジュール編集",
+  "scheduleAdd": "スケジュール追加",
+  "startTimeLabel": "開始",
+  "endTimeLabel": "終了",
+  "startMustBeBeforeEnd": "開始時刻は終了時刻より前にしてください",
+  "timeRangeOverlap": "時間帯が重複しています",
+  "copyToOtherDays": "他の曜日にコピー",
+  "registeredSchedules": "登録済みスケジュール",
+  "scheduleArrowRandom": "→ ランダム ({count}フロア)",
+  "@scheduleArrowRandom": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "fixedFloorOption": "固定フロア",
+  "weekdayScheduleInvalid": "{wd}曜日のスケジュールに不正な時刻があります",
+  "@weekdayScheduleInvalid": {
+    "placeholders": { "wd": { "type": "String" } }
+  },
+  "weekdayScheduleOverlap": "{wd}曜日のスケジュールに時間帯重複があります",
+  "@weekdayScheduleOverlap": {
+    "placeholders": { "wd": { "type": "String" } }
+  },
+  "scheduleArrowFloor": "→ {floor}",
+  "@scheduleArrowFloor": {
+    "placeholders": { "floor": { "type": "String" } }
+  },
+
+  "noBlockLabel": "なし",
+
+  "fixedFloor": "固定フロア",
+  "randomFloor": "ランダムフロア",
+  "placementFloorLabel": "配置先フロア:",
+  "shuffleModeLabel": "シャッフル方式:",
+  "shuffleOnceAtStart": "時間帯の最初に1回",
+  "shuffleRepeatInterval": "一定間隔で繰り返し",
+  "shuffleSpecifiedCount": "指定回数実行",
+  "countLabel": "回数: ",
+  "intervalDayUnit": "日",
+  "intervalHourUnit": "時間",
+  "intervalMinuteUnit": "分",
+  "copyToWeekdaysTitle": "コピー先の曜日",
+  "actionCopy": "コピー",
+
+  "usageCountRulesScreenTitle": "起動回数フロア変更",
+  "usageCountRulesHelp": "1日の起動回数が閾値に達したら自動でフロアを変更します。毎日0時にカウントはリセットされます。",
+  "usageCountAddAppButton": "アプリを追加",
+  "usageCountNoApps": "ルールが設定されたアプリはありません",
+  "usageCountSummaryFmt": "{count}ルール",
+  "@usageCountSummaryFmt": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "batchGroupsTitle": "バッチグループ",
+  "batchGroupsHelp": "バッチ通知の対象アプリをまとめ、グループごとに配信スケジュールを設定できます。",
+  "batchGroupAdd": "グループを追加",
+  "batchGroupNoGroups": "グループはまだありません",
+  "batchGroupCount": "{count}グループ",
+  "@batchGroupCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "batchGroupName": "名前",
+  "batchGroupNameHint": "例: SNS",
+  "batchGroupNewName": "新規グループ",
+  "batchGroupApps": "対象アプリ",
+  "batchGroupAppsCount": "{count}アプリ",
+  "@batchGroupAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "batchGroupSchedule": "スケジュール",
+  "batchGroupScheduleInterval": "間隔",
+  "batchGroupScheduleFixed": "指定時刻",
+  "batchGroupScheduleDailyOnce": "1日1回",
+  "batchGroupIntervalLabel": "{minutes}分ごと",
+  "@batchGroupIntervalLabel": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "batchGroupHourlyLabel": "{hours}時間ごと",
+  "@batchGroupHourlyLabel": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+  "batchGroupTimesLabel": "発火時刻",
+  "batchGroupAddTime": "時刻を追加",
+  "batchGroupTime": "時刻",
+  "batchGroupWeekdays": "曜日",
+  "batchGroupEveryDay": "毎日",
+  "batchGroupNoApps": "アプリ未設定",
+  "batchGroupNoTimes": "時刻未設定",
+  "batchGroupDeleteConfirm": "「{name}」を削除しますか？",
+  "@batchGroupDeleteConfirm": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "batchGroupSummaryInterval": "{minutes}分ごと · {appCount}アプリ",
+  "@batchGroupSummaryInterval": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "appCount": { "type": "int" }
+    }
+  },
+  "batchGroupSummaryHourly": "{hours}時間ごと · {appCount}アプリ",
+  "@batchGroupSummaryHourly": {
+    "placeholders": {
+      "hours": { "type": "int" },
+      "appCount": { "type": "int" }
+    }
+  },
+  "batchGroupSummaryFixed": "指定{count}回 · {appCount}アプリ",
+  "@batchGroupSummaryFixed": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "appCount": { "type": "int" }
+    }
+  },
+  "batchGroupSummaryDaily": "{time} · {appCount}アプリ",
+  "@batchGroupSummaryDaily": {
+    "placeholders": {
+      "time": { "type": "String" },
+      "appCount": { "type": "int" }
+    }
+  },
+
+  "blockedHistoryTitle": "ブロック履歴",
+  "blockedHistoryEmpty": "ブロックされた通知はありません",
+  "blockedHistoryClear": "履歴をクリア",
+  "blockedHistoryClearConfirm": "ブロック履歴を全て削除しますか？",
+  "blockedHistoryCount": "{count}件",
+  "@blockedHistoryCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "batchPendingTitle": "バッチ予定",
+  "batchPendingEmpty": "保留中の通知はありません",
+  "batchPendingNoGroups": "バッチグループがありません",
+  "batchPendingItems": "{count}件",
+  "@batchPendingItems": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "batchPendingNextFire": "次回 {time}",
+  "@batchPendingNextFire": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "batchPendingNoFireScheduled": "次回未定",
+  "batchPendingGroupEmpty": "保留なし"
 }

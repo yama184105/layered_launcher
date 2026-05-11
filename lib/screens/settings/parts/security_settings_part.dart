@@ -4,26 +4,28 @@ extension SecuritySettingsMethods on _SettingsScreenState {
   // ── Lock Mode section ──────────────────────────────────────────
 
   Widget _buildLockModeSection() {
+    final s = S.of(context);
     final ss = _ss;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('ストリクトモード',
-              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
+          Text(s.strictMode,
+              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          const Text('各カテゴリごとに制限を設定できます',
-              style: TextStyle(color: Colors.white38, fontSize: 12)),
+          Text(s.strictModeDesc,
+              style: const TextStyle(color: Colors.white38, fontSize: 12)),
           const SizedBox(height: 12),
           ...BlockSettings.strictSubKeys.map((key) {
-            final label = BlockSettings.strictSubLabels[key] ?? key;
-            final desc = BlockSettings.strictSubDescriptions[key] ?? '';
+            final label = _strictSubLabel(s, key);
+            final desc = _strictSubDesc(s, key);
             final enabled = ss.strictSubEnabled(key);
             final type = ss.strictSubType(key);
             final timer = ss.strictSubTimerMinutes(key);
             final cooldown = ss.strictSubCooldownRemaining(key);
-            final typeLabel = type == 'block' ? '完全ブロック' : 'タイマー（${timer}分待ち）';
+            final typeLabel = type == 'block' ? s.fullBlock : s.timerWaitMinutes(timer);
+            final offLabel = s.actionOff;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -36,7 +38,7 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                           Text(label, style: const TextStyle(color: Colors.white, fontSize: 13)),
                           Text(desc, style: const TextStyle(color: Colors.white30, fontSize: 10)),
                           const SizedBox(height: 2),
-                          Text(enabled ? typeLabel : 'OFF',
+                          Text(enabled ? typeLabel : offLabel,
                               style: TextStyle(
                                   color: enabled ? Colors.orangeAccent : Colors.white38,
                                   fontSize: 11)),
@@ -52,7 +54,7 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                           if (ss.strictSubType('submode') == 'block') {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('サブモード設定がロックされています')));
+                                SnackBar(content: Text(S.of(context).submodeLocked)));
                             }
                             return;
                           }
@@ -74,12 +76,12 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                       children: [
                         Row(
                           children: [
-                            _strictTypeChip('完全ブロック', type == 'block', () async {
+                            _strictTypeChip(s.fullBlock, type == 'block', () async {
                               await ss.setStrictSubType(key, 'block');
                               setState(() {});
                             }),
                             const SizedBox(width: 8),
-                            _strictTypeChip('タイマー', type == 'timer', () async {
+                            _strictTypeChip(s.timer, type == 'timer', () async {
                               await ss.setStrictSubType(key, 'timer');
                               setState(() {});
                             }),
@@ -88,13 +90,13 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                               GestureDetector(
                                 onTap: () async {
                                   final v = await _showIntSliderDialog(
-                                      'タイマー（分）', timer.toDouble(), 1, 30);
+                                      s.timerMinutes, timer.toDouble(), 1, 30);
                                   if (v != null) {
                                     await ss.setStrictSubTimerMinutes(key, v);
                                     setState(() {});
                                   }
                                 },
-                                child: Text('${timer}分',
+                                child: Text(s.minutesShortValue(timer),
                                     style: const TextStyle(
                                         color: Colors.tealAccent, fontSize: 12,
                                         decoration: TextDecoration.underline)),
@@ -113,8 +115,8 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                                 const SizedBox(width: 6),
                                 Text(
                                   ss.floorMoveLockedApps.isEmpty
-                                      ? '対象アプリ：全アプリ（タップして選択）'
-                                      : '対象アプリ：${ss.floorMoveLockedApps.length}個選択済み',
+                                      ? s.targetAllApps
+                                      : s.targetAppsCount(ss.floorMoveLockedApps.length),
                                   style: const TextStyle(
                                       color: Colors.tealAccent, fontSize: 11,
                                       decoration: TextDecoration.underline),
@@ -134,8 +136,8 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                                 const SizedBox(width: 6),
                                 Text(
                                   ss.emergencyLockedApps.isEmpty
-                                      ? '対象アプリ：全アプリ（タップして選択）'
-                                      : '対象アプリ：${ss.emergencyLockedApps.length}個選択済み',
+                                      ? s.targetAllApps
+                                      : s.targetAppsCount(ss.emergencyLockedApps.length),
                                   style: const TextStyle(
                                       color: Colors.tealAccent, fontSize: 11,
                                       decoration: TextDecoration.underline),
@@ -150,7 +152,7 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                 if (cooldown != null)
                   Padding(
                     padding: const EdgeInsets.only(left: 16, bottom: 4),
-                    child: _Hourglass(remaining: cooldown, message: '反映待ち'),
+                    child: _Hourglass(remaining: cooldown, message: S.of(context).applyPending),
                   ),
                 const Divider(color: Colors.white12, height: 12),
               ],
@@ -160,14 +162,14 @@ extension SecuritySettingsMethods on _SettingsScreenState {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('レガシーロックモード',
-                        style: TextStyle(color: Colors.white38, fontSize: 12)),
-                    Text('全フロア移動・全アニメ設定を一括でクールダウン制限する旧モード',
-                        style: TextStyle(color: Colors.white24, fontSize: 10)),
+                    Text(s.legacyLockMode,
+                        style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                    Text(s.legacyLockModeDesc,
+                        style: const TextStyle(color: Colors.white24, fontSize: 10)),
                   ],
                 ),
               ),
@@ -199,9 +201,9 @@ extension SecuritySettingsMethods on _SettingsScreenState {
           backgroundColor: const Color(0xFF1A1A1A),
           title: Row(
             children: [
-              const Expanded(
-                child: Text('ロック対象アプリを選択',
-                    style: TextStyle(color: Colors.white, fontSize: 14)),
+              Expanded(
+                child: Text(S.of(ctx).selectLockedApps,
+                    style: const TextStyle(color: Colors.white, fontSize: 14)),
               ),
               TextButton(
                 onPressed: () {
@@ -214,7 +216,7 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                   });
                 },
                 child: Text(
-                  selected.length == apps.length ? '全解除' : '全選択',
+                  selected.length == apps.length ? S.of(ctx).deselectAll : S.of(ctx).selectAll,
                   style: const TextStyle(color: Colors.tealAccent, fontSize: 12),
                 ),
               ),
@@ -256,13 +258,13 @@ extension SecuritySettingsMethods on _SettingsScreenState {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
+                child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
             TextButton(
                 onPressed: () async {
                   await onSave(selected.toList());
                   if (ctx.mounted) Navigator.pop(ctx);
                 },
-                child: const Text('保存', style: TextStyle(color: Colors.white))),
+                child: Text(S.of(ctx).actionSave, style: const TextStyle(color: Colors.white))),
           ],
         ),
       ),
@@ -289,6 +291,28 @@ extension SecuritySettingsMethods on _SettingsScreenState {
     );
   }
 
+  String _strictSubLabel(S s, String key) {
+    switch (key) {
+      case 'floorMove': return s.strictFloorMoveLabel;
+      case 'animation': return s.strictAnimationLabel;
+      case 'submode': return s.strictSubmodeLabel;
+      case 'emergency': return s.strictEmergencyLabel;
+      case 'shortcut': return s.strictShortcutLabel;
+      default: return key;
+    }
+  }
+
+  String _strictSubDesc(S s, String key) {
+    switch (key) {
+      case 'floorMove': return s.strictFloorMoveDesc;
+      case 'animation': return s.strictAnimationDesc;
+      case 'submode': return s.strictSubmodeDesc;
+      case 'emergency': return s.strictEmergencyDesc;
+      case 'shortcut': return s.strictShortcutDesc;
+      default: return '';
+    }
+  }
+
   Future<int?> _showIntSliderDialog(String title, double initial, double min, double max) async {
     double value = initial;
     return showDialog<int>(
@@ -309,8 +333,8 @@ extension SecuritySettingsMethods on _SettingsScreenState {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('キャンセル', style: TextStyle(color: Colors.white54))),
-            TextButton(onPressed: () => Navigator.pop(ctx, value.round()), child: const Text('OK', style: TextStyle(color: Colors.white))),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
+            TextButton(onPressed: () => Navigator.pop(ctx, value.round()), child: Text(S.of(ctx).actionConfirm, style: const TextStyle(color: Colors.white))),
           ],
         ),
       ),

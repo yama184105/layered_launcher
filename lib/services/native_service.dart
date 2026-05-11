@@ -67,6 +67,94 @@ class NativeService {
     }
   }
 
+  /// Push the full notification policy to native: which mode applies by
+  /// default to apps without an explicit override, the explicit OFF set,
+  /// and the explicit allow set. All three are persisted on the kotlin
+  /// side so NotificationService can resolve any package's effective mode
+  /// even when Flutter is dead.
+  Future<void> setNotifPolicy({
+    required String defaultMode,
+    required Set<String> offPackages,
+    required Set<String> allowPackages,
+  }) async {
+    try {
+      await _channel.invokeMethod('setNotifPolicy', {
+        'defaultMode': defaultMode,
+        'offPackages': offPackages.toList(),
+        'allowPackages': allowPackages.toList(),
+      });
+    } catch (_) {}
+  }
+
+  /// Push the full batch-group config to the native side. The native code
+  /// persists it (so NotificationService can intercept matching apps even
+  /// when Flutter is dead) and arms an AlarmManager wake-up for each
+  /// group's next delivery time so scheduled batches keep firing during
+  /// Doze and after device reboots.
+  Future<void> setBatchGroups(List<Map<String, dynamic>> groups) async {
+    try {
+      await _channel.invokeMethod('setBatchGroups', groups);
+    } catch (_) {}
+  }
+
+  /// Android 12+: returns whether SCHEDULE_EXACT_ALARM is granted. False
+  /// means batch alarms fall back to the inexact "while idle" path
+  /// (~9-15 min window during Doze).
+  Future<bool> canScheduleExactAlarms() async {
+    try {
+      final v = await _channel.invokeMethod<bool>('canScheduleExactAlarms');
+      return v ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> openExactAlarmSettings() async {
+    try {
+      await _channel.invokeMethod('openExactAlarmSettings');
+    } catch (_) {}
+  }
+
+  /// Returns the OFF-blocked notification history captured by
+  /// NotificationService. Each entry: `{pkg, title, text, blockedAt}`
+  /// (epochMs). Order is oldest-first; the UI flips it for display.
+  Future<List<Map<String, dynamic>>> getBlockedHistory() async {
+    try {
+      final raw = await _channel.invokeMethod('getBlockedHistory');
+      if (raw == null) return [];
+      return (raw as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> clearBlockedHistory() async {
+    try {
+      await _channel.invokeMethod('clearBlockedHistory');
+    } catch (_) {}
+  }
+
+  /// Returns one entry per batch group with its pending captured items
+  /// (queued for delivery at the group's next fire time). Each entry:
+  /// `{id, name, scheduleType, nextFireMs, items: [{pkg, title, text, postedAt}]}`.
+  Future<List<Map<String, dynamic>>> getBatchQueues() async {
+    try {
+      final raw = await _channel.invokeMethod('getBatchQueues');
+      if (raw == null) return [];
+      return (raw as List).map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        m['items'] = (m['items'] as List? ?? const [])
+            .map((it) => Map<String, dynamic>.from(it as Map))
+            .toList();
+        return m;
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<bool> isNotificationServiceEnabled() async {
     try {
       final result = await _channel

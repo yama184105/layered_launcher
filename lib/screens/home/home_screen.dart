@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import '../../l10n/s.dart';
 import '../../models/app_config.dart';
 import '../../services/app_service.dart';
 import '../../services/native_service.dart';
@@ -143,6 +144,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ── alphabet index highlight ──────────────────────────────────
   String? _activeIndexChar;
+  // 同じキーへの連続スクロール要求をスキップしてドラッグ追従を軽くする
+  String? _lastScrolledIndexKey;
 
   int get _maxFloor => widget.settingsService.maxFloors;
 
@@ -472,7 +475,10 @@ class _HomeScreenState extends State<HomeScreen>
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      '緊急モード  残り ${remaining != null ? _fmt(remaining) : ""}  (${_emergency1FApps.length}アプリ)',
+                                      S.of(context).emergencyBannerActive(
+                                        remaining != null ? _fmt(remaining) : '',
+                                        _emergency1FApps.length,
+                                      ),
                                       style: const TextStyle(
                                           color: Colors.white, fontSize: 13),
                                     ),
@@ -486,8 +492,8 @@ class _HomeScreenState extends State<HomeScreen>
                                         border: Border.all(color: Colors.white54),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text('追加',
-                                          style: TextStyle(color: Colors.white, fontSize: 11)),
+                                      child: Text(S.of(context).actionAdd,
+                                          style: const TextStyle(color: Colors.white, fontSize: 11)),
                                     ),
                                   ),
                                   GestureDetector(
@@ -498,8 +504,8 @@ class _HomeScreenState extends State<HomeScreen>
                                         border: Border.all(color: Colors.white54),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text('停止',
-                                          style: TextStyle(color: Colors.white, fontSize: 11)),
+                                      child: Text(S.of(context).actionStop,
+                                          style: const TextStyle(color: Colors.white, fontSize: 11)),
                                     ),
                                   ),
                                 ],

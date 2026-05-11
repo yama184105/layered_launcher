@@ -2,32 +2,33 @@ part of '../settings_screen.dart';
 
 extension AppearanceSettingsMethods on _SettingsScreenState {
   List<Widget> _gaikkanSettingRows() {
+    final s = S.of(context);
     final ss = _ss;
     return [
       _expandableRow(
         key: 'gaikkan_background',
-        title: '背景',
-        summary: '一括 / ホーム / 階層 / 設定',
+        title: s.background,
+        summary: s.backgroundSummaryAll,
         children: [
-          _settingRow('背景一括変更', '', _showBulkBgColorPicker),
+          _settingRow(s.bulkBackgroundChange, '', _showBulkBgColorPicker),
           _rowDivider,
-          _settingRow('ホーム背景', '', () async {
+          _settingRow(s.homeBackground, '', () async {
             await _showHomeBackgroundDialog();
           }),
           _rowDivider,
-          _settingRow('階層背景', '', () {
+          _settingRow(s.floorBackground, '', () {
             Navigator.push(context, MaterialPageRoute(
               builder: (_) => _FloorBgScreen(settingsService: ss),
             )).then((_) => setState(() {}));
           }),
           _rowDivider,
-          _settingRow('設定画面背景', '', () async {
+          _settingRow(s.settingsBackground, '', () async {
             await _showSettingsBgDialog();
           }),
         ],
       ),
       _rowDivider,
-      _settingRow('フォント設定', '', () {
+      _settingRow(s.fontSettings, '', () {
         Navigator.push(context, MaterialPageRoute(
           builder: (_) => _FontSettingsScreen(settingsService: ss),
         )).then((_) => setState(() {}));
@@ -36,29 +37,30 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
   }
 
   Widget _buildAnimationSection() {
-    const types = [
-      ('slide', 'スライド'),
-      ('stair', '階段'),
-      ('fade', 'フェード'),
-      ('zoom', 'ズーム'),
-      ('none', 'なし'),
+    final s = S.of(context);
+    final types = <(String, String)>[
+      ('slide', s.animTypeSlide),
+      ('stair', s.animTypeStair),
+      ('fade', s.animTypeFade),
+      ('zoom', s.animTypeZoom),
+      ('none', s.noneLabel),
     ];
-    const speedPresets = [
-      (50, '瞬速'),
-      (150, '超速'),
-      (300, '速い'),
-      (500, 'やや速い'),
-      (700, '普通'),
-      (1000, 'やや遅い'),
-      (1400, '遅い'),
-      (1800, 'とても遅い'),
-      (2400, '超遅い'),
-      (3000, '極遅い'),
+    final speedPresets = <(int, String)>[
+      (50, s.speedInstant),
+      (150, s.speedSuperFast),
+      (300, s.speedFast),
+      (500, s.speedSomewhatFast),
+      (700, s.speedNormal),
+      (1000, s.speedSomewhatSlow),
+      (1400, s.speedSlow),
+      (1800, s.speedVerySlow),
+      (2400, s.speedSuperSlow),
+      (3000, s.speedExtremelySlow),
     ];
 
     final typeLabel = types.firstWhere(
       (t) => t.$1 == _ss.animationType,
-      orElse: () => ('slide', 'スライド'),
+      orElse: () => ('slide', s.animTypeSlide),
     ).$2;
 
     final currentSpeed = _ss.animationSpeedMs;
@@ -67,32 +69,32 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
         .map((p) => p.$2)
         .firstOrNull;
     final speedLabel = speedPresetMatch != null
-        ? '$speedPresetMatch (${currentSpeed}ms)'
-        : 'カスタム (${currentSpeed}ms)';
+        ? s.speedWithMs(speedPresetMatch, currentSpeed)
+        : s.speedCustomWithMs(currentSpeed);
 
     final pairCount = _customizedPairCount();
-    final pairLabel = pairCount > 0 ? '$pairCount件 設定中' : '未設定';
+    final pairLabel = pairCount > 0 ? s.pairSetting(pairCount) : s.notSet;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _animSubRow(
           'type',
-          '種類',
+          s.animTypeLabel,
           typeLabel,
           _buildAnimTypeBody(types),
         ),
         const Divider(height: 1, color: Colors.white12, indent: 16, endIndent: 16),
         _animSubRow(
           'speed',
-          'デフォルト速度',
+          s.animDefaultSpeed,
           speedLabel,
           _buildAnimSpeedBody(speedPresets),
         ),
         const Divider(height: 1, color: Colors.white12, indent: 16, endIndent: 16),
         _animSubRow(
           'pair',
-          'フロア間ごとの個別速度',
+          s.animPerPairSpeed,
           pairLabel,
           _buildAnimPairBody(),
         ),
@@ -171,7 +173,7 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
   Future<bool> _confirmStrictBeforeSpeedChange() async {
     if (!_ss.strictSubEnabled('animation')) return true;
     if (_ss.strictSubType('animation') == 'block') {
-      _showSnack('アニメーション速度がロックされています');
+      _showSnack(S.of(context).animationLocked);
       return false;
     }
     final confirmed = await showStrictTimerDialog(context, seconds: 10);
@@ -202,7 +204,7 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
                 border: Border.all(color: sel ? Colors.white : Colors.white38),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Text('${preset.$2} (${preset.$1}ms)',
+              child: Text(S.of(context).speedWithMs(preset.$2, preset.$1),
                   style: TextStyle(
                       color: sel ? Colors.black : Colors.white70, fontSize: 11)),
             ),
@@ -215,15 +217,15 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
               context: context,
               builder: (ctx) => AlertDialog(
                 backgroundColor: const Color(0xFF1A1A1A),
-                title: const Text('カスタム速度 (ms)',
-                    style: TextStyle(color: Colors.white)),
+                title: Text(S.of(ctx).customSpeedTitle,
+                    style: const TextStyle(color: Colors.white)),
                 content: TextField(
                   controller: _customSpeedCtrl,
                   keyboardType: TextInputType.number,
                   autofocus: true,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: '50〜5000',
+                    hintText: S.of(ctx).speedRangeHint,
                     hintStyle: const TextStyle(color: Colors.white38),
                     filled: true,
                     fillColor: Colors.white.withOpacity(0.07),
@@ -238,8 +240,8 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('キャンセル',
-                        style: TextStyle(color: Colors.white54)),
+                    child: Text(S.of(ctx).actionCancel,
+                        style: const TextStyle(color: Colors.white54)),
                   ),
                   TextButton(
                     onPressed: () {
@@ -248,8 +250,8 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
                         Navigator.pop(ctx, v);
                       }
                     },
-                    child: const Text('決定',
-                        style: TextStyle(color: Colors.white)),
+                    child: Text(S.of(ctx).actionDecide,
+                        style: const TextStyle(color: Colors.white)),
                   ),
                 ],
               ),
@@ -267,7 +269,7 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
                   Border.all(color: isCustom ? Colors.white : Colors.white38),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: Text(isCustom ? 'カスタム (${currentSpeed}ms)' : 'カスタム',
+            child: Text(isCustom ? S.of(context).speedCustomWithMs(currentSpeed) : S.of(context).speedCustom,
                 style: TextStyle(
                     color: isCustom ? Colors.black : Colors.white70,
                     fontSize: 11)),
@@ -314,8 +316,8 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
                 if (mounted) setState(() {});
               });
             },
-            child: const Text('一括リセット',
-                style: TextStyle(
+            child: Text(S.of(context).bulkReset,
+                style: const TextStyle(
                     color: Colors.redAccent,
                     fontSize: 11,
                     decoration: TextDecoration.underline)),
@@ -329,7 +331,7 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
           final label = from < 0
               ? (to < 0 ? 'B${-from}F ↔ B${-to}F' : 'B${-from}F ↔ ${to}F')
               : '${from}F ↔ ${to}F';
-          final valLabel = custom != null ? '${custom}ms' : '(デフォルト)';
+          final valLabel = custom != null ? '${custom}ms' : S.of(context).pairDefaultLabel;
           return GestureDetector(
             onTap: () async {
               if (!await _confirmStrictBeforeSpeedChange()) return;
@@ -341,7 +343,7 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
                           _ss.animationSpeedMs.toString());
                   return AlertDialog(
                     backgroundColor: const Color(0xFF1A1A1A),
-                    title: Text('$label の速度 (ms)',
+                    title: Text(S.of(dctx).pairSpeedTitle(label),
                         style: const TextStyle(
                             color: Colors.white, fontSize: 13)),
                     content: Column(
@@ -353,7 +355,7 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
                           autofocus: true,
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
-                            hintText: '50〜5000',
+                            hintText: S.of(dctx).speedRangeHint,
                             hintStyle: const TextStyle(color: Colors.white38),
                             filled: true,
                             fillColor: Colors.white.withOpacity(0.07),
@@ -367,8 +369,8 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
                         const SizedBox(height: 6),
                         GestureDetector(
                           onTap: () => Navigator.pop(dctx, -1),
-                          child: const Text('デフォルトに戻す',
-                              style: TextStyle(
+                          child: Text(S.of(dctx).restoreDefaults,
+                              style: const TextStyle(
                                   color: Colors.redAccent,
                                   fontSize: 12,
                                   decoration: TextDecoration.underline)),
@@ -378,8 +380,8 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
                     actions: [
                       TextButton(
                           onPressed: () => Navigator.pop(dctx),
-                          child: const Text('キャンセル',
-                              style: TextStyle(color: Colors.white54))),
+                          child: Text(S.of(dctx).actionCancel,
+                              style: const TextStyle(color: Colors.white54))),
                       TextButton(
                         onPressed: () {
                           final v = int.tryParse(ctrl.text);
@@ -387,8 +389,8 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
                             Navigator.pop(dctx, v);
                           }
                         },
-                        child: const Text('適用',
-                            style: TextStyle(color: Colors.tealAccent)),
+                        child: Text(S.of(dctx).actionApply,
+                            style: const TextStyle(color: Colors.tealAccent)),
                       ),
                     ],
                   );
@@ -447,35 +449,39 @@ class _FontSettingsScreen extends StatefulWidget {
 class _FontSettingsScreenState extends State<_FontSettingsScreen> {
   SettingsService get _ss => widget.settingsService;
 
-  static const _fontOptions = [
-    ('', 'デフォルト'),
-    ('Roboto', 'Roboto'),
-    ('Roboto Mono', 'Roboto Mono'),
-    ('Noto Sans JP', 'Noto Sans JP'),
-    ('Source Code Pro', 'Source Code Pro'),
-    ('Lato', 'Lato'),
-    ('Montserrat', 'Montserrat'),
-  ];
+  List<(String, String)> _fontOptionsFor(BuildContext ctx) {
+    final s = S.of(ctx);
+    return [
+      ('', s.defaultLabel),
+      ('Roboto', 'Roboto'),
+      ('Roboto Mono', 'Roboto Mono'),
+      ('Noto Sans JP', 'Noto Sans JP'),
+      ('Source Code Pro', 'Source Code Pro'),
+      ('Lato', 'Lato'),
+      ('Montserrat', 'Montserrat'),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D0D0D),
         foregroundColor: Colors.white,
-        title: const Text('フォント設定', style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text(s.fontSettings, style: const TextStyle(color: Colors.white, fontSize: 16)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           // フォントカラー
-          const Text('フォントカラー',
-              style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+          Text(s.fontColor,
+              style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
-            children: [('white', '白'), ('black', '黒')].map((opt) {
+            children: [('white', s.swatchWhite), ('black', s.swatchBlack)].map((opt) {
               final sel = _ss.fontColor == opt.$1;
               return GestureDetector(
                 onTap: () async { await _ss.setFontColor(opt.$1); setState(() {}); },
@@ -494,8 +500,8 @@ class _FontSettingsScreenState extends State<_FontSettingsScreen> {
           const SizedBox(height: 20),
 
           // フォントサイズ
-          const Text('フォントサイズ',
-              style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+          Text(s.fontSize,
+              style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
           StatefulBuilder(builder: (ctx, setInner) {
             double pending = _ss.fontSize;
@@ -503,7 +509,7 @@ class _FontSettingsScreenState extends State<_FontSettingsScreen> {
               children: [
                 Row(
                   children: [
-                    const Expanded(child: Text('サイズ', style: TextStyle(color: Colors.white, fontSize: 14))),
+                    Expanded(child: Text(s.sizeLabel, style: const TextStyle(color: Colors.white, fontSize: 14))),
                     Text('${_ss.fontSize.round()}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   ],
                 ),
@@ -520,8 +526,8 @@ class _FontSettingsScreenState extends State<_FontSettingsScreen> {
           const SizedBox(height: 16),
 
           // 行間隔
-          const Text('行間隔',
-              style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+          Text(s.rowSpacingLabel,
+              style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
           StatefulBuilder(builder: (ctx, setInner) {
             double pending = _ss.rowSpacing;
@@ -529,7 +535,7 @@ class _FontSettingsScreenState extends State<_FontSettingsScreen> {
               children: [
                 Row(
                   children: [
-                    const Expanded(child: Text('間隔', style: TextStyle(color: Colors.white, fontSize: 14))),
+                    Expanded(child: Text(s.spacingLabel, style: const TextStyle(color: Colors.white, fontSize: 14))),
                     Text('${_ss.rowSpacing.round()}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   ],
                 ),
@@ -546,13 +552,13 @@ class _FontSettingsScreenState extends State<_FontSettingsScreen> {
           const SizedBox(height: 20),
 
           // フォントスタイル
-          const Text('フォントスタイル',
-              style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+          Text(s.fontStyle,
+              style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _fontOptions.map((f) {
+            children: _fontOptionsFor(context).map((f) {
               final sel = _ss.fontFamily == f.$1;
               return GestureDetector(
                 onTap: () async { await _ss.setFontFamily(f.$1); setState(() {}); },

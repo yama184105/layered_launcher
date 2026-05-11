@@ -42,8 +42,9 @@ extension SearchMethods on _HomeScreenState {
 
   Widget _buildIndexSidebar(List<AppConfig> apps, Map<String, GlobalKey> sectionKeys) {
     if (!widget.settingsService.showAlphabetIndex) return const SizedBox.shrink();
-    final ungroupedCount = apps.where((a) => _folderOf(a) == null).length;
-    if (ungroupedCount < 6) return const SizedBox.shrink();
+    // No artificial app-count threshold; we still want to reserve the same
+    // 32px column when the floor has no apps so the floor-move buttons stay
+    // pinned to the same horizontal position regardless of content.
 
     const normalOrder = [
       'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -61,23 +62,58 @@ extension SearchMethods on _HomeScreenState {
       }
     }
 
-    if (normalSorted.isEmpty && !hasEmergencyIndex) return const SizedBox.shrink();
+    if (normalSorted.isEmpty && !hasEmergencyIndex) {
+      // Empty floor / no apps yet: keep the 32px column anyway so the
+      // stair-nav buttons just inside it don't slide right when the floor
+      // has zero matching sections.
+      return const SizedBox(width: 32);
+    }
 
     void scrollTo(String key) {
+      // 同じキーへの連続要求はハイライトだけ更新してスクロール再発火を抑える
+      if (key == _lastScrolledIndexKey) {
+        if (_activeIndexChar != key) {
+          setState(() => _activeIndexChar = key);
+        }
+        return;
+      }
+      _lastScrolledIndexKey = key;
       final globalKey = sectionKeys[key];
       final ctx = globalKey?.currentContext;
-      if (ctx == null) return;
-      Scrollable.ensureVisible(
-        ctx,
-        duration: const Duration(milliseconds: 150),
-        curve: Curves.easeOut,
-        alignment: 0.0,
-      );
+      if (ctx != null) {
+        // Duration.zero で即時ジャンプ。ドラッグ追従でアニメ重なりが起きない。
+        Scrollable.ensureVisible(
+          ctx,
+          duration: Duration.zero,
+          alignment: 0.0,
+        );
+      } else if (_scrollController.hasClients) {
+        // ctx 未解決（off-screen で未ビルド）の保険：先に近い位置までジャンプして
+        // 次フレームでもう一度 ensureVisible を試す。
+        final anchorOrder = [
+          'A','B','C','D','E','F','G','H','I','J','K','L','M',
+          'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+          'あ','か','さ','た','な','は','ま','や','ら','わ','#',
+        ];
+        final pos = anchorOrder.indexOf(key.startsWith('🚨') && key.length > 1 ? key.substring(1) : key);
+        if (pos >= 0) {
+          final maxScroll = _scrollController.position.maxScrollExtent;
+          final estimate = maxScroll * (pos / anchorOrder.length);
+          _scrollController.jumpTo(estimate.clamp(0.0, maxScroll));
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final ctx2 = sectionKeys[key]?.currentContext;
+            if (ctx2 != null) {
+              Scrollable.ensureVisible(ctx2, duration: Duration.zero, alignment: 0.0);
+            }
+          });
+        }
+      }
       setState(() => _activeIndexChar = key);
     }
 
     void dismissHighlight() {
-      Future.delayed(const Duration(milliseconds: 600), () {
+      _lastScrolledIndexKey = null;
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) setState(() => _activeIndexChar = null);
       });
     }
@@ -111,19 +147,22 @@ extension SearchMethods on _HomeScreenState {
           final totalItemsH = items.length * itemH;
           final itemsStartY = ((totalH - totalItemsH) / 2).clamp(0.0, double.infinity);
 
-          void handleDrag(double localY) {
+          void handleAt(double localY) {
             final relY = localY - itemsStartY;
-            if (relY < 0 || relY >= totalItemsH) return;
-            final idx = (relY / itemH).floor().clamp(0, items.length - 1);
+            // 範囲外でも端の項目にスナップさせて反応を切らさない
+            final clampedRelY = relY.clamp(0.0, totalItemsH - 0.001);
+            final idx = (clampedRelY / itemH).floor().clamp(0, items.length - 1);
             scrollTo(items[idx]);
           }
 
-          return GestureDetector(
+          // Listener で raw pointer event を直接拾う。GestureDetector の
+          // ドラッグ方向認識を待たないため、指を置いた瞬間から追従する。
+          return Listener(
             behavior: HitTestBehavior.opaque,
-            onVerticalDragStart: (d) => handleDrag(d.localPosition.dy),
-            onVerticalDragUpdate: (d) => handleDrag(d.localPosition.dy),
-            onVerticalDragEnd: (_) => dismissHighlight(),
-            onTapDown: (d) { handleDrag(d.localPosition.dy); dismissHighlight(); },
+            onPointerDown: (e) => handleAt(e.localPosition.dy),
+            onPointerMove: (e) => handleAt(e.localPosition.dy),
+            onPointerUp: (_) => dismissHighlight(),
+            onPointerCancel: (_) => dismissHighlight(),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: items.map((c) => indexItem(c, colorOverride: itemColor)).toList(),
@@ -137,7 +176,7 @@ extension SearchMethods on _HomeScreenState {
     if (hasEmergencyIndex && normalSorted.isNotEmpty) {
       final emgItems = ['🚨', ...emgSubKeys];
       return SizedBox(
-        width: 24,
+        width: 32,
         child: LayoutBuilder(builder: (ctx, constraints) {
           const divH = 5.0; // divider area height
           final half = (constraints.maxHeight - divH) / 2;
@@ -160,7 +199,7 @@ extension SearchMethods on _HomeScreenState {
         ? ['🚨', ...emgSubKeys]
         : normalSorted;
     return SizedBox(
-      width: 24,
+      width: 32,
       child: indexStrip(items, itemColor: hasEmergencyIndex ? Colors.redAccent : null),
     );
   }
@@ -189,9 +228,9 @@ extension SearchMethods on _HomeScreenState {
       ..sort((a, b) => _displayName(a).compareTo(_displayName(b)));
 
     if (results.isEmpty) {
-      return const Center(
-        child: Text('該当するアプリがありません',
-            style: TextStyle(color: Colors.white38, fontSize: 14)),
+      return Center(
+        child: Text(S.of(context).noMatchingApps,
+            style: const TextStyle(color: Colors.white38, fontSize: 14)),
       );
     }
 
@@ -238,7 +277,7 @@ extension SearchMethods on _HomeScreenState {
             focusNode: _searchFocusNode,
             style: TextStyle(color: textColor, fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'アプリを検索...',
+              hintText: S.of(context).appSearchHint,
               hintStyle: TextStyle(color: textColor.withOpacity(0.5), fontSize: 13),
               prefixIcon: Icon(Icons.search, color: textColor.withOpacity(0.5), size: 18),
               suffixIcon: _searchQuery.isNotEmpty

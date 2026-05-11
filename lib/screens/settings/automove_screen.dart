@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/s.dart';
 import '../../models/app_config.dart';
 import '../../services/settings_service.dart';
 import '../home/home_screen.dart' show floorLabel;
@@ -35,7 +36,10 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
   bool _isBulk = false;
   String _currentMode = 'none';
 
-  static const _weekdayLabels = ['月', '火', '水', '木', '金', '土', '日'];
+  List<String> _weekdayLabels(BuildContext context) {
+    final s = S.of(context);
+    return [s.weekdayMon, s.weekdayTue, s.weekdayWed, s.weekdayThu, s.weekdayFri, s.weekdaySat, s.weekdaySun];
+  }
 
   @override
   void initState() {
@@ -147,6 +151,8 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
   }
 
   Future<void> _save(String mode) async {
+    final s = S.of(context);
+    final wdLabels = _weekdayLabels(context);
     if (mode == 'schedule') {
       // 全曜日の重複・不正チェック
       for (int wd = 1; wd <= 7; wd++) {
@@ -154,14 +160,13 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
         for (int i = 0; i < slots.length; i++) {
           final a = slots[i];
           if (a.startMinute >= a.endMinute) {
-            _showSnack('${_weekdayLabels[wd - 1]}曜日のスケジュールに不正な時刻があります');
+            _showSnack(s.weekdayScheduleInvalid(wdLabels[wd - 1]));
             return;
           }
           for (int j = i + 1; j < slots.length; j++) {
             final b = slots[j];
             if (a.startMinute < b.endMinute && a.endMinute > b.startMinute) {
-              _showSnack(
-                  '${_weekdayLabels[wd - 1]}曜日のスケジュールに時間帯重複があります');
+              _showSnack(s.weekdayScheduleOverlap(wdLabels[wd - 1]));
               return;
             }
           }
@@ -201,21 +206,21 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('ストリクトモード',
-            style: TextStyle(color: Colors.white, fontSize: 15)),
-        content: const Text(
-          'このアプリはフロア移動ロック中です。ブロック/タイマーを適用しますか？',
-          style: TextStyle(color: Colors.white70, fontSize: 13),
+        title: Text(S.of(ctx).automoveStrictModeTitle,
+            style: const TextStyle(color: Colors.white, fontSize: 15)),
+        content: Text(
+          S.of(ctx).automoveStrictModeMessage,
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('キャンセル',
-                style: TextStyle(color: Colors.white54)),
+            child: Text(S.of(ctx).actionCancel,
+                style: const TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('適用', style: TextStyle(color: Colors.white)),
+            child: Text(S.of(ctx).actionApply, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -225,9 +230,10 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     final title = _isBulk
-        ? '自動移動 (${widget.packageNames.length}アプリ)'
-        : '自動移動 - ${_appName(widget.packageNames.first)}';
+        ? s.automoveTitleMulti(widget.packageNames.length)
+        : s.automoveTitleSingle(_appName(widget.packageNames.first));
     final bottomPad = MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
@@ -242,9 +248,9 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white38,
-          tabs: const [
-            Tab(text: 'スケジュール制'),
-            Tab(text: '日数間隔ランダム'),
+          tabs: [
+            Tab(text: s.tabSchedule),
+            Tab(text: s.tabIntervalRandom),
           ],
         ),
         actions: [
@@ -256,8 +262,8 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
                 }
                 if (mounted) Navigator.pop(context, true);
               },
-              child: const Text('解除',
-                  style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+              child: Text(s.actionRelease,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
             ),
         ],
       ),
@@ -274,16 +280,17 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
   // ── Mode B: Interval Random Tab ─────────────────────────────────────────
 
   Widget _buildIntervalTab(double bottomPad) {
+    final s = S.of(context);
     return ListView(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomPad),
       children: [
-        const Text('指定日数ごとにランダムなフロアに配置',
-            style: TextStyle(color: Colors.white70, fontSize: 13)),
+        Text(s.intervalRandomDesc,
+            style: const TextStyle(color: Colors.white70, fontSize: 13)),
         const SizedBox(height: 16),
         Row(
           children: [
-            const Text('間隔: ',
-                style: TextStyle(color: Colors.white, fontSize: 14)),
+            Text(s.intervalLabel,
+                style: const TextStyle(color: Colors.white, fontSize: 14)),
             SizedBox(
               width: 60,
               child: TextField(
@@ -298,16 +305,16 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
                 },
               ),
             ),
-            const Text(' 日ごと',
-                style: TextStyle(color: Colors.white, fontSize: 14)),
+            Text(s.intervalDays,
+                style: const TextStyle(color: Colors.white, fontSize: 14)),
             const SizedBox(width: 8),
-            const Text('(0=毎日)',
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
+            Text(s.intervalDaysHint,
+                style: const TextStyle(color: Colors.white38, fontSize: 11)),
           ],
         ),
         const SizedBox(height: 20),
-        const Text('対象フロア:',
-            style: TextStyle(color: Colors.white, fontSize: 14)),
+        Text(s.targetFloorsLabel,
+            style: const TextStyle(color: Colors.white, fontSize: 14)),
         const SizedBox(height: 8),
         _buildFloorChips(_intervalFloors, (floors) {
           setState(() => _intervalFloors = floors);
@@ -320,7 +327,7 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
           ),
           onPressed:
               _intervalFloors.isEmpty ? null : () => _save('interval'),
-          child: const Text('保存'),
+          child: Text(s.actionSave),
         ),
       ],
     );
@@ -329,6 +336,7 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
   // ── Mode A: Schedule Tab ────────────────────────────────────────────────
 
   Widget _buildScheduleTab(double bottomPad) {
+    final wdLabels = _weekdayLabels(context);
     return Column(
       children: [
         // Weekday selector
@@ -349,7 +357,7 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
                     color: selected ? Colors.white : Colors.transparent,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text(_weekdayLabels[i],
+                  child: Text(wdLabels[i],
                       style: TextStyle(
                         color: selected ? Colors.black : Colors.white54,
                         fontSize: 13,
@@ -387,8 +395,8 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
                     side: const BorderSide(color: Colors.white24),
                   ),
                   onPressed: _showCopyDialog,
-                  child: const Text('他の曜日にコピー',
-                      style: TextStyle(fontSize: 12)),
+                  child: Text(S.of(context).copyToOtherDays,
+                      style: const TextStyle(fontSize: 12)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -399,7 +407,7 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
                     foregroundColor: Colors.black,
                   ),
                   onPressed: () => _save('schedule'),
-                  child: const Text('保存'),
+                  child: Text(S.of(context).actionSave),
                 ),
               ),
             ],
@@ -410,6 +418,7 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
   }
 
   Widget _buildDefaultSection() {
+    final s = S.of(context);
     final cfg = _defaults[_editingWeekday] ??= _SlotConfig();
     // Default is fixed-only — random/shuffle is reserved for slots & mode B.
     if (cfg.type != 'fixed') {
@@ -418,14 +427,14 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('デフォルトフロア',
-            style: TextStyle(
+        Text(s.defaultFloorLabel,
+            style: const TextStyle(
                 color: Colors.white,
                 fontSize: 13,
                 fontWeight: FontWeight.w500)),
         const SizedBox(height: 4),
-        const Text('スケジュール外の時間帯に適用されるフロアです',
-            style: TextStyle(color: Colors.white38, fontSize: 12)),
+        Text(s.defaultFloorDesc,
+            style: const TextStyle(color: Colors.white38, fontSize: 12)),
         const SizedBox(height: 8),
         _buildFloorChipsSingle(cfg.floor, (f) {
           setState(() => cfg.floor = f);
@@ -435,36 +444,36 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
   }
 
   Widget _buildScheduleListSection() {
+    final s = S.of(context);
     final slots = _schedules[_editingWeekday] ?? const [];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
-            const Expanded(
-              child: Text('スケジュール',
-                  style: TextStyle(
+            Expanded(
+              child: Text(s.scheduleLabel,
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 13,
                       fontWeight: FontWeight.w500)),
             ),
             GestureDetector(
               onTap: () => _showSlotEditDialog(),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Text('＋ 追加',
-                    style:
-                        TextStyle(color: Colors.tealAccent, fontSize: 12)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(s.addSchedule,
+                    style: const TextStyle(color: Colors.tealAccent, fontSize: 12)),
               ),
             ),
           ],
         ),
         const SizedBox(height: 4),
         if (slots.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('スケジュールなし（デフォルトフロアが常に適用されます）',
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(s.noScheduleHint,
+                style: const TextStyle(color: Colors.white38, fontSize: 11)),
           )
         else
           ...slots.asMap().entries.map((e) {
@@ -475,11 +484,12 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
   }
 
   Widget _scheduleCard(int idx, _SlotConfig cfg) {
+    final s = S.of(context);
     final timeLabel =
         '${_fmtTime(cfg.startMinute)} 〜 ${_fmtTime(cfg.endMinute)}';
     final detail = cfg.type == 'fixed'
-        ? '→ ${floorLabel(cfg.floor)}'
-        : '→ ランダム (${cfg.floors.length}フロア)';
+        ? s.scheduleArrowFloor(floorLabel(cfg.floor))
+        : s.scheduleArrowRandom(cfg.floors.length);
     return Card(
       color: const Color(0xFF1A1A1A),
       margin: const EdgeInsets.only(bottom: 6),
@@ -537,9 +547,11 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
     await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setInner) => AlertDialog(
+        builder: (ctx, setInner) {
+          final s = S.of(ctx);
+          return AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: Text(isEdit ? 'スケジュール編集' : 'スケジュール追加',
+          title: Text(isEdit ? s.scheduleEdit : s.scheduleAdd,
               style:
                   const TextStyle(color: Colors.white, fontSize: 14)),
           contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -557,7 +569,7 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
                       Expanded(
                         child: _timePickerButton(
                           ctx,
-                          '開始',
+                          s.startTimeLabel,
                           draft.startMinute,
                           (m) => setInner(() => draft.startMinute = m),
                         ),
@@ -566,7 +578,7 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
                       Expanded(
                         child: _timePickerButton(
                           ctx,
-                          '終了',
+                          s.endTimeLabel,
                           draft.endMinute,
                           (m) => setInner(() => draft.endMinute = m),
                         ),
@@ -583,18 +595,18 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(s.actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: () {
                 if (draft.startMinute >= draft.endMinute) {
-                  _showSnack('開始時刻は終了時刻より前にしてください');
+                  _showSnack(s.startMustBeBeforeEnd);
                   return;
                 }
                 if (_hasOverlap(_editingWeekday, draft,
                     editingIndex: editingIndex)) {
-                  _showSnack('時間帯が重複しています');
+                  _showSnack(s.timeRangeOverlap);
                   return;
                 }
                 if (isEdit) {
@@ -607,11 +619,12 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
                 Navigator.pop(ctx);
                 setState(() {});
               },
-              child: Text(isEdit ? '保存' : '追加',
+              child: Text(isEdit ? s.actionSave : s.actionAdd,
                   style: const TextStyle(color: Colors.tealAccent)),
             ),
           ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -621,6 +634,7 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
   /// window. [editingIndex] excludes the slot currently being edited so the
   /// user doesn't see their own row.
   Widget _buildExistingSlotsHint(int? editingIndex) {
+    final s = S.of(context);
     final slots = _schedules[_editingWeekday] ?? const <_SlotConfig>[];
     final others = <(_SlotConfig, int)>[];
     for (int i = 0; i < slots.length; i++) {
@@ -640,15 +654,15 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('登録済みスケジュール',
-              style: TextStyle(color: Colors.white54, fontSize: 11)),
+          Text(s.registeredSchedules,
+              style: const TextStyle(color: Colors.white54, fontSize: 11)),
           const SizedBox(height: 4),
           for (final entry in others)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 1),
               child: Text(
                 '  ${_fmtTime(entry.$1.startMinute)}〜${_fmtTime(entry.$1.endMinute)}'
-                '  →  ${entry.$1.type == 'fixed' ? floorLabel(entry.$1.floor) : 'ランダム(${entry.$1.floors.length}フロア)'}',
+                '  ${entry.$1.type == 'fixed' ? s.scheduleArrowFloor(floorLabel(entry.$1.floor)) : s.scheduleArrowRandom(entry.$1.floors.length)}',
                 style: const TextStyle(color: Colors.white70, fontSize: 11),
               ),
             ),
@@ -722,44 +736,45 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
     _SlotConfig cfg,
     void Function(VoidCallback) setter,
   ) {
+    final s = S.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            _chip('固定フロア', cfg.type == 'fixed', () {
+            _chip(s.fixedFloor, cfg.type == 'fixed', () {
               setter(() => cfg.type = 'fixed');
             }),
             const SizedBox(width: 8),
-            _chip('ランダムフロア', cfg.type == 'random', () {
+            _chip(s.randomFloor, cfg.type == 'random', () {
               setter(() => cfg.type = 'random');
             }),
           ],
         ),
         const SizedBox(height: 8),
         if (cfg.type == 'fixed') ...[
-          const Text('配置先フロア:',
-              style: TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(s.placementFloorLabel,
+              style: const TextStyle(color: Colors.white54, fontSize: 12)),
           const SizedBox(height: 4),
           _buildFloorChipsSingle(cfg.floor, (f) {
             setter(() => cfg.floor = f);
           }),
         ] else ...[
-          const Text('対象フロア:',
-              style: TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(s.targetFloorsLabel,
+              style: const TextStyle(color: Colors.white54, fontSize: 12)),
           const SizedBox(height: 4),
           _buildFloorChips(cfg.floors, (floors) {
             setter(() => cfg.floors = floors);
           }),
           const SizedBox(height: 8),
-          const Text('シャッフル方式:',
-              style: TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(s.shuffleModeLabel,
+              style: const TextStyle(color: Colors.white54, fontSize: 12)),
           const SizedBox(height: 4),
-          _chip('時間帯の最初に1回', cfg.shuffleMode == 'once', () {
+          _chip(s.shuffleOnceAtStart, cfg.shuffleMode == 'once', () {
             setter(() => cfg.shuffleMode = 'once');
           }),
           const SizedBox(height: 4),
-          _chip('一定間隔で繰り返し', cfg.shuffleMode == 'repeat', () {
+          _chip(s.shuffleRepeatInterval, cfg.shuffleMode == 'repeat', () {
             setter(() => cfg.shuffleMode = 'repeat');
           }),
           if (cfg.shuffleMode == 'repeat') ...[
@@ -767,15 +782,15 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
             _buildRepeatIntervalRow(cfg),
           ],
           const SizedBox(height: 4),
-          _chip('指定回数実行', cfg.shuffleMode == 'count', () {
+          _chip(s.shuffleSpecifiedCount, cfg.shuffleMode == 'count', () {
             setter(() => cfg.shuffleMode = 'count');
           }),
           if (cfg.shuffleMode == 'count') ...[
             const SizedBox(height: 4),
             Row(
               children: [
-                const Text('回数: ',
-                    style: TextStyle(
+                Text(s.countLabel,
+                    style: const TextStyle(
                         color: Colors.white54, fontSize: 12)),
                 SizedBox(
                   width: 50,
@@ -803,13 +818,14 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
   // ── Shared widgets ──────────────────────────────────────────────────────
 
   Widget _buildRepeatIntervalRow(_SlotConfig cfg) {
+    final s = S.of(context);
     return Row(
       children: [
-        _smallInput('日', cfg.repeatDays, (v) => cfg.repeatDays = v),
+        _smallInput(s.intervalDayUnit, cfg.repeatDays, (v) => cfg.repeatDays = v),
         const SizedBox(width: 6),
-        _smallInput('時間', cfg.repeatHours, (v) => cfg.repeatHours = v),
+        _smallInput(s.intervalHourUnit, cfg.repeatHours, (v) => cfg.repeatHours = v),
         const SizedBox(width: 6),
-        _smallInput('分', cfg.repeatMinutes, (v) => cfg.repeatMinutes = v),
+        _smallInput(s.intervalMinuteUnit, cfg.repeatMinutes, (v) => cfg.repeatMinutes = v),
       ],
     );
   }
@@ -949,14 +965,17 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
   }
 
   void _showCopyDialog() {
+    final wdLabels = _weekdayLabels(context);
     final targets = <int>{};
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setInner) => AlertDialog(
+        builder: (ctx, setInner) {
+          final s = S.of(ctx);
+          return AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('コピー先の曜日',
-              style: TextStyle(color: Colors.white, fontSize: 14)),
+          title: Text(s.copyToWeekdaysTitle,
+              style: const TextStyle(color: Colors.white, fontSize: 14)),
           content: Wrap(
             alignment: WrapAlignment.start,
             spacing: 8,
@@ -987,7 +1006,7 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
                           border: Border.all(
                               color: selected ? Colors.white : Colors.white24),
                         ),
-                        child: Text(_weekdayLabels[i],
+                        child: Text(wdLabels[i],
                             style: TextStyle(
                                 color: selected ? Colors.black : Colors.white54)),
                       ),
@@ -998,8 +1017,8 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('キャンセル',
-                  style: TextStyle(color: Colors.white54)),
+              child: Text(s.actionCancel,
+                  style: const TextStyle(color: Colors.white54)),
             ),
             TextButton(
               onPressed: () {
@@ -1015,11 +1034,11 @@ class _AutoMoveScreenState extends State<AutoMoveScreen>
                 Navigator.pop(ctx);
                 setState(() {});
               },
-              child:
-                  const Text('コピー', style: TextStyle(color: Colors.white)),
+              child: Text(s.actionCopy, style: const TextStyle(color: Colors.white)),
             ),
           ],
-        ),
+          );
+        },
       ),
     );
   }

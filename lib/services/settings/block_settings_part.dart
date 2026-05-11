@@ -7,21 +7,9 @@ extension BlockSettings on SettingsService {
 
   // ── Strict Sub-modes ─────────────────────────────────────────────────────
   // Keys: 'floorMove', 'animation', 'submode', 'emergency', 'shortcut'
+  // Localized labels/descriptions live in the UI layer (security_settings_part.dart)
+  // so that this service file stays free of hardcoded strings.
   static const strictSubKeys = ['floorMove', 'animation', 'submode', 'emergency', 'shortcut'];
-  static const strictSubLabels = {
-    'floorMove': 'アプリフロア移動ロック',
-    'animation': 'アニメーション速度ロック',
-    'submode': 'サブモード設定ロック',
-    'emergency': '緊急使用設定ロック',
-    'shortcut': 'ショートカットアプリ変更ロック',
-  };
-  static const strictSubDescriptions = {
-    'floorMove': '選択したアプリのフロア移動を制限します',
-    'animation': 'アニメーション速度の変更を制限します',
-    'submode': 'ストリクトモードの各設定の変更自体を制限します',
-    'emergency': '緊急モードの使用制限設定の変更を制限します',
-    'shortcut': 'ホーム画面のショートカットアプリの変更を制限します',
-  };
 
   bool strictSubEnabled(String key) =>
       (_box.get('strict_${key}_enabled') as bool?) ?? false;

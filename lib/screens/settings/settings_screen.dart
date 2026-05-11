@@ -14,10 +14,12 @@ import '../../models/app_config.dart';
 import '../../services/app_service.dart';
 import '../../services/native_service.dart';
 import '../../services/settings_service.dart';
-import '../home/home_screen.dart' show floorLabel, showStrictTimerDialog;
+import '../home/home_screen.dart'
+    show floorLabel, showStrictTimerDialog, formatLastUsedRelative;
 import 'automove_screen.dart';
 
 part 'app_block_screen.dart';
+part 'batch_groups_screen.dart';
 part 'wallpaper_crop_screen.dart';
 part 'parts/home_settings_part.dart';
 part 'parts/floor_settings_part.dart';
@@ -459,12 +461,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Material(
-          color: Colors.transparent,
+          // 開いている章はヘッダ自体にも背景色を付けて、内容ブロックと
+          // 視覚的に連続して見えるようにする。
+          color: isOpen
+              ? Colors.white.withOpacity(0.04)
+              : Colors.transparent,
           child: InkWell(
             onTap: () => setState(() {
               _openSection = isOpen ? null : key;
             }),
-            child: Padding(
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  // 開いている章は左端にティールのバーを出す。
+                  left: BorderSide(
+                    color: isOpen ? Colors.tealAccent : Colors.transparent,
+                    width: 3,
+                  ),
+                ),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -485,14 +500,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         if (isOpen)
-          Padding(
-            padding: const EdgeInsets.only(left: 0, bottom: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.04),
+              border: const Border(
+                left: BorderSide(color: Colors.tealAccent, width: 3),
+              ),
+            ),
+            padding: const EdgeInsets.only(bottom: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: children,
             ),
           ),
-        const Divider(color: Colors.white12, height: 1),
+        // 章間の区切り線。開いている章の直後はやや強めにして、
+        // 「内容の終わり / 次章の始まり」を分かりやすくする。
+        Divider(
+          color: isOpen ? Colors.white38 : Colors.white12,
+          height: 1,
+          thickness: isOpen ? 1 : 0.5,
+        ),
       ],
     );
   }
@@ -566,15 +593,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required List<Widget> children,
   }) {
     final open = _expandedRows[key] ?? false;
+    // Same visual idiom as the top-level accordion sections, scaled down so
+    // a sub-group of related rows reads as one block:
+    //   * tinted background on both header + content
+    //   * a thin teal indicator down the left edge that runs through the
+    //     whole open block
+    //   * a slightly stronger divider after the open block so the next
+    //     sibling row clearly sits outside it
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Material(
-          color: Colors.transparent,
+          color: open ? Colors.white.withOpacity(0.05) : Colors.transparent,
           child: InkWell(
             onTap: () => setState(() => _expandedRows[key] = !open),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color:
+                        open ? Colors.tealAccent : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+              ),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
                   Expanded(
@@ -600,12 +644,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         if (open)
           Container(
-            color: Colors.white.withOpacity(0.02),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              border: const Border(
+                left: BorderSide(color: Colors.tealAccent, width: 2),
+              ),
+            ),
+            padding: const EdgeInsets.only(bottom: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: children,
             ),
           ),
+        // Stronger divider directly after an open block so the next sibling
+        // row is clearly outside it. Closed rows keep the very subtle
+        // baseline divider that's painted by their parent accordion.
+        if (open)
+          const Divider(
+              color: Colors.white24, height: 1, thickness: 0.6),
       ],
     );
   }

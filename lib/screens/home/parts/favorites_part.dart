@@ -86,7 +86,7 @@ extension FavoritesMethods on _HomeScreenState {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _sheetItem(ctx, Icons.star, 'お気に入りから削除', () async {
+                    _sheetItem(ctx, Icons.star, S.of(ctx).removeFromFavoritesShort, () async {
                       Navigator.pop(ctx);
                       final ss = widget.settingsService;
                       final pinned = ss.pinnedFolderNames;
@@ -224,7 +224,7 @@ extension FavoritesMethods on _HomeScreenState {
     _loadApps();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${_displayName(app)} をお気に入りに追加しました')),
+        SnackBar(content: Text(S.of(context).addedToFavorites(_displayName(app)))),
       );
     }
   }
@@ -239,7 +239,7 @@ extension FavoritesMethods on _HomeScreenState {
     _loadApps();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${_displayName(app)} をお気に入りから解除しました')),
+        SnackBar(content: Text(S.of(context).removedFromFavorites(_displayName(app)))),
       );
     }
   }

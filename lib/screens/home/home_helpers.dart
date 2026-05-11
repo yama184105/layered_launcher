@@ -9,9 +9,9 @@ String floorLabel(int floor) {
 }
 
 /// Formats a UsageStats lastTimeUsed timestamp as a short relative label
-/// like "3分前" / "2時間前" / "5日前". Returns null when the timestamp is
+/// like "3m ago" / "2h ago" / "5d ago". Returns null when the timestamp is
 /// missing/invalid or older than ~30 days.
-String? formatLastUsedRelative(int? lastUsedMs, {DateTime? now}) {
+String? formatLastUsedRelative(BuildContext context, int? lastUsedMs, {DateTime? now}) {
   if (lastUsedMs == null || lastUsedMs <= 0) return null;
   final reference = now ?? DateTime.now();
   final diff = reference.millisecondsSinceEpoch - lastUsedMs;
@@ -19,10 +19,11 @@ String? formatLastUsedRelative(int? lastUsedMs, {DateTime? now}) {
   const minute = 60 * 1000;
   const hour = 60 * minute;
   const day = 24 * hour;
-  if (diff < minute) return 'たった今';
-  if (diff < hour) return '${diff ~/ minute}分前';
-  if (diff < day) return '${diff ~/ hour}時間前';
-  if (diff < 30 * day) return '${diff ~/ day}日前';
+  final s = S.of(context);
+  if (diff < minute) return s.relTimeJustNow;
+  if (diff < hour) return s.relTimeMinutesAgo(diff ~/ minute);
+  if (diff < day) return s.relTimeHoursAgo(diff ~/ hour);
+  if (diff < 30 * day) return s.relTimeDaysAgo(diff ~/ day);
   return null;
 }
 
@@ -69,19 +70,20 @@ class _StrictTimerDialogState extends State<_StrictTimerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     final done = _remaining <= 0;
     return AlertDialog(
       backgroundColor: const Color(0xFF1A1A1A),
-      title: const Text('ストリクトモード',
-          style: TextStyle(color: Colors.orangeAccent, fontSize: 15)),
+      title: Text(s.strictModeTimerTitle,
+          style: const TextStyle(color: Colors.orangeAccent, fontSize: 15)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('変更を適用するにはタイマー完了後に確定してください。',
-              style: TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(s.strictTimerWaitMessage,
+              style: const TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 20),
           Text(
-            done ? '確定できます' : '$_remaining',
+            done ? s.strictTimerCanConfirm : '$_remaining',
             style: TextStyle(
               color: done ? Colors.tealAccent : Colors.orangeAccent,
               fontSize: done ? 16 : 48,
@@ -96,11 +98,11 @@ class _StrictTimerDialogState extends State<_StrictTimerDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('キャンセル', style: TextStyle(color: Colors.white54)),
+          child: Text(s.actionCancel, style: const TextStyle(color: Colors.white54)),
         ),
         TextButton(
           onPressed: done ? () => Navigator.pop(context, true) : null,
-          child: Text('確定',
+          child: Text(s.actionConfirmShort,
               style: TextStyle(
                   color: done ? Colors.tealAccent : Colors.white24,
                   fontWeight: FontWeight.bold)),

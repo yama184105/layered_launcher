@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES"/>
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR"/>
+    <!-- Daywise-style batch notification: precise alarms for delivery times -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
 
     <application
         android:label="LayeredLauncher"
@@ -61,6 +64,22 @@
                 <action android:name="android.service.notification.NotificationListenerService"/>
             </intent-filter>
         </service>
+        <!-- Daywise-style batch notification: re-post saved notifications at scheduled times -->
+        <receiver
+            android:name=".BatchAlarmReceiver"
+            android:exported="false"/>
+        <!-- Re-register batch alarms after device reboot or app update -->
+        <receiver
+            android:name=".BatchBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
         <!-- Device Admin Receiver -->
         <receiver
             android:name=".DeviceAdminReceiver"
