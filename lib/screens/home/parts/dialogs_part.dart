@@ -230,7 +230,7 @@ extension DialogsMethods on _HomeScreenState {
         ],
       ),
     );
-    ctrl.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
   }
 
   Future<void> _showMoveFloorDialog(AppConfig app) async {
@@ -423,7 +423,7 @@ extension DialogsMethods on _HomeScreenState {
         ),
       ),
     );
-    ctrl.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
   }
 
   Widget _folderOption(String? value, String? selected, String label,
@@ -675,7 +675,7 @@ extension DialogsMethods on _HomeScreenState {
         ),
       ),
     );
-    ctrl.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
 
     if (result != null && result.isNotEmpty && mounted) {
       for (final pkg in _selectedPackages) {
@@ -821,7 +821,7 @@ extension DialogsMethods on _HomeScreenState {
         ],
       ),
     );
-    ctrl.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
   }
 
   Future<void> _deleteFolderConfirm(
