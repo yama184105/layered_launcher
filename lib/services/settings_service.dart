@@ -37,6 +37,17 @@ class SettingsService {
     await migrateBatchGroupsIfNeeded();
   }
 
+  /// True after the user finishes the first-launch onboarding (permission
+  /// grant flow). main.dart shows OnboardingScreen instead of HomeScreen
+  /// while this is false so we can request notification listener, usage
+  /// stats, device admin, and exact alarm permissions up front rather than
+  /// drip-feeding them via in-app banners.
+  bool get hasCompletedOnboarding =>
+      _box.get('hasCompletedOnboarding', defaultValue: false) as bool;
+  Future<void> setOnboardingCompleted(bool v) async {
+    await _box.put('hasCompletedOnboarding', v);
+  }
+
   /// App locale code: 'ja' or 'en'. Null = follow system locale.
   String? get languageCode => _box.get('languageCode') as String?;
   Future<void> setLanguageCode(String? code) async {

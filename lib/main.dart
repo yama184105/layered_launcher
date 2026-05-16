@@ -8,6 +8,7 @@ import 'services/app_service.dart';
 import 'services/native_service.dart';
 import 'services/settings_service.dart';
 import 'screens/home/home_screen.dart';
+import 'screens/onboarding/onboarding_screen.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -82,10 +83,15 @@ class LayeredLauncherApp extends StatelessWidget {
             surface: Colors.black,
           ),
         ),
-        home: HomeScreen(
-          appService: appService,
-          settingsService: settingsService,
-        ),
+        home: settingsService.hasCompletedOnboarding
+            ? HomeScreen(
+                appService: appService,
+                settingsService: settingsService,
+              )
+            : OnboardingScreen(
+                appService: appService,
+                settingsService: settingsService,
+              ),
       ),
     );
   }
