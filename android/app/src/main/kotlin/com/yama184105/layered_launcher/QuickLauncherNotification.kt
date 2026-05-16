@@ -16,9 +16,12 @@ import androidx.core.app.NotificationManagerCompat
  *
  * Two presentation styles:
  *   - "consolidated": one notification with a custom expandable list
- *   - "perApp":       one notification per app, visually grouped via
- *                     setGroup()/setGroupSummary() so the shade still
- *                     shows them as a collapsible cluster
+ *   - "perApp":       one notification per app, posted independently
+ *                     (no setGroup) so they appear as separate rows
+ *                     in the shade. Android 7+ will still auto-bundle
+ *                     them once the same-package count reaches 4 — that
+ *                     auto-grouping is a system feature apps can't
+ *                     fully disable.
  *
  * Two channels back both styles so the user can pick between a quiet
  * (LOW) display and a prominent (DEFAULT) one that briefly shows as
@@ -32,13 +35,12 @@ object QuickLauncherNotification {
 
     /** Single consolidated notification id. */
     private const val NOTIFICATION_ID_CONSOLIDATED = 9001
-    /** Group summary id when in per-app mode. */
-    private const val NOTIFICATION_ID_SUMMARY = 9099
+    /** Stale group summary id from a prior implementation. Kept here
+     *  only so cancelAll() can wipe lingering notifications after
+     *  upgrade. */
+    private const val NOTIFICATION_ID_STALE_SUMMARY = 9099
     /** Per-app notification id base (9100 + index). */
     private const val NOTIFICATION_ID_PER_APP_BASE = 9100
-
-    /** Group key used to cluster per-app notifications in the shade. */
-    private const val GROUP_KEY = "com.yama184105.layered_launcher.QUICK_LAUNCHER"
 
     /** Cap how many apps we expose. Determines per-app notification id
      *  range and consolidated row count. */
@@ -111,7 +113,7 @@ object QuickLauncherNotification {
         try {
             val nm = NotificationManagerCompat.from(ctx)
             nm.cancel(NOTIFICATION_ID_CONSOLIDATED)
-            nm.cancel(NOTIFICATION_ID_SUMMARY)
+            nm.cancel(NOTIFICATION_ID_STALE_SUMMARY)
             for (i in 0 until MAX_APPS) {
                 nm.cancel(NOTIFICATION_ID_PER_APP_BASE + i)
             }
@@ -198,6 +200,11 @@ object QuickLauncherNotification {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
 
+            // Intentionally NOT calling setGroup() — we want each app
+            // notification to appear independently in the shade.
+            // Android 7+ may still auto-bundle when 4+ notifications
+            // share the same package; that's system-controlled
+            // auto-grouping which apps cannot fully opt out of.
             val n = NotificationCompat.Builder(ctx, channel)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setOngoing(true)
@@ -206,27 +213,10 @@ object QuickLauncherNotification {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setContentTitle(app.label)
                 .setContentText("タップで起動")
-                .setGroup(GROUP_KEY)
                 .setContentIntent(tapPi)
                 .build()
             nm.notify(NOTIFICATION_ID_PER_APP_BASE + index, n)
         }
-
-        // Summary: required on Android 7+ when using setGroup so the
-        // shade renders them as a single collapsible cluster.
-        val summary = NotificationCompat.Builder(ctx, channel)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setPriority(priority)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setContentTitle("Layered Launcher")
-            .setContentText("${apps.size} 件のクイック起動")
-            .setGroup(GROUP_KEY)
-            .setGroupSummary(true)
-            .setContentIntent(openLauncherPendingIntent(ctx))
-            .build()
-        nm.notify(NOTIFICATION_ID_SUMMARY, summary)
     }
 
     // ── Helpers ───────────────────────────────────────────────────
