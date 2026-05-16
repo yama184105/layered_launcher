@@ -142,24 +142,23 @@ class NativeService {
     } catch (_) {}
   }
 
-  /// Post or cancel the persistent quick-launcher notification(s).
+  /// Post or cancel the persistent quick-launcher notification.
   ///
   /// [enabled] toggles posting vs cancelling.
   /// [prominent] picks between LOW (quiet) and DEFAULT (heads-up).
-  /// [style] picks between 'consolidated' (one notification with an
-  /// expandable list) and 'perApp' (one notification per app, visually
-  /// grouped in the shade).
+  /// [showDividers] inserts a thin separator line between app rows in
+  /// the expanded view for clearer visual grouping.
   Future<void> setQuickLauncherConfig({
     required bool enabled,
     required bool prominent,
-    required String style,
+    required bool showDividers,
     required List<Map<String, String>> apps,
   }) async {
     try {
       await _channel.invokeMethod('setQuickLauncherConfig', {
         'enabled': enabled,
         'prominent': prominent,
-        'style': style,
+        'showDividers': showDividers,
         'apps': apps,
       });
     } catch (_) {}

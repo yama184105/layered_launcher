@@ -248,7 +248,7 @@ class MainActivity : FlutterActivity() {
                         val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
                         val enabled = args["enabled"] as? Boolean ?: false
                         val prominent = args["prominent"] as? Boolean ?: false
-                        val style = args["style"] as? String ?: "consolidated"
+                        val showDividers = args["showDividers"] as? Boolean ?: false
                         val appsArg = args["apps"] as? List<*> ?: emptyList<Any>()
                         val apps = appsArg.mapNotNull { item ->
                             val m = item as? Map<*, *> ?: return@mapNotNull null
@@ -257,7 +257,7 @@ class MainActivity : FlutterActivity() {
                             QuickLauncherNotification.App(pkg, label)
                         }
                         QuickLauncherNotification.update(
-                            this, enabled, apps, prominent, style,
+                            this, enabled, apps, prominent, showDividers,
                         )
                         result.success(null)
                     }

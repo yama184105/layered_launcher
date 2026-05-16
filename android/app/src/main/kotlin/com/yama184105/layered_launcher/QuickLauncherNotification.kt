@@ -12,20 +12,14 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
 /**
- * Persistent notification(s) for quick app launch from the shade.
+ * Persistent notification for quick app launch from the shade.
  *
- * Two presentation styles:
- *   - "consolidated": one notification with a custom expandable list
- *   - "perApp":       one notification per app, posted independently
- *                     (no setGroup) so they appear as separate rows
- *                     in the shade. Android 7+ will still auto-bundle
- *                     them once the same-package count reaches 4 — that
- *                     auto-grouping is a system feature apps can't
- *                     fully disable.
+ * Single consolidated notification with a custom expandable list of
+ * apps. Optional thin dividers between rows for visual separation.
  *
- * Two channels back both styles so the user can pick between a quiet
- * (LOW) display and a prominent (DEFAULT) one that briefly shows as
- * heads-up.
+ * Two channels back the notification so the user can pick between a
+ * quiet (LOW) display and a prominent (DEFAULT) one that briefly
+ * shows as heads-up.
  */
 object QuickLauncherNotification {
     private const val TAG = "QuickLauncherNotif"
@@ -33,17 +27,14 @@ object QuickLauncherNotification {
     const val CHANNEL_ID_SILENT = "quick_launcher"
     const val CHANNEL_ID_PROMINENT = "quick_launcher_prominent"
 
-    /** Single consolidated notification id. */
-    private const val NOTIFICATION_ID_CONSOLIDATED = 9001
-    /** Stale group summary id from a prior implementation. Kept here
-     *  only so cancelAll() can wipe lingering notifications after
-     *  upgrade. */
+    private const val NOTIFICATION_ID = 9001
+
+    /** Stale notification ids from prior per-app implementation. Kept
+     *  here so cancelAll() can wipe ghosts after upgrade. */
     private const val NOTIFICATION_ID_STALE_SUMMARY = 9099
-    /** Per-app notification id base (9100 + index). */
     private const val NOTIFICATION_ID_PER_APP_BASE = 9100
 
-    /** Cap how many apps we expose. Determines per-app notification id
-     *  range and consolidated row count. */
+    /** Cap how many apps appear in the expanded list. */
     private const val MAX_APPS = 12
 
     data class App(val packageName: String, val label: String)
@@ -83,36 +74,29 @@ object QuickLauncherNotification {
         }
     }
 
-    /** Post or cancel the quick-launcher notification(s) based on
-     *  [enabled] and [style] ('consolidated' or 'perApp'). Always
-     *  cancels stale notifications from the other style/old app list
-     *  first so we don't leave orphans in the shade. */
     fun update(
         ctx: Context,
         enabled: Boolean,
         apps: List<App>,
         prominent: Boolean = false,
-        style: String = "consolidated",
+        showDividers: Boolean = false,
     ) {
         cancelAll(ctx)
         if (!enabled) return
         try {
             ensureChannels(ctx)
-            val capped = apps.take(MAX_APPS)
-            if (style == "perApp") {
-                postPerApp(ctx, capped, prominent)
-            } else {
-                postConsolidated(ctx, capped, prominent)
-            }
+            postConsolidated(ctx, apps.take(MAX_APPS), prominent, showDividers)
         } catch (e: Exception) {
-            Log.w(TAG, "failed to post quick launcher notification(s)", e)
+            Log.w(TAG, "failed to post quick launcher notification", e)
         }
     }
 
     private fun cancelAll(ctx: Context) {
         try {
             val nm = NotificationManagerCompat.from(ctx)
-            nm.cancel(NOTIFICATION_ID_CONSOLIDATED)
+            nm.cancel(NOTIFICATION_ID)
+            // Wipe leftovers from previous per-app implementation so
+            // they don't linger after upgrade.
             nm.cancel(NOTIFICATION_ID_STALE_SUMMARY)
             for (i in 0 until MAX_APPS) {
                 nm.cancel(NOTIFICATION_ID_PER_APP_BASE + i)
@@ -120,12 +104,11 @@ object QuickLauncherNotification {
         } catch (_: Exception) {}
     }
 
-    // ── Consolidated style ──────────────────────────────────────────
-
     private fun postConsolidated(
         ctx: Context,
         apps: List<App>,
         prominent: Boolean,
+        showDividers: Boolean,
     ) {
         val collapsed = RemoteViews(ctx.packageName, R.layout.quick_launcher_collapsed)
 
@@ -133,8 +116,12 @@ object QuickLauncherNotification {
         expanded.removeAllViews(R.id.app_list)
 
         for ((index, app) in apps.withIndex()) {
-            val row = buildConsolidatedRow(ctx, app, index) ?: continue
+            val row = buildRow(ctx, app, index) ?: continue
             expanded.addView(R.id.app_list, row)
+            if (showDividers && index < apps.size - 1) {
+                val divider = RemoteViews(ctx.packageName, R.layout.quick_launcher_divider)
+                expanded.addView(R.id.app_list, divider)
+            }
         }
 
         val openLauncherPi = openLauncherPendingIntent(ctx)
@@ -152,11 +139,10 @@ object QuickLauncherNotification {
             .setContentIntent(openLauncherPi)
             .build()
 
-        NotificationManagerCompat.from(ctx)
-            .notify(NOTIFICATION_ID_CONSOLIDATED, notification)
+        NotificationManagerCompat.from(ctx).notify(NOTIFICATION_ID, notification)
     }
 
-    private fun buildConsolidatedRow(ctx: Context, app: App, index: Int): RemoteViews? {
+    private fun buildRow(ctx: Context, app: App, index: Int): RemoteViews? {
         val launchIntent = ctx.packageManager.getLaunchIntentForPackage(app.packageName)
             ?: return null
 
@@ -176,50 +162,6 @@ object QuickLauncherNotification {
 
         return row
     }
-
-    // ── Per-app style ──────────────────────────────────────────────
-
-    private fun postPerApp(
-        ctx: Context,
-        apps: List<App>,
-        prominent: Boolean,
-    ) {
-        val (channel, priority) = channelAndPriority(prominent)
-        val nm = NotificationManagerCompat.from(ctx)
-
-        for ((index, app) in apps.withIndex()) {
-            val launchIntent = ctx.packageManager.getLaunchIntentForPackage(app.packageName)
-                ?: continue
-            val tapIntent = Intent(launchIntent).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            val tapPi = PendingIntent.getActivity(
-                ctx,
-                20000 + index,
-                tapIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-
-            // Intentionally NOT calling setGroup() — we want each app
-            // notification to appear independently in the shade.
-            // Android 7+ may still auto-bundle when 4+ notifications
-            // share the same package; that's system-controlled
-            // auto-grouping which apps cannot fully opt out of.
-            val n = NotificationCompat.Builder(ctx, channel)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setOngoing(true)
-                .setOnlyAlertOnce(!prominent)
-                .setPriority(priority)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setContentTitle(app.label)
-                .setContentText("タップで起動")
-                .setContentIntent(tapPi)
-                .build()
-            nm.notify(NOTIFICATION_ID_PER_APP_BASE + index, n)
-        }
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────
 
     private fun channelAndPriority(prominent: Boolean): Pair<String, Int> {
         return if (prominent) {

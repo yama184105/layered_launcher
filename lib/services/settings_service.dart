@@ -33,13 +33,14 @@ class SettingsService {
   Future<void> Function(List<Map<String, dynamic>> groups)? onBatchGroupsChanged;
 
   /// Hook invoked whenever quick-launcher config (enabled flag,
-  /// prominence, style, or resolved app list) changes. main.dart wires
-  /// this to NativeService.setQuickLauncherConfig so the persistent
-  /// notification(s) update whenever favorites/floor1/etc. shift.
+  /// prominence, dividers, or resolved app list) changes. main.dart
+  /// wires this to NativeService.setQuickLauncherConfig so the
+  /// persistent notification updates whenever favorites/floor1/etc.
+  /// shift.
   Future<void> Function(
     bool enabled,
     bool prominent,
-    String style,
+    bool showDividers,
     List<Map<String, String>> apps,
   )? onQuickLauncherChanged;
 
@@ -66,13 +67,13 @@ class SettingsService {
     await _box.put('quickLauncherProminent', v);
   }
 
-  /// Presentation style for the quick launcher.
-  /// 'consolidated' = one notification with an expandable app list (default).
-  /// 'perApp'       = one notification per app, visually grouped in the shade.
-  String get quickLauncherStyle =>
-      _box.get('quickLauncherStyle', defaultValue: 'consolidated') as String;
-  Future<void> setQuickLauncherStyle(String v) async {
-    await _box.put('quickLauncherStyle', v);
+  /// Whether to draw a thin divider line between app rows in the
+  /// quick-launcher notification. Makes individual rows easier to
+  /// distinguish at the cost of slightly more vertical space.
+  bool get quickLauncherShowDividers =>
+      _box.get('quickLauncherShowDividers', defaultValue: false) as bool;
+  Future<void> setQuickLauncherShowDividers(bool v) async {
+    await _box.put('quickLauncherShowDividers', v);
   }
 
   /// Which set of apps populates the quick launcher notification.

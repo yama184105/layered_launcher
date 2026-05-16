@@ -85,7 +85,7 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
     final ss = _ss;
     final enabled = ss.quickLauncherEnabled;
     final prominent = ss.quickLauncherProminent;
-    final style = ss.quickLauncherStyle;
+    final showDividers = ss.quickLauncherShowDividers;
     final source = ss.quickLauncherSource;
     final customCount = ss.quickLauncherCustomApps.length;
     final sourceLabel = switch (source) {
@@ -93,20 +93,19 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
       'custom' => 'カスタム ($customCount)',
       _ => 'お気に入り',
     };
-    final styleLabel =
-        style == 'perApp' ? '小分け (アプリごとに通知)' : 'まとめ (1つの通知)';
 
     Future<void> resync({
       required bool enabled,
       required bool prominent,
-      required String style,
+      required bool showDividers,
       required String source,
     }) async {
       final apps = await _as.resolveQuickLauncherApps(
         source,
         customPackages: ss.quickLauncherCustomApps,
       );
-      await ss.onQuickLauncherChanged?.call(enabled, prominent, style, apps);
+      await ss.onQuickLauncherChanged
+          ?.call(enabled, prominent, showDividers, apps);
     }
 
     return Column(
@@ -129,7 +128,7 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
             await resync(
                 enabled: v,
                 prominent: prominent,
-                style: style,
+                showDividers: showDividers,
                 source: source);
             if (mounted) setState(() {});
           },
@@ -184,7 +183,7 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                       await resync(
                           enabled: enabled,
                           prominent: prominent,
-                          style: style,
+                          showDividers: showDividers,
                           source: choice);
                       if (mounted) setState(() {});
                     }
@@ -224,7 +223,7 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                   await resync(
                       enabled: enabled,
                       prominent: prominent,
-                      style: style,
+                      showDividers: showDividers,
                       source: 'custom');
                   if (mounted) setState(() {});
                 },
@@ -234,64 +233,28 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                 ),
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
-            child: Row(
-              children: [
-                const Text(
-                  '通知スタイル:',
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () async {
-                    final choice = await showDialog<String>(
-                      context: context,
-                      builder: (ctx) => SimpleDialog(
-                        backgroundColor: const Color(0xFF1A1A1A),
-                        title: const Text(
-                          '通知スタイル',
-                          style: TextStyle(color: Colors.white, fontSize: 14),
-                        ),
-                        children: [
-                          SimpleDialogOption(
-                            onPressed: () =>
-                                Navigator.pop(ctx, 'consolidated'),
-                            child: const Text(
-                              'まとめ (1つの通知でリスト表示)',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                          SimpleDialogOption(
-                            onPressed: () => Navigator.pop(ctx, 'perApp'),
-                            child: const Text(
-                              '小分け (アプリごとに個別の通知)',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (choice != null && choice != style) {
-                      await ss.setQuickLauncherStyle(choice);
-                      await resync(
-                          enabled: enabled,
-                          prominent: prominent,
-                          style: choice,
-                          source: source);
-                      if (mounted) setState(() {});
-                    }
-                  },
-                  child: Text(
-                    styleLabel,
-                    style: const TextStyle(
-                      color: Colors.tealAccent,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
+          SwitchListTile(
+            contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            title: const Text(
+              'アプリ間に区切り線を表示',
+              style: TextStyle(color: Colors.white, fontSize: 13),
             ),
+            subtitle: const Text(
+              '通知内の各アプリ行の境界を分かりやすくする',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            activeColor: Colors.tealAccent,
+            dense: true,
+            value: showDividers,
+            onChanged: (v) async {
+              await ss.setQuickLauncherShowDividers(v);
+              await resync(
+                  enabled: enabled,
+                  prominent: prominent,
+                  showDividers: v,
+                  source: source);
+              if (mounted) setState(() {});
+            },
           ),
           SwitchListTile(
             contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -311,7 +274,7 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
               await resync(
                   enabled: enabled,
                   prominent: v,
-                  style: style,
+                  showDividers: showDividers,
                   source: source);
               if (mounted) setState(() {});
             },
