@@ -56,13 +56,26 @@ class SettingsService {
   }
 
   /// Which set of apps populates the quick launcher notification.
-  /// 'favorites' = isPinned apps from Hive AppConfig box, ordered by
-  /// favoriteOrder; 'floor1' = floor==1 apps in alphabetical order.
+  /// 'favorites' = isPinned apps; 'floor1' = floor==1 apps;
+  /// 'custom' = user-picked list (see quickLauncherCustomApps).
   /// Defaults to 'favorites'.
   String get quickLauncherSource =>
       _box.get('quickLauncherSource', defaultValue: 'favorites') as String;
   Future<void> setQuickLauncherSource(String v) async {
     await _box.put('quickLauncherSource', v);
+  }
+
+  /// Package names manually picked by the user for the quick-launcher
+  /// notification. Only consulted when quickLauncherSource == 'custom'.
+  /// Order is preserved (pick order = notification row order).
+  List<String> get quickLauncherCustomApps {
+    final raw = _box.get('quickLauncherCustomApps');
+    if (raw is List) return raw.cast<String>();
+    return const [];
+  }
+
+  Future<void> setQuickLauncherCustomApps(List<String> pkgs) async {
+    await _box.put('quickLauncherCustomApps', pkgs);
   }
 
   /// True after the user finishes the first-launch onboarding (permission

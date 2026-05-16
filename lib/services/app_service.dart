@@ -96,26 +96,35 @@ class AppService {
 
   /// Resolves the apps that populate the persistent quick-launcher
   /// notification, given a [source]:
-  /// - 'favorites': isPinned apps
-  /// - 'floor1':    floor==1 apps
-  /// Returns a list of `{packageName, label}` maps sorted alphabetically.
+  /// - 'favorites':  isPinned apps (alphabetical)
+  /// - 'floor1':     floor==1 apps (alphabetical)
+  /// - 'custom':     packages from [customPackages] in their original order
+  /// Returns a list of `{packageName, label}` maps.
   Future<List<Map<String, String>>> resolveQuickLauncherApps(
-      String source) async {
+    String source, {
+    List<String> customPackages = const [],
+  }) async {
     final all = await getAllApps();
-    Iterable<AppConfig> selected;
-    switch (source) {
-      case 'floor1':
-        selected = all.where((a) => a.floor == 1);
-        break;
-      case 'favorites':
-      default:
-        selected = all.where((a) => a.isPinned);
-        break;
+    final byPkg = {for (final a in all) a.packageName: a};
+
+    List<AppConfig> selected;
+    if (source == 'custom') {
+      // Preserve the user-picked order, drop packages that aren't
+      // installed anymore.
+      selected = [
+        for (final pkg in customPackages)
+          if (byPkg[pkg] != null) byPkg[pkg]!,
+      ];
+    } else {
+      final filtered = source == 'floor1'
+          ? all.where((a) => a.floor == 1)
+          : all.where((a) => a.isPinned);
+      selected = filtered.toList()
+        ..sort((a, b) =>
+            a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
     }
-    final list = selected.toList()
-      ..sort((a, b) =>
-          a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
-    return list
+
+    return selected
         .map((a) => {
               'packageName': a.packageName,
               'label': (a.customName != null && a.customName!.isNotEmpty)

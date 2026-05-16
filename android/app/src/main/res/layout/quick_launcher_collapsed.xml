@@ -9,18 +9,15 @@
     android:paddingTop="10dp"
     android:paddingBottom="10dp">
     <TextView
-        android:id="@+id/title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Layered Launcher"
-        android:textColor="?android:attr/textColorPrimary"
-        android:textSize="14sp"
-        android:textStyle="bold"/>
+        android:textAppearance="@android:style/TextAppearance.Material.Notification.Title"
+        android:textSize="14sp"/>
     <TextView
-        android:id="@+id/hint"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text=" — クイック起動 (展開でアプリ一覧)"
-        android:textColor="?android:attr/textColorSecondary"
+        android:textAppearance="@android:style/TextAppearance.Material.Notification.Info"
         android:textSize="12sp"/>
 </LinearLayout>

@@ -1,5 +1,6 @@
 package com.yama184105.layered_launcher
 
+import android.app.ActivityOptions
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -131,23 +132,67 @@ object QuickLauncherNotification {
         )
         row.setOnClickPendingIntent(R.id.app_name, normalPi)
 
-        // Split-screen launch: FLAG_ACTIVITY_LAUNCH_ADJACENT places the
-        // new activity in the adjacent split window if supported. On
-        // Lenovo tablets with Productivity Mode this triggers split view.
+        // Split-screen launch. The FLAG_ACTIVITY_LAUNCH_ADJACENT alone
+        // often fails when launching from a notification because the
+        // caller (system UI / launcher) isn't itself in multi-window
+        // mode. We additionally pass ActivityOptions with explicit
+        // windowing mode = MULTI_WINDOW (5) via reflection — that hidden
+        // attribute is the same one the system shell uses for split.
         // MULTIPLE_TASK ensures we get a fresh window instance.
         val splitIntent = Intent(launchIntent).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT or
-                Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                Intent.FLAG_ACTIVITY_NEW_DOCUMENT
         }
-        val splitPi = PendingIntent.getActivity(
+        val splitPi = makeSplitPendingIntent(
             ctx,
-            10001 + index * 2,
             splitIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            10001 + index * 2,
         )
         row.setOnClickPendingIntent(R.id.split_button, splitPi)
 
         return row
+    }
+
+    /** Build a PendingIntent that asks the system to launch [splitIntent]
+     *  in split-screen / multi-window mode. On Android 12+ we attach
+     *  ActivityOptions with WINDOWING_MODE_MULTI_WINDOW (=5) via
+     *  reflection; this is the same mechanism Samsung/Lenovo task
+     *  switchers use and is required for split-screen to actually take
+     *  effect when launched from a notification (FLAG_ACTIVITY_LAUNCH_ADJACENT
+     *  alone falls back to single-window if the caller isn't already in
+     *  multi-window). Falls back to a flag-only PendingIntent on older
+     *  Android or if reflection fails. */
+    private fun makeSplitPendingIntent(
+        ctx: Context,
+        splitIntent: Intent,
+        requestCode: Int,
+    ): PendingIntent {
+        val piFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val optsBundle = buildSplitOptionsBundle()
+        return if (optsBundle != null) {
+            PendingIntent.getActivity(ctx, requestCode, splitIntent, piFlags, optsBundle)
+        } else {
+            PendingIntent.getActivity(ctx, requestCode, splitIntent, piFlags)
+        }
+    }
+
+    private fun buildSplitOptionsBundle(): android.os.Bundle? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
+        return try {
+            val opts = ActivityOptions.makeBasic()
+            // WINDOWING_MODE_MULTI_WINDOW = 5 in WindowConfiguration.
+            // The setLaunchWindowingMode method is @SystemApi but
+            // accessible via reflection on most builds.
+            val method = opts.javaClass.getMethod(
+                "setLaunchWindowingMode",
+                Int::class.javaPrimitiveType,
+            )
+            method.invoke(opts, 5)
+            opts.toBundle()
+        } catch (_: Exception) {
+            null
+        }
     }
 }

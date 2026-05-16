@@ -54,8 +54,10 @@ void main() async {
   // source without knowing about AppService.
   settingsService.onQuickLauncherChanged = (enabled, apps) =>
       nativeService.setQuickLauncherConfig(enabled: enabled, apps: apps);
-  final quickLauncherApps = await appService
-      .resolveQuickLauncherApps(settingsService.quickLauncherSource);
+  final quickLauncherApps = await appService.resolveQuickLauncherApps(
+    settingsService.quickLauncherSource,
+    customPackages: settingsService.quickLauncherCustomApps,
+  );
   await nativeService.setQuickLauncherConfig(
     enabled: settingsService.quickLauncherEnabled,
     apps: quickLauncherApps,

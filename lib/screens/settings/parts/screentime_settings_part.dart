@@ -85,11 +85,18 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
     final ss = _ss;
     final enabled = ss.quickLauncherEnabled;
     final source = ss.quickLauncherSource;
-    final sourceLabel =
-        source == 'floor1' ? '1F のアプリ' : 'お気に入り';
+    final customCount = ss.quickLauncherCustomApps.length;
+    final sourceLabel = switch (source) {
+      'floor1' => '1F のアプリ',
+      'custom' => 'カスタム ($customCount)',
+      _ => 'お気に入り',
+    };
 
     Future<void> resync({required bool enabled, required String source}) async {
-      final apps = await _as.resolveQuickLauncherApps(source);
+      final apps = await _as.resolveQuickLauncherApps(
+        source,
+        customPackages: ss.quickLauncherCustomApps,
+      );
       await ss.onQuickLauncherChanged?.call(enabled, apps);
     }
 
@@ -114,9 +121,9 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
             if (mounted) setState(() {});
           },
         ),
-        if (enabled)
+        if (enabled) ...[
           Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
             child: Row(
               children: [
                 const Text(
@@ -149,6 +156,13 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                               style: TextStyle(color: Colors.white),
                             ),
                           ),
+                          SimpleDialogOption(
+                            onPressed: () => Navigator.pop(ctx, 'custom'),
+                            child: const Text(
+                              'カスタム (一覧から選ぶ)',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -169,7 +183,222 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
               ],
             ),
           ),
+          if (source == 'custom')
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.05),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => _QuickLauncherAppPickerScreen(
+                        appService: _as,
+                        settingsService: ss,
+                      ),
+                    ),
+                  );
+                  await resync(enabled: enabled, source: 'custom');
+                  if (mounted) setState(() {});
+                },
+                child: const Text(
+                  'カスタムアプリ一覧を編集',
+                  style: TextStyle(color: Colors.tealAccent, fontSize: 13),
+                ),
+              ),
+            ),
+        ],
       ],
+    );
+  }
+}
+
+// ── Quick Launcher App Picker ────────────────────────────────────────────────
+
+/// Lets the user pick which apps appear in the persistent quick-launcher
+/// notification when source == 'custom'. Selection order is preserved so
+/// the user can prioritise their most-used apps at the top of the
+/// notification list.
+class _QuickLauncherAppPickerScreen extends StatefulWidget {
+  final AppService appService;
+  final SettingsService settingsService;
+
+  const _QuickLauncherAppPickerScreen({
+    required this.appService,
+    required this.settingsService,
+  });
+
+  @override
+  State<_QuickLauncherAppPickerScreen> createState() =>
+      _QuickLauncherAppPickerScreenState();
+}
+
+class _QuickLauncherAppPickerScreenState
+    extends State<_QuickLauncherAppPickerScreen> {
+  List<AppConfig> _allApps = [];
+  List<String> _selected = [];
+  String _query = '';
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List.from(widget.settingsService.quickLauncherCustomApps);
+    _load();
+  }
+
+  Future<void> _load() async {
+    final apps = await widget.appService.getAllApps();
+    apps.sort((a, b) =>
+        _label(a).toLowerCase().compareTo(_label(b).toLowerCase()));
+    if (!mounted) return;
+    setState(() {
+      _allApps = apps;
+      _loading = false;
+    });
+  }
+
+  String _label(AppConfig a) =>
+      (a.customName != null && a.customName!.isNotEmpty)
+          ? a.customName!
+          : a.appName;
+
+  Future<void> _save() async {
+    await widget.settingsService.setQuickLauncherCustomApps(_selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _query.isEmpty
+        ? _allApps
+        : _allApps.where((a) =>
+            _label(a).toLowerCase().contains(_query.toLowerCase())).toList();
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text('クイック起動アプリ (${_selected.length})',
+            style: const TextStyle(fontSize: 16)),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: TextField(
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: '検索',
+                      hintStyle:
+                          const TextStyle(color: Colors.white38, fontSize: 13),
+                      prefixIcon:
+                          const Icon(Icons.search, color: Colors.white38),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.05),
+                      contentPadding: EdgeInsets.zero,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(4),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onChanged: (v) => setState(() => _query = v),
+                  ),
+                ),
+                if (_selected.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Row(
+                      children: [
+                        Text('選択順 (上から通知に並ぶ): ${_selected.length}件',
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 11)),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () async {
+                            setState(() => _selected.clear());
+                            await _save();
+                          },
+                          child: const Text('全解除',
+                              style: TextStyle(
+                                  color: Colors.redAccent, fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) {
+                      final app = filtered[i];
+                      final pkg = app.packageName;
+                      final isSelected = _selected.contains(pkg);
+                      final orderIdx = isSelected ? _selected.indexOf(pkg) : -1;
+                      return InkWell(
+                        onTap: () async {
+                          setState(() {
+                            if (isSelected) {
+                              _selected.remove(pkg);
+                            } else {
+                              _selected.add(pkg);
+                            }
+                          });
+                          await _save();
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 28,
+                                child: isSelected
+                                    ? Text('${orderIdx + 1}',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            color: Colors.tealAccent,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600))
+                                    : const SizedBox.shrink(),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _label(app),
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.tealAccent
+                                        : Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              Icon(
+                                isSelected
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank,
+                                color: isSelected
+                                    ? Colors.tealAccent
+                                    : Colors.white38,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
