@@ -342,55 +342,69 @@ class _QuickLauncherAppPickerScreenState
                       final pkg = app.packageName;
                       final isSelected = _selected.contains(pkg);
                       final orderIdx = isSelected ? _selected.indexOf(pkg) : -1;
-                      return InkWell(
-                        onTap: () async {
-                          setState(() {
-                            if (isSelected) {
-                              _selected.remove(pkg);
-                            } else {
-                              _selected.add(pkg);
-                            }
-                          });
-                          await _save();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 28,
-                                child: isSelected
-                                    ? Text('${orderIdx + 1}',
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                            color: Colors.tealAccent,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600))
-                                    : const SizedBox.shrink(),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _label(app),
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Colors.tealAccent
-                                        : Colors.white,
-                                    fontSize: 14,
+                      return Material(
+                        color: isSelected
+                            ? Colors.tealAccent.withOpacity(0.08)
+                            : Colors.transparent,
+                        child: InkWell(
+                          onTap: () async {
+                            setState(() {
+                              if (isSelected) {
+                                _selected.remove(pkg);
+                              } else {
+                                _selected.add(pkg);
+                              }
+                            });
+                            await _save();
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 4),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.check_box
+                                      : Icons.check_box_outline_blank,
+                                  color: isSelected
+                                      ? Colors.tealAccent
+                                      : Colors.white38,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    _label(app),
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.tealAccent
+                                          : Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w500
+                                          : FontWeight.normal,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Icon(
-                                isSelected
-                                    ? Icons.check_box
-                                    : Icons.check_box_outline_blank,
-                                color: isSelected
-                                    ? Colors.tealAccent
-                                    : Colors.white38,
-                                size: 20,
-                              ),
-                            ],
+                                if (isSelected)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.tealAccent.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '#${orderIdx + 1}',
+                                      style: const TextStyle(
+                                        color: Colors.tealAccent,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       );

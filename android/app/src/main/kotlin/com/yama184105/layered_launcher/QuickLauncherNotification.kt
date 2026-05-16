@@ -182,14 +182,22 @@ object QuickLauncherNotification {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
         return try {
             val opts = ActivityOptions.makeBasic()
-            // WINDOWING_MODE_MULTI_WINDOW = 5 in WindowConfiguration.
-            // The setLaunchWindowingMode method is @SystemApi but
-            // accessible via reflection on most builds.
+            // WindowConfiguration.WINDOWING_MODE_* values:
+            //   3 = SPLIT_SCREEN_PRIMARY   (deprecated in API 31)
+            //   4 = SPLIT_SCREEN_SECONDARY (deprecated in API 31)
+            //   5 = FREEFORM
+            //   6 = MULTI_WINDOW           (the modern catch-all)
+            // setLaunchWindowingMode is @SystemApi; accessing via
+            // reflection works on most OEM builds including Lenovo.
             val method = opts.javaClass.getMethod(
                 "setLaunchWindowingMode",
                 Int::class.javaPrimitiveType,
             )
-            method.invoke(opts, 5)
+            // Prefer MULTI_WINDOW (6) for Android 12+. On older devices
+            // SPLIT_SCREEN_PRIMARY (3) is what the recents/long-press
+            // gesture used to send.
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 6 else 3
+            method.invoke(opts, mode)
             opts.toBundle()
         } catch (_: Exception) {
             null
