@@ -1,6 +1,5 @@
 package com.yama184105.layered_launcher
 
-import android.app.ActivityOptions
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -14,17 +13,20 @@ import androidx.core.app.NotificationManagerCompat
 
 /**
  * Persistent notification with an expandable app list. The collapsed view
- * just shows "Layered Launcher". Expanding reveals one row per favorite
- * app, where tapping the name launches normally and tapping the ▢▢ icon
- * launches in split-screen using FLAG_ACTIVITY_LAUNCH_ADJACENT.
+ * just shows "Layered Launcher". Expanding reveals one row per app from
+ * the user-chosen source (favorites / floor1 / custom). Tapping a row
+ * launches that app.
  *
- * Posted from Flutter via MainActivity.setQuickLauncherConfig and from
- * QuickLauncherBootReceiver after a device reboot so the notification
- * survives without needing a foreground service.
+ * Two channels back the notification so the user can switch between a
+ * quiet (LOW) display and a prominent (DEFAULT) one that briefly shows as
+ * heads-up — Android's only public lever to influence whether the shade
+ * shows the notification in expanded form.
  */
 object QuickLauncherNotification {
     private const val TAG = "QuickLauncherNotif"
-    const val CHANNEL_ID = "quick_launcher"
+
+    const val CHANNEL_ID_SILENT = "quick_launcher"
+    const val CHANNEL_ID_PROMINENT = "quick_launcher_prominent"
     const val NOTIFICATION_ID = 9001
 
     /** Cap how many apps we put in the expanded RemoteViews. The
@@ -34,26 +36,48 @@ object QuickLauncherNotification {
 
     data class App(val packageName: String, val label: String)
 
-    fun ensureChannel(ctx: Context) {
+    fun ensureChannels(ctx: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(CHANNEL_ID) != null) return
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "クイック起動",
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = "通知シェードからアプリを素早く起動するための常駐通知"
-            setShowBadge(false)
-            enableLights(false)
-            enableVibration(false)
-            setSound(null, null)
+
+        if (nm.getNotificationChannel(CHANNEL_ID_SILENT) == null) {
+            val ch = NotificationChannel(
+                CHANNEL_ID_SILENT,
+                "クイック起動 (静か)",
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = "シェード内で折りたたみ表示する常駐通知"
+                setShowBadge(false)
+                enableLights(false)
+                enableVibration(false)
+                setSound(null, null)
+            }
+            nm.createNotificationChannel(ch)
         }
-        nm.createNotificationChannel(channel)
+
+        if (nm.getNotificationChannel(CHANNEL_ID_PROMINENT) == null) {
+            val ch = NotificationChannel(
+                CHANNEL_ID_PROMINENT,
+                "クイック起動 (目立つ)",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = "投稿時にヘッズアップ表示する常駐通知"
+                setShowBadge(false)
+                enableLights(false)
+                enableVibration(false)
+                setSound(null, null)
+            }
+            nm.createNotificationChannel(ch)
+        }
     }
 
     /** Post or cancel the persistent notification based on [enabled]. */
-    fun update(ctx: Context, enabled: Boolean, apps: List<App>) {
+    fun update(
+        ctx: Context,
+        enabled: Boolean,
+        apps: List<App>,
+        prominent: Boolean = false,
+    ) {
         if (!enabled) {
             try {
                 NotificationManagerCompat.from(ctx).cancel(NOTIFICATION_ID)
@@ -61,8 +85,8 @@ object QuickLauncherNotification {
             return
         }
         try {
-            ensureChannel(ctx)
-            val notification = buildNotification(ctx, apps.take(MAX_APPS))
+            ensureChannels(ctx)
+            val notification = buildNotification(ctx, apps.take(MAX_APPS), prominent)
             NotificationManagerCompat.from(ctx).notify(NOTIFICATION_ID, notification)
         } catch (e: Exception) {
             Log.w(TAG, "failed to post quick launcher notification", e)
@@ -72,13 +96,11 @@ object QuickLauncherNotification {
     private fun buildNotification(
         ctx: Context,
         apps: List<App>,
+        prominent: Boolean,
     ): android.app.Notification {
         val collapsed = RemoteViews(ctx.packageName, R.layout.quick_launcher_collapsed)
 
         val expanded = RemoteViews(ctx.packageName, R.layout.quick_launcher_expanded)
-        // Remove any rows left over from a previous post (RemoteViews caches
-        // child views per id). Defensive — Android usually rebuilds from the
-        // layout xml on each notify but be explicit.
         expanded.removeAllViews(R.id.app_list)
 
         for ((index, app) in apps.withIndex()) {
@@ -86,8 +108,7 @@ object QuickLauncherNotification {
             expanded.addView(R.id.app_list, row)
         }
 
-        // Tap the notification body itself opens our launcher app — a
-        // fallback in case the user wants the full Layered Launcher UI.
+        // Tap the notification body itself opens our launcher app.
         val openLauncherIntent = Intent(ctx, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
         }
@@ -98,11 +119,21 @@ object QuickLauncherNotification {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        return NotificationCompat.Builder(ctx, CHANNEL_ID)
+        val channel = if (prominent) CHANNEL_ID_PROMINENT else CHANNEL_ID_SILENT
+        val priority = if (prominent) {
+            NotificationCompat.PRIORITY_DEFAULT
+        } else {
+            NotificationCompat.PRIORITY_LOW
+        }
+
+        return NotificationCompat.Builder(ctx, channel)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            // setOnlyAlertOnce(false) when prominent so re-posts after
+            // app list change also surface as heads-up. The user can
+            // still swipe the heads-up away or mute the channel.
+            .setOnlyAlertOnce(!prominent)
+            .setPriority(priority)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setCustomContentView(collapsed)
@@ -118,89 +149,17 @@ object QuickLauncherNotification {
         val row = RemoteViews(ctx.packageName, R.layout.quick_launcher_app_row)
         row.setTextViewText(R.id.app_name, app.label)
 
-        // Normal launch: just FLAG_ACTIVITY_NEW_TASK so it opens fullscreen
-        // (or in whatever windowing mode the user already has). Use unique
-        // request codes per row so PendingIntents don't collide.
         val normalIntent = Intent(launchIntent).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         val normalPi = PendingIntent.getActivity(
             ctx,
-            10000 + index * 2,
+            10000 + index,
             normalIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         row.setOnClickPendingIntent(R.id.app_name, normalPi)
 
-        // Split-screen launch. The FLAG_ACTIVITY_LAUNCH_ADJACENT alone
-        // often fails when launching from a notification because the
-        // caller (system UI / launcher) isn't itself in multi-window
-        // mode. We additionally pass ActivityOptions with explicit
-        // windowing mode = MULTI_WINDOW (5) via reflection — that hidden
-        // attribute is the same one the system shell uses for split.
-        // MULTIPLE_TASK ensures we get a fresh window instance.
-        val splitIntent = Intent(launchIntent).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT or
-                Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                Intent.FLAG_ACTIVITY_NEW_DOCUMENT
-        }
-        val splitPi = makeSplitPendingIntent(
-            ctx,
-            splitIntent,
-            10001 + index * 2,
-        )
-        row.setOnClickPendingIntent(R.id.split_button, splitPi)
-
         return row
-    }
-
-    /** Build a PendingIntent that asks the system to launch [splitIntent]
-     *  in split-screen / multi-window mode. On Android 12+ we attach
-     *  ActivityOptions with WINDOWING_MODE_MULTI_WINDOW (=5) via
-     *  reflection; this is the same mechanism Samsung/Lenovo task
-     *  switchers use and is required for split-screen to actually take
-     *  effect when launched from a notification (FLAG_ACTIVITY_LAUNCH_ADJACENT
-     *  alone falls back to single-window if the caller isn't already in
-     *  multi-window). Falls back to a flag-only PendingIntent on older
-     *  Android or if reflection fails. */
-    private fun makeSplitPendingIntent(
-        ctx: Context,
-        splitIntent: Intent,
-        requestCode: Int,
-    ): PendingIntent {
-        val piFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        val optsBundle = buildSplitOptionsBundle()
-        return if (optsBundle != null) {
-            PendingIntent.getActivity(ctx, requestCode, splitIntent, piFlags, optsBundle)
-        } else {
-            PendingIntent.getActivity(ctx, requestCode, splitIntent, piFlags)
-        }
-    }
-
-    private fun buildSplitOptionsBundle(): android.os.Bundle? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
-        return try {
-            val opts = ActivityOptions.makeBasic()
-            // WindowConfiguration.WINDOWING_MODE_* values:
-            //   3 = SPLIT_SCREEN_PRIMARY   (deprecated in API 31)
-            //   4 = SPLIT_SCREEN_SECONDARY (deprecated in API 31)
-            //   5 = FREEFORM
-            //   6 = MULTI_WINDOW           (the modern catch-all)
-            // setLaunchWindowingMode is @SystemApi; accessing via
-            // reflection works on most OEM builds including Lenovo.
-            val method = opts.javaClass.getMethod(
-                "setLaunchWindowingMode",
-                Int::class.javaPrimitiveType,
-            )
-            // Prefer MULTI_WINDOW (6) for Android 12+. On older devices
-            // SPLIT_SCREEN_PRIMARY (3) is what the recents/long-press
-            // gesture used to send.
-            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 6 else 3
-            method.invoke(opts, mode)
-            opts.toBundle()
-        } catch (_: Exception) {
-            null
-        }
     }
 }

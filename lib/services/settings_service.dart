@@ -32,12 +32,13 @@ class SettingsService {
   /// notification listener's app-to-group lookup stay in sync.
   Future<void> Function(List<Map<String, dynamic>> groups)? onBatchGroupsChanged;
 
-  /// Hook invoked whenever quick-launcher config (enabled flag or
-  /// resolved app list) changes. main.dart wires this to
+  /// Hook invoked whenever quick-launcher config (enabled flag,
+  /// prominence, or resolved app list) changes. main.dart wires this to
   /// NativeService.setQuickLauncherConfig so the persistent notification
   /// is updated whenever favorites/floor1/etc. shift.
   Future<void> Function(
     bool enabled,
+    bool prominent,
     List<Map<String, String>> apps,
   )? onQuickLauncherChanged;
 
@@ -53,6 +54,15 @@ class SettingsService {
       _box.get('quickLauncherEnabled', defaultValue: false) as bool;
   Future<void> setQuickLauncherEnabled(bool v) async {
     await _box.put('quickLauncherEnabled', v);
+  }
+
+  /// When true, the quick-launcher notification uses the DEFAULT
+  /// importance channel (heads-up on post, more likely to display in
+  /// expanded form). When false, uses LOW (quiet, folded in shade).
+  bool get quickLauncherProminent =>
+      _box.get('quickLauncherProminent', defaultValue: false) as bool;
+  Future<void> setQuickLauncherProminent(bool v) async {
+    await _box.put('quickLauncherProminent', v);
   }
 
   /// Which set of apps populates the quick launcher notification.

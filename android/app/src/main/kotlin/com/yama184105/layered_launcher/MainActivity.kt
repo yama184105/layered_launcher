@@ -247,6 +247,7 @@ class MainActivity : FlutterActivity() {
                         // entry shows at the top of the expanded view.
                         val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
                         val enabled = args["enabled"] as? Boolean ?: false
+                        val prominent = args["prominent"] as? Boolean ?: false
                         val appsArg = args["apps"] as? List<*> ?: emptyList<Any>()
                         val apps = appsArg.mapNotNull { item ->
                             val m = item as? Map<*, *> ?: return@mapNotNull null
@@ -254,7 +255,7 @@ class MainActivity : FlutterActivity() {
                             val label = m["label"] as? String ?: pkg
                             QuickLauncherNotification.App(pkg, label)
                         }
-                        QuickLauncherNotification.update(this, enabled, apps)
+                        QuickLauncherNotification.update(this, enabled, apps, prominent)
                         result.success(null)
                     }
                     "openExactAlarmSettings" -> {

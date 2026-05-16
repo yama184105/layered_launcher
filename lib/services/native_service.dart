@@ -145,15 +145,20 @@ class NativeService {
   /// Post or cancel the persistent quick-launcher notification. When
   /// [enabled] is true the user sees an ongoing notification in the
   /// shade; expanding it reveals one row per [apps] entry where tapping
-  /// the name launches the app normally and tapping ▢▢ launches it in
-  /// split-screen (FLAG_ACTIVITY_LAUNCH_ADJACENT).
+  /// the name launches the app.
+  ///
+  /// [prominent] picks between the LOW-importance channel (quiet,
+  /// collapsed in shade) and the DEFAULT-importance channel (heads-up
+  /// on post, more likely to land in expanded state).
   Future<void> setQuickLauncherConfig({
     required bool enabled,
+    required bool prominent,
     required List<Map<String, String>> apps,
   }) async {
     try {
       await _channel.invokeMethod('setQuickLauncherConfig', {
         'enabled': enabled,
+        'prominent': prominent,
         'apps': apps,
       });
     } catch (_) {}

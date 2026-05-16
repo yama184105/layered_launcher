@@ -84,6 +84,7 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
   Widget _quickLauncherToggleRow() {
     final ss = _ss;
     final enabled = ss.quickLauncherEnabled;
+    final prominent = ss.quickLauncherProminent;
     final source = ss.quickLauncherSource;
     final customCount = ss.quickLauncherCustomApps.length;
     final sourceLabel = switch (source) {
@@ -92,12 +93,16 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
       _ => 'お気に入り',
     };
 
-    Future<void> resync({required bool enabled, required String source}) async {
+    Future<void> resync({
+      required bool enabled,
+      required bool prominent,
+      required String source,
+    }) async {
       final apps = await _as.resolveQuickLauncherApps(
         source,
         customPackages: ss.quickLauncherCustomApps,
       );
-      await ss.onQuickLauncherChanged?.call(enabled, apps);
+      await ss.onQuickLauncherChanged?.call(enabled, prominent, apps);
     }
 
     return Column(
@@ -110,14 +115,14 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
             style: TextStyle(color: Colors.white, fontSize: 14),
           ),
           subtitle: const Text(
-            '常駐通知を展開してアプリを起動 (▢▢ で分割画面)',
+            '常駐通知を展開してアプリを起動',
             style: TextStyle(color: Colors.white54, fontSize: 12),
           ),
           activeColor: Colors.tealAccent,
           value: enabled,
           onChanged: (v) async {
             await ss.setQuickLauncherEnabled(v);
-            await resync(enabled: v, source: source);
+            await resync(enabled: v, prominent: prominent, source: source);
             if (mounted) setState(() {});
           },
         ),
@@ -168,7 +173,10 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                     );
                     if (choice != null && choice != source) {
                       await ss.setQuickLauncherSource(choice);
-                      await resync(enabled: enabled, source: choice);
+                      await resync(
+                          enabled: enabled,
+                          prominent: prominent,
+                          source: choice);
                       if (mounted) setState(() {});
                     }
                   },
@@ -204,7 +212,8 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                       ),
                     ),
                   );
-                  await resync(enabled: enabled, source: 'custom');
+                  await resync(
+                      enabled: enabled, prominent: prominent, source: 'custom');
                   if (mounted) setState(() {});
                 },
                 child: const Text(
@@ -213,6 +222,25 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                 ),
               ),
             ),
+          SwitchListTile(
+            contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            title: const Text(
+              '展開状態で表示',
+              style: TextStyle(color: Colors.white, fontSize: 13),
+            ),
+            subtitle: const Text(
+              'ヘッズアップ通知で目立たせ、シェード内でも展開済みになりやすく',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            activeColor: Colors.tealAccent,
+            dense: true,
+            value: prominent,
+            onChanged: (v) async {
+              await ss.setQuickLauncherProminent(v);
+              await resync(enabled: enabled, prominent: v, source: source);
+              if (mounted) setState(() {});
+            },
+          ),
         ],
       ],
     );

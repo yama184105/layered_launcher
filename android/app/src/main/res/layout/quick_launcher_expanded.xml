@@ -7,26 +7,13 @@
     android:paddingEnd="12dp"
     android:paddingTop="10dp"
     android:paddingBottom="10dp">
-    <LinearLayout
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingBottom="6dp">
-        <TextView
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text="Layered Launcher"
-            android:textAppearance="@android:style/TextAppearance.Material.Notification.Title"
-            android:textSize="14sp"/>
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="名前=単独 / ▢▢=分割"
-            android:textAppearance="@android:style/TextAppearance.Material.Notification.Info"
-            android:textSize="10sp"/>
-    </LinearLayout>
+        android:text="Layered Launcher"
+        android:textAppearance="@android:style/TextAppearance.Material.Notification.Title"
+        android:textSize="14sp"
+        android:paddingBottom="6dp"/>
     <LinearLayout
         android:id="@+id/app_list"
         android:layout_width="match_parent"
