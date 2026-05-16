@@ -221,6 +221,7 @@ class MainActivity : FlutterActivity() {
                                     val o = arr.optJSONObject(i) ?: continue
                                     out.add(
                                         mapOf(
+                                            "key" to o.optString("key"),
                                             "pkg" to o.optString("pkg"),
                                             "title" to o.optString("title"),
                                             "text" to o.optString("text"),

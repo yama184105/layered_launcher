@@ -20,7 +20,7 @@ class NotificationService : NotificationListenerService() {
         const val KEY_DEFAULT_MODE = "default_mode"
         const val KEY_BATCH_GROUPS = "batch_groups"
         /** History log of OFF-blocked notifications, JSON array of
-         *  { pkg, title, text, blockedAt }. Capped to MAX_BLOCKED_HISTORY. */
+         *  { key, pkg, title, text, blockedAt }. Capped to MAX_BLOCKED_HISTORY. */
         const val KEY_BLOCKED_HISTORY = "blocked_history"
 
         /** Per-group queue of intercepted notification payloads, persisted
@@ -93,19 +93,31 @@ class NotificationService : NotificationListenerService() {
         }
     }
 
-    /** Append an entry to the OFF-blocked history log. Trims oldest
-     *  entries when the cap is exceeded. */
+    /** Append an entry to the OFF-blocked history log. Updates/re-posts of
+     *  an already recorded StatusBarNotification.key are ignored so the
+     *  history doesn't fill with duplicates. Trims oldest entries when the
+     *  cap is exceeded. */
     private fun appendBlockedHistory(sbn: StatusBarNotification) {
         try {
             val sp = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val existing = sp.getString(KEY_BLOCKED_HISTORY, null)
             val arr = if (existing != null) JSONArray(existing) else JSONArray()
+            val notificationKey = sbn.key
+
+            for (i in 0 until arr.length()) {
+                val item = arr.optJSONObject(i) ?: continue
+                if (item.optString("key") == notificationKey) {
+                    return
+                }
+            }
+
             val ex = sbn.notification.extras
             val title = ex.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
             val text = ex.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
             val bigText = ex.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
             val effectiveText = if (!bigText.isNullOrEmpty()) bigText else text
             arr.put(JSONObject().apply {
+                put("key", notificationKey)
                 put("pkg", sbn.packageName)
                 put("title", title)
                 put("text", effectiveText)
