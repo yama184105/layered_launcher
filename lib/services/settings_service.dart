@@ -32,9 +32,37 @@ class SettingsService {
   /// notification listener's app-to-group lookup stay in sync.
   Future<void> Function(List<Map<String, dynamic>> groups)? onBatchGroupsChanged;
 
+  /// Hook invoked whenever quick-launcher config (enabled flag or
+  /// resolved app list) changes. main.dart wires this to
+  /// NativeService.setQuickLauncherConfig so the persistent notification
+  /// is updated whenever favorites/floor1/etc. shift.
+  Future<void> Function(
+    bool enabled,
+    List<Map<String, String>> apps,
+  )? onQuickLauncherChanged;
+
   Future<void> init() async {
     _box = await Hive.openBox<dynamic>(_boxName);
     await migrateBatchGroupsIfNeeded();
+  }
+
+  /// Whether the persistent quick-launcher notification is enabled. When
+  /// true, main.dart pushes the resolved app list to NativeService on
+  /// boot and on every change.
+  bool get quickLauncherEnabled =>
+      _box.get('quickLauncherEnabled', defaultValue: false) as bool;
+  Future<void> setQuickLauncherEnabled(bool v) async {
+    await _box.put('quickLauncherEnabled', v);
+  }
+
+  /// Which set of apps populates the quick launcher notification.
+  /// 'favorites' = isPinned apps from Hive AppConfig box, ordered by
+  /// favoriteOrder; 'floor1' = floor==1 apps in alphabetical order.
+  /// Defaults to 'favorites'.
+  String get quickLauncherSource =>
+      _box.get('quickLauncherSource', defaultValue: 'favorites') as String;
+  Future<void> setQuickLauncherSource(String v) async {
+    await _box.put('quickLauncherSource', v);
   }
 
   /// True after the user finishes the first-launch onboarding (permission

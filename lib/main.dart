@@ -49,6 +49,18 @@ void main() async {
   );
   await nativeService.setBatchGroups(settingsService.batchGroups);
 
+  // Persistent quick-launcher notification. The hook resolves the app
+  // list inline so the settings UI can just flip the toggle / change
+  // source without knowing about AppService.
+  settingsService.onQuickLauncherChanged = (enabled, apps) =>
+      nativeService.setQuickLauncherConfig(enabled: enabled, apps: apps);
+  final quickLauncherApps = await appService
+      .resolveQuickLauncherApps(settingsService.quickLauncherSource);
+  await nativeService.setQuickLauncherConfig(
+    enabled: settingsService.quickLauncherEnabled,
+    apps: quickLauncherApps,
+  );
+
   runApp(LayeredLauncherApp(
     appService: appService,
     settingsService: settingsService,

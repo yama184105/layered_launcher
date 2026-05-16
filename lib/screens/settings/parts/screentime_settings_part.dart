@@ -54,6 +54,8 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
             );
             if (mounted) setState(() {});
           }),
+          _rowDivider,
+          _quickLauncherToggleRow(),
         ],
       ),
       _rowDivider,
@@ -75,6 +77,101 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
     ];
   }
 
+  /// Persistent quick-launcher notification toggle + source selector.
+  /// Posts/cancels the kotlin-side notification on flip. The source picker
+  /// lets the user choose what populates the expanded view (favorites vs.
+  /// floor 1 vs. ...).
+  Widget _quickLauncherToggleRow() {
+    final ss = _ss;
+    final enabled = ss.quickLauncherEnabled;
+    final source = ss.quickLauncherSource;
+    final sourceLabel =
+        source == 'floor1' ? '1F のアプリ' : 'お気に入り';
+
+    Future<void> resync({required bool enabled, required String source}) async {
+      final apps = await _as.resolveQuickLauncherApps(source);
+      await ss.onQuickLauncherChanged?.call(enabled, apps);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SwitchListTile(
+          contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+          title: const Text(
+            '通知シェードからクイック起動',
+            style: TextStyle(color: Colors.white, fontSize: 14),
+          ),
+          subtitle: const Text(
+            '常駐通知を展開してアプリを起動 (▢▢ で分割画面)',
+            style: TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+          activeColor: Colors.tealAccent,
+          value: enabled,
+          onChanged: (v) async {
+            await ss.setQuickLauncherEnabled(v);
+            await resync(enabled: v, source: source);
+            if (mounted) setState(() {});
+          },
+        ),
+        if (enabled)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: Row(
+              children: [
+                const Text(
+                  '表示するアプリ:',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () async {
+                    final choice = await showDialog<String>(
+                      context: context,
+                      builder: (ctx) => SimpleDialog(
+                        backgroundColor: const Color(0xFF1A1A1A),
+                        title: const Text(
+                          '表示するアプリ',
+                          style: TextStyle(color: Colors.white, fontSize: 14),
+                        ),
+                        children: [
+                          SimpleDialogOption(
+                            onPressed: () => Navigator.pop(ctx, 'favorites'),
+                            child: const Text(
+                              'お気に入り',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          SimpleDialogOption(
+                            onPressed: () => Navigator.pop(ctx, 'floor1'),
+                            child: const Text(
+                              '1F のアプリ',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (choice != null && choice != source) {
+                      await ss.setQuickLauncherSource(choice);
+                      await resync(enabled: enabled, source: choice);
+                      if (mounted) setState(() {});
+                    }
+                  },
+                  child: Text(
+                    sourceLabel,
+                    style: const TextStyle(
+                      color: Colors.tealAccent,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 // ── Mindful Delay Settings Screen ────────────────────────────────────────────

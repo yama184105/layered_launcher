@@ -142,6 +142,23 @@ class NativeService {
     } catch (_) {}
   }
 
+  /// Post or cancel the persistent quick-launcher notification. When
+  /// [enabled] is true the user sees an ongoing notification in the
+  /// shade; expanding it reveals one row per [apps] entry where tapping
+  /// the name launches the app normally and tapping ▢▢ launches it in
+  /// split-screen (FLAG_ACTIVITY_LAUNCH_ADJACENT).
+  Future<void> setQuickLauncherConfig({
+    required bool enabled,
+    required List<Map<String, String>> apps,
+  }) async {
+    try {
+      await _channel.invokeMethod('setQuickLauncherConfig', {
+        'enabled': enabled,
+        'apps': apps,
+      });
+    } catch (_) {}
+  }
+
   /// Returns one entry per batch group with its pending captured items
   /// (queued for delivery at the group's next fire time). Each entry:
   /// `{id, name, scheduleType, nextFireMs, items: [{pkg, title, text, postedAt}]}`.

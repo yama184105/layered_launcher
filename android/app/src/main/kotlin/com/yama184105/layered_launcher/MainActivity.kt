@@ -241,6 +241,22 @@ class MainActivity : FlutterActivity() {
                         sp.edit().remove(NotificationService.KEY_BLOCKED_HISTORY).apply()
                         result.success(null)
                     }
+                    "setQuickLauncherConfig" -> {
+                        // Post or update the persistent quick-launcher
+                        // notification. Apps are an ordered list — first
+                        // entry shows at the top of the expanded view.
+                        val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+                        val enabled = args["enabled"] as? Boolean ?: false
+                        val appsArg = args["apps"] as? List<*> ?: emptyList<Any>()
+                        val apps = appsArg.mapNotNull { item ->
+                            val m = item as? Map<*, *> ?: return@mapNotNull null
+                            val pkg = m["packageName"] as? String ?: return@mapNotNull null
+                            val label = m["label"] as? String ?: pkg
+                            QuickLauncherNotification.App(pkg, label)
+                        }
+                        QuickLauncherNotification.update(this, enabled, apps)
+                        result.success(null)
+                    }
                     "openExactAlarmSettings" -> {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)

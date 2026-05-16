@@ -94,6 +94,37 @@ class AppService {
     await DeviceApps.openApp(packageName);
   }
 
+  /// Resolves the apps that populate the persistent quick-launcher
+  /// notification, given a [source]:
+  /// - 'favorites': isPinned apps
+  /// - 'floor1':    floor==1 apps
+  /// Returns a list of `{packageName, label}` maps sorted alphabetically.
+  Future<List<Map<String, String>>> resolveQuickLauncherApps(
+      String source) async {
+    final all = await getAllApps();
+    Iterable<AppConfig> selected;
+    switch (source) {
+      case 'floor1':
+        selected = all.where((a) => a.floor == 1);
+        break;
+      case 'favorites':
+      default:
+        selected = all.where((a) => a.isPinned);
+        break;
+    }
+    final list = selected.toList()
+      ..sort((a, b) =>
+          a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
+    return list
+        .map((a) => {
+              'packageName': a.packageName,
+              'label': (a.customName != null && a.customName!.isNotEmpty)
+                  ? a.customName!
+                  : a.appName,
+            })
+        .toList();
+  }
+
   /// Randomly assigns floors 1–10 to every non-pinned app.
   Future<Map<String, int>> buildRandomFloorMap() async {
     final installed = await DeviceApps.getInstalledApplications(
