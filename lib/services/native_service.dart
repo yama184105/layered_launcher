@@ -142,23 +142,24 @@ class NativeService {
     } catch (_) {}
   }
 
-  /// Post or cancel the persistent quick-launcher notification. When
-  /// [enabled] is true the user sees an ongoing notification in the
-  /// shade; expanding it reveals one row per [apps] entry where tapping
-  /// the name launches the app.
+  /// Post or cancel the persistent quick-launcher notification(s).
   ///
-  /// [prominent] picks between the LOW-importance channel (quiet,
-  /// collapsed in shade) and the DEFAULT-importance channel (heads-up
-  /// on post, more likely to land in expanded state).
+  /// [enabled] toggles posting vs cancelling.
+  /// [prominent] picks between LOW (quiet) and DEFAULT (heads-up).
+  /// [style] picks between 'consolidated' (one notification with an
+  /// expandable list) and 'perApp' (one notification per app, visually
+  /// grouped in the shade).
   Future<void> setQuickLauncherConfig({
     required bool enabled,
     required bool prominent,
+    required String style,
     required List<Map<String, String>> apps,
   }) async {
     try {
       await _channel.invokeMethod('setQuickLauncherConfig', {
         'enabled': enabled,
         'prominent': prominent,
+        'style': style,
         'apps': apps,
       });
     } catch (_) {}

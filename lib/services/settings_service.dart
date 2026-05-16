@@ -33,12 +33,13 @@ class SettingsService {
   Future<void> Function(List<Map<String, dynamic>> groups)? onBatchGroupsChanged;
 
   /// Hook invoked whenever quick-launcher config (enabled flag,
-  /// prominence, or resolved app list) changes. main.dart wires this to
-  /// NativeService.setQuickLauncherConfig so the persistent notification
-  /// is updated whenever favorites/floor1/etc. shift.
+  /// prominence, style, or resolved app list) changes. main.dart wires
+  /// this to NativeService.setQuickLauncherConfig so the persistent
+  /// notification(s) update whenever favorites/floor1/etc. shift.
   Future<void> Function(
     bool enabled,
     bool prominent,
+    String style,
     List<Map<String, String>> apps,
   )? onQuickLauncherChanged;
 
@@ -63,6 +64,15 @@ class SettingsService {
       _box.get('quickLauncherProminent', defaultValue: false) as bool;
   Future<void> setQuickLauncherProminent(bool v) async {
     await _box.put('quickLauncherProminent', v);
+  }
+
+  /// Presentation style for the quick launcher.
+  /// 'consolidated' = one notification with an expandable app list (default).
+  /// 'perApp'       = one notification per app, visually grouped in the shade.
+  String get quickLauncherStyle =>
+      _box.get('quickLauncherStyle', defaultValue: 'consolidated') as String;
+  Future<void> setQuickLauncherStyle(String v) async {
+    await _box.put('quickLauncherStyle', v);
   }
 
   /// Which set of apps populates the quick launcher notification.

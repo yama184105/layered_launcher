@@ -85,6 +85,7 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
     final ss = _ss;
     final enabled = ss.quickLauncherEnabled;
     final prominent = ss.quickLauncherProminent;
+    final style = ss.quickLauncherStyle;
     final source = ss.quickLauncherSource;
     final customCount = ss.quickLauncherCustomApps.length;
     final sourceLabel = switch (source) {
@@ -92,17 +93,20 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
       'custom' => 'カスタム ($customCount)',
       _ => 'お気に入り',
     };
+    final styleLabel =
+        style == 'perApp' ? '小分け (アプリごとに通知)' : 'まとめ (1つの通知)';
 
     Future<void> resync({
       required bool enabled,
       required bool prominent,
+      required String style,
       required String source,
     }) async {
       final apps = await _as.resolveQuickLauncherApps(
         source,
         customPackages: ss.quickLauncherCustomApps,
       );
-      await ss.onQuickLauncherChanged?.call(enabled, prominent, apps);
+      await ss.onQuickLauncherChanged?.call(enabled, prominent, style, apps);
     }
 
     return Column(
@@ -122,7 +126,11 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
           value: enabled,
           onChanged: (v) async {
             await ss.setQuickLauncherEnabled(v);
-            await resync(enabled: v, prominent: prominent, source: source);
+            await resync(
+                enabled: v,
+                prominent: prominent,
+                style: style,
+                source: source);
             if (mounted) setState(() {});
           },
         ),
@@ -176,6 +184,7 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                       await resync(
                           enabled: enabled,
                           prominent: prominent,
+                          style: style,
                           source: choice);
                       if (mounted) setState(() {});
                     }
@@ -213,7 +222,10 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                     ),
                   );
                   await resync(
-                      enabled: enabled, prominent: prominent, source: 'custom');
+                      enabled: enabled,
+                      prominent: prominent,
+                      style: style,
+                      source: 'custom');
                   if (mounted) setState(() {});
                 },
                 child: const Text(
@@ -222,6 +234,65 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                 ),
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
+            child: Row(
+              children: [
+                const Text(
+                  '通知スタイル:',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () async {
+                    final choice = await showDialog<String>(
+                      context: context,
+                      builder: (ctx) => SimpleDialog(
+                        backgroundColor: const Color(0xFF1A1A1A),
+                        title: const Text(
+                          '通知スタイル',
+                          style: TextStyle(color: Colors.white, fontSize: 14),
+                        ),
+                        children: [
+                          SimpleDialogOption(
+                            onPressed: () =>
+                                Navigator.pop(ctx, 'consolidated'),
+                            child: const Text(
+                              'まとめ (1つの通知でリスト表示)',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          SimpleDialogOption(
+                            onPressed: () => Navigator.pop(ctx, 'perApp'),
+                            child: const Text(
+                              '小分け (アプリごとに個別の通知)',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (choice != null && choice != style) {
+                      await ss.setQuickLauncherStyle(choice);
+                      await resync(
+                          enabled: enabled,
+                          prominent: prominent,
+                          style: choice,
+                          source: source);
+                      if (mounted) setState(() {});
+                    }
+                  },
+                  child: Text(
+                    styleLabel,
+                    style: const TextStyle(
+                      color: Colors.tealAccent,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           SwitchListTile(
             contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
             title: const Text(
@@ -237,7 +308,11 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
             value: prominent,
             onChanged: (v) async {
               await ss.setQuickLauncherProminent(v);
-              await resync(enabled: enabled, prominent: v, source: source);
+              await resync(
+                  enabled: enabled,
+                  prominent: v,
+                  style: style,
+                  source: source);
               if (mounted) setState(() {});
             },
           ),
