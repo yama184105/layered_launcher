@@ -1,5 +1,6 @@
 package com.yama184105.layered_launcher
 
+import android.Manifest
 import android.app.AppOpsManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -7,6 +8,7 @@ import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.Uri
 import android.os.BatteryManager
@@ -260,6 +262,44 @@ class MainActivity : FlutterActivity() {
                             this, enabled, apps, prominent, showDividers,
                         )
                         result.success(null)
+                    }
+                    "isPostNotificationsGranted" -> {
+                        // Android 13+ requires runtime POST_NOTIFICATIONS
+                        // grant before any notify() actually shows up.
+                        // Older versions implicitly grant it from the
+                        // manifest declaration.
+                        val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+                                PackageManager.PERMISSION_GRANTED
+                        } else true
+                        result.success(granted)
+                    }
+                    "requestPostNotifications" -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            requestPermissions(
+                                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                                42,
+                            )
+                        }
+                        result.success(null)
+                    }
+                    "openAppDetailSettings" -> {
+                        // Opens Settings > Apps > [package]. When no
+                        // package arg is supplied, defaults to our own
+                        // app so the user can grant POST_NOTIFICATIONS
+                        // even when the runtime prompt was previously
+                        // denied with "don't ask again".
+                        val pkg = call.argument<String>("packageName") ?: packageName
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.parse("package:$pkg")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        try {
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (_: Exception) {
+                            result.success(false)
+                        }
                     }
                     "openExactAlarmSettings" -> {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

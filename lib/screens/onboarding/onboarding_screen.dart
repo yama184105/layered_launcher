@@ -31,6 +31,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   bool _usageGranted = false;
   bool _adminGranted = false;
   bool _exactAlarmGranted = true;
+  bool _postNotifGranted = true;
 
   @override
   void initState() {
@@ -57,12 +58,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final usage = await _native.isUsageStatsPermissionGranted();
     final admin = await _native.isDeviceAdminEnabled();
     final alarm = await _native.canScheduleExactAlarms();
+    final postNotif = await _native.isPostNotificationsGranted();
     if (!mounted) return;
     setState(() {
       _notifGranted = notif;
       _usageGranted = usage;
       _adminGranted = admin;
       _exactAlarmGranted = alarm;
+      _postNotifGranted = postNotif;
     });
   }
 
@@ -123,6 +126,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     ),
                     const SizedBox(height: 8),
                     _section('推奨'),
+                    _permissionTile(
+                      title: '通知の表示',
+                      subtitle: 'クイック起動などの通知を表示するために必要 (Android 13+)',
+                      granted: _postNotifGranted,
+                      onGrant: () async {
+                        // Try the runtime prompt first. If the user
+                        // previously denied it with "don't ask again"
+                        // the dialog won't reappear, so also expose
+                        // the system settings shortcut as a fallback.
+                        await _native.requestPostNotifications();
+                        await Future.delayed(const Duration(milliseconds: 300));
+                        await _refreshAll();
+                        if (!_postNotifGranted && mounted) {
+                          await _native.openAppDetailSettings();
+                        }
+                      },
+                    ),
                     _permissionTile(
                       title: 'デバイス管理者',
                       subtitle: '画面ロックジェスチャ（下スワイプ等）に必要',

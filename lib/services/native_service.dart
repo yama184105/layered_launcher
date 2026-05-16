@@ -183,6 +183,45 @@ class NativeService {
     }
   }
 
+  /// Android 13+ POST_NOTIFICATIONS runtime permission state. False
+  /// means notify() calls silently no-op (which is why the quick
+  /// launcher notification never appears on fresh Galaxy installs).
+  Future<bool> isPostNotificationsGranted() async {
+    try {
+      final v =
+          await _channel.invokeMethod<bool>('isPostNotificationsGranted');
+      return v ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Shows the system runtime prompt for POST_NOTIFICATIONS. No-op on
+  /// Android < 13 (where the permission is implicitly granted from the
+  /// manifest). If the user previously denied with "don't ask again",
+  /// the prompt won't reappear — call [openAppDetailSettings] in that
+  /// case so they can flip the toggle in Android Settings.
+  Future<void> requestPostNotifications() async {
+    try {
+      await _channel.invokeMethod('requestPostNotifications');
+    } catch (_) {}
+  }
+
+  /// Opens Android `Settings > Apps > [packageName]` (or our own
+  /// detail page when [packageName] is null) so the user can adjust
+  /// permissions, notifications, storage, etc. for that app directly.
+  Future<bool> openAppDetailSettings({String? packageName}) async {
+    try {
+      final v = await _channel.invokeMethod<bool>(
+        'openAppDetailSettings',
+        {if (packageName != null) 'packageName': packageName},
+      );
+      return v ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> isNotificationServiceEnabled() async {
     try {
       final result = await _channel

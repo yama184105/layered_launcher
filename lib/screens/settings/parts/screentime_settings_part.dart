@@ -131,6 +131,49 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
                 showDividers: showDividers,
                 source: source);
             if (mounted) setState(() {});
+            // Quick launcher post fails silently without
+            // POST_NOTIFICATIONS on Android 13+. Ensure the user is
+            // prompted at the moment they enable the feature so the
+            // notification actually appears.
+            if (v) {
+              final native = NativeService();
+              final granted = await native.isPostNotificationsGranted();
+              if (!granted) {
+                await native.requestPostNotifications();
+                await Future.delayed(const Duration(milliseconds: 400));
+                final stillNot = !(await native.isPostNotificationsGranted());
+                if (stillNot && mounted) {
+                  final go = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: const Color(0xFF1A1A1A),
+                      title: const Text('通知の権限が必要です',
+                          style: TextStyle(color: Colors.white, fontSize: 14)),
+                      content: const Text(
+                        'クイック起動の通知を表示するには Android の通知許可が必要です。'
+                        '\n設定画面で「通知」を有効にしてください。',
+                        style: TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('閉じる',
+                              style: TextStyle(color: Colors.white54)),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('設定を開く',
+                              style: TextStyle(color: Colors.tealAccent)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (go == true) {
+                    await native.openAppDetailSettings();
+                  }
+                }
+              }
+            }
           },
         ),
         if (enabled) ...[

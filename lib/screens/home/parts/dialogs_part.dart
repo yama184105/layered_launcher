@@ -701,7 +701,11 @@ extension DialogsMethods on _HomeScreenState {
     final ss = widget.settingsService;
     final pkg = app.packageName;
     final name = (app.customName?.isNotEmpty == true) ? app.customName! : app.appName;
-    final override = await showDialog<bool>(
+    // First dialog: blocked alert. User picks between cancelling,
+    // launching the app once, or jumping to the app's system settings
+    // (useful when they just want to grant a permission like
+    // notification access without actually using the blocked app).
+    final action = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
@@ -713,19 +717,33 @@ extension DialogsMethods on _HomeScreenState {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx, 'close'),
             child: Text(S.of(ctx).actionClose,
                 style: const TextStyle(color: Colors.white54)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(ctx, 'settings'),
+            child: const Text('システム設定を開く',
+                style: TextStyle(color: Colors.tealAccent)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'launch'),
             child: Text(S.of(ctx).emergencyOverride,
                 style: const TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
     );
-    if (override == true && mounted) {
+    if (action == 'settings' && mounted) {
+      // System settings shortcut: record the override (so subsequent
+      // tap-back into the app doesn't re-prompt) and jump straight to
+      // Settings > Apps > [pkg] so the user can flip notification /
+      // permission toggles without unblocking via launch.
+      await ss.recordBlockOverride(pkg);
+      await _native.openAppDetailSettings(packageName: pkg);
+      return;
+    }
+    if (action == 'launch' && mounted) {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
