@@ -100,15 +100,14 @@ class LayeredLauncherApp extends StatelessWidget {
         theme: ThemeData(
           brightness: Brightness.dark,
           scaffoldBackgroundColor: Colors.black,
-          // Disable InkWell splash globally. Active styli on Lenovo
-          // Idea Tab Plus (and similar) deliver ACTION_HOVER_EXIT
-          // instead of ACTION_UP on lift, so the Material splash
-          // animation never receives the release event and the
-          // highlight stays visible at the first-pressed position.
-          // Removing the splash entirely sidesteps the stuck-press
-          // visual; tap callbacks still fire normally. The text-only
-          // minimalist design doesn't really need the ripple anyway.
-          splashFactory: NoSplash.splashFactory,
+          // Keep the InkWell splash (transient ripple animation that
+          // auto-fades) so the user sees feedback on tap, but disable
+          // the persistent highlight overlay because active styli on
+          // Lenovo Idea Tab Plus deliver ACTION_HOVER_EXIT instead of
+          // ACTION_UP on lift — the highlight then never receives a
+          // release event and stays visible forever at the first
+          // touched row. hoverColor is also nulled so a hovering pen
+          // doesn't pre-trigger any visual state.
           highlightColor: Colors.transparent,
           hoverColor: Colors.transparent,
           colorScheme: const ColorScheme.dark(
