@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<View xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- RemoteViews only accepts a fixed set of view types as the root
+     element. A bare <View> is NOT in that list and causes silent
+     inflation failure, which makes the whole notification disappear.
+     FrameLayout is supported and works fine as a thin colored bar. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="1dp"
     android:background="#1FFFFFFF"
     android:layout_marginStart="4dp"
-    android:layout_marginEnd="4dp"/>
+    android:layout_marginEnd="4dp"
+    android:layout_marginTop="2dp"
+    android:layout_marginBottom="2dp"/>
