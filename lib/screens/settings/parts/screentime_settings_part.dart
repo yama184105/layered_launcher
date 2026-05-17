@@ -141,8 +141,17 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
               if (!granted) {
                 await native.requestPostNotifications();
                 await Future.delayed(const Duration(milliseconds: 400));
-                final stillNot = !(await native.isPostNotificationsGranted());
-                if (stillNot && mounted) {
+                final nowGranted = await native.isPostNotificationsGranted();
+                if (nowGranted) {
+                  // Permission just granted — the earlier resync's
+                  // notify() silently no-op'd before the grant landed,
+                  // so re-push now that the system will let it through.
+                  await resync(
+                      enabled: true,
+                      prominent: prominent,
+                      showDividers: showDividers,
+                      source: source);
+                } else if (mounted) {
                   final go = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(

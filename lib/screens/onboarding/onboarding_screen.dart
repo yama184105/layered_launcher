@@ -71,6 +71,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   Future<void> _finish() async {
     await widget.settingsService.setOnboardingCompleted(true);
+    // Re-push the quick-launcher notification so it lands in the
+    // shade even if POST_NOTIFICATIONS was granted during onboarding
+    // (the initial boot-time post would have silently failed).
+    final ss = widget.settingsService;
+    if (ss.onQuickLauncherChanged != null) {
+      final apps = await widget.appService.resolveQuickLauncherApps(
+        ss.quickLauncherSource,
+        customPackages: ss.quickLauncherCustomApps,
+      );
+      await ss.onQuickLauncherChanged!.call(
+        ss.quickLauncherEnabled,
+        ss.quickLauncherProminent,
+        ss.quickLauncherShowDividers,
+        apps,
+      );
+    }
     if (!mounted) return;
     Navigator.of(context).pushReplacement(MaterialPageRoute(
       builder: (_) => HomeScreen(

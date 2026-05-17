@@ -401,6 +401,11 @@ class _HomeScreenState extends State<HomeScreen>
     if (state == AppLifecycleState.resumed) {
       _loadHomeWidgets();
       _loadApps();
+      // Re-push the quick-launcher notification config on every
+      // resume so the persistent notification reappears in the shade
+      // even when POST_NOTIFICATIONS was granted after the initial
+      // boot-time post silently failed.
+      _resyncQuickLauncher();
       // If we returned from an external app (home button pressed), go to HOME
       if (_launchedExternalApp && !_isInExternalScreen) {
         _launchedExternalApp = false;

@@ -175,6 +175,25 @@ extension HomeContentMethods on _HomeScreenState {
     _tick();
   }
 
+  /// Re-pushes the persistent quick-launcher notification config to
+  /// native. Called from didChangeAppLifecycleState (resumed) so the
+  /// notification reappears even when POST_NOTIFICATIONS was granted
+  /// after the boot-time post silently failed.
+  Future<void> _resyncQuickLauncher() async {
+    final ss = widget.settingsService;
+    if (ss.onQuickLauncherChanged == null) return;
+    final apps = await widget.appService.resolveQuickLauncherApps(
+      ss.quickLauncherSource,
+      customPackages: ss.quickLauncherCustomApps,
+    );
+    await ss.onQuickLauncherChanged!.call(
+      ss.quickLauncherEnabled,
+      ss.quickLauncherProminent,
+      ss.quickLauncherShowDividers,
+      apps,
+    );
+  }
+
   void _tick() {
     if (!mounted) return;
     _now = DateTime.now();
