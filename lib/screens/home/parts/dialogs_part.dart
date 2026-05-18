@@ -235,12 +235,14 @@ extension DialogsMethods on _HomeScreenState {
 
   Future<void> _showMoveFloorDialog(AppConfig app) async {
     int selectedFloor = app.floor;
-    final ug = widget.settingsService.undergroundFloors;
+    int ug = widget.settingsService.undergroundFloors;
     final maxF = widget.settingsService.maxFloors;
-    final floors = [
-      for (int i = ug; i >= 1; i--) -i,
-      for (int i = 1; i <= maxF; i++) i,
-    ];
+    // Computed inside StatefulBuilder so newly added basement floors
+    // reflect immediately when the user taps "地下階を追加".
+    List<int> buildFloors() => [
+          for (int i = ug; i >= 1; i--) -i,
+          for (int i = 1; i <= maxF; i++) i,
+        ];
     await showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -249,10 +251,14 @@ extension DialogsMethods on _HomeScreenState {
           title: Text(S.of(ctx).moveFloorWithName(_displayName(app)),
               style: const TextStyle(
                   color: Colors.white, fontSize: 14)),
-          content: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: floors.map((f) {
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: buildFloors().map((f) {
               final sel = selectedFloor == f;
               return GestureDetector(
                 onTap: () => setInner(() => selectedFloor = f),
@@ -274,6 +280,42 @@ extension DialogsMethods on _HomeScreenState {
                 ),
               );
             }).toList(),
+              ),
+              const SizedBox(height: 12),
+              // Quick-toggle to add a basement floor straight from the
+              // move dialog. The static floor settings screen still
+              // exists, but discovering it isn't obvious; without this
+              // button the user wonders why "地下" never appears.
+              GestureDetector(
+                onTap: () async {
+                  await widget.settingsService.setUndergroundFloors(ug + 1);
+                  setInner(() => ug += 1);
+                  if (mounted) setState(() {});
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                        color: Colors.blueAccent.withOpacity(0.5)),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.add,
+                          color: Colors.blueAccent, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        ug == 0 ? '地下階を有効化 (B1F)' : '地下階を追加 (B${ug + 1}F)',
+                        style: const TextStyle(
+                            color: Colors.blueAccent, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(

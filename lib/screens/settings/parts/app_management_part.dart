@@ -1366,7 +1366,33 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
             _switchRow(S.of(context).pinToThisFloor, _isPinned, Colors.blueAccent,
                 (v) => setState(() => _isPinned = v)),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+
+            // ── Uninstall ──
+            // Surfaces the system uninstall flow from the app-list
+            // detail page. The actual prompt is the Android one
+            // (ACTION_DELETE) so the user still has to confirm there.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.delete_outline,
+                    color: Colors.redAccent, size: 18),
+                label: Text(
+                  S.of(context).uninstall,
+                  style: const TextStyle(
+                      color: Colors.redAccent, fontSize: 13),
+                ),
+                onPressed: () async {
+                  final intent = AndroidIntent(
+                    action: 'android.intent.action.DELETE',
+                    data: 'package:${app.packageName}',
+                  );
+                  await intent.launch();
+                },
+              ),
+            ),
+
+            const SizedBox(height: 12),
 
             // ── Save / Cancel buttons ──
             Row(
