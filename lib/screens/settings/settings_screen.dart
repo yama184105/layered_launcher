@@ -319,6 +319,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Auto-move app list expanded
   bool _autoMoveListExpanded = false;
+  /// View mode for the auto-move section. true = group apps by
+  /// schedule contents (1 row per unique schedule); false = list
+  /// every app individually. Defaults to grouped because most users
+  /// have ~10 unique schedules across ~100 apps.
+  bool _autoMoveGrouped = true;
+  /// Which group fingerprints are currently expanded in the
+  /// grouped view. Local UI state only; not persisted.
+  final Set<String> _autoMoveExpandedGroups = {};
 
   SettingsService get _ss => widget.settingsService;
   AppService get _as => widget.appService;

@@ -12,26 +12,47 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
       }
     }
     return [
-      // Collapsible header
+      // Collapsible header with view-mode toggle. Tapping the count
+      // label toggles expand/collapse; the two badges on the right
+      // toggle between per-app and grouped views.
       if (autoApps.isNotEmpty)
         Material(
           color: Colors.transparent,
-          child: InkWell(
-            onTap: () => setState(() => _autoMoveListExpanded = !_autoMoveListExpanded),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(s.autoMoveAppsCount(autoApps.length),
-                        style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() =>
+                        _autoMoveListExpanded = !_autoMoveListExpanded),
+                    child: Row(
+                      children: [
+                        Text(s.autoMoveAppsCount(autoApps.length),
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 12)),
+                        const SizedBox(width: 6),
+                        Icon(
+                          _autoMoveListExpanded
+                              ? Icons.expand_less
+                              : Icons.expand_more,
+                          color: Colors.white38,
+                          size: 18,
+                        ),
+                      ],
+                    ),
                   ),
-                  Icon(
-                    _autoMoveListExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.white38, size: 18,
-                  ),
+                ),
+                if (_autoMoveListExpanded) ...[
+                  _autoMoveViewToggle('アプリ別', !_autoMoveGrouped, () {
+                    setState(() => _autoMoveGrouped = false);
+                  }),
+                  const SizedBox(width: 6),
+                  _autoMoveViewToggle('内容別', _autoMoveGrouped, () {
+                    setState(() => _autoMoveGrouped = true);
+                  }),
                 ],
-              ),
+              ],
             ),
           ),
         ),
@@ -41,8 +62,8 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
           child: Text(s.noAutoMoveApps,
               style: const TextStyle(color: Colors.white38, fontSize: 12)),
         ),
-      // Expanded app list
-      if (_autoMoveListExpanded)
+      // Expanded list (per-app or grouped depending on toggle).
+      if (_autoMoveListExpanded && !_autoMoveGrouped)
         ...autoApps.map((pkg) {
           final name = _apps.firstWhere(
             (a) => a.packageName == pkg,
@@ -50,10 +71,6 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
           );
           final displayName = (name.customName?.isNotEmpty == true) ? name.customName! : name.appName;
           final mode = _ss.autoMoveMode(pkg);
-          // Two-line summary: mode label on the first line, the
-          // currently-effective slot + next-change preview on the
-          // second. Generated inline so it always reflects fresh
-          // schedule data (no caching).
           final scheduleSummary = _autoMoveScheduleSummary(pkg, mode);
           return _autoMoveAppRow(
             displayName: displayName,
@@ -74,6 +91,8 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
             },
           );
         }),
+      if (_autoMoveListExpanded && _autoMoveGrouped)
+        ..._autoMoveGroupedRows(autoApps, modeName),
       _settingRow(s.selectAppsToConfigure, '', () async {
         final selected = await _showAppMultiSelectDialog();
         if (selected != null && selected.isNotEmpty) {
@@ -257,6 +276,219 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
       parts.add('次: ${fmtMin(nextStart)} → ${describeSlot(nextSlot)}');
     }
     return parts.join(' / ');
+  }
+
+  /// Small pill widget used to switch between "アプリ別" / "内容別"
+  /// views in the auto-move section header.
+  Widget _autoMoveViewToggle(String label, bool selected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: selected
+              ? Colors.tealAccent.withOpacity(0.15)
+              : Colors.transparent,
+          border: Border.all(
+            color: selected ? Colors.tealAccent : Colors.white24,
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.tealAccent : Colors.white54,
+            fontSize: 11,
+            fontWeight: selected ? FontWeight.w500 : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build the "by-content" view: apps sharing the exact same
+  /// auto-move configuration (mode + schedule JSON + interval
+  /// settings) are merged into one row. Tap a row to expand and
+  /// see member apps; tap a member to jump into its config screen.
+  ///
+  /// Fingerprint = canonical JSON of (mode, schedule, interval)
+  /// so any change — including AI-driven tweaks — moves the app
+  /// into its own group automatically.
+  List<Widget> _autoMoveGroupedRows(
+    List<String> autoApps,
+    String Function(String) modeName,
+  ) {
+    // pkgs grouped by fingerprint, in insertion order.
+    final groups = <String, List<String>>{};
+    for (final pkg in autoApps) {
+      final fp = _scheduleFingerprint(pkg);
+      groups.putIfAbsent(fp, () => []).add(pkg);
+    }
+    // Sort groups by size descending so the biggest cluster (most
+    // commonly "the default schedule of 90 apps") shows first.
+    final sortedEntries = groups.entries.toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+
+    final widgets = <Widget>[];
+    for (final entry in sortedEntries) {
+      final fp = entry.key;
+      final members = entry.value;
+      final repPkg = members.first;
+      final mode = _ss.autoMoveMode(repPkg);
+      final summary = _autoMoveScheduleSummary(repPkg, mode);
+      final isExpanded = _autoMoveExpandedGroups.contains(fp);
+
+      widgets.add(Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              if (isExpanded) {
+                _autoMoveExpandedGroups.remove(fp);
+              } else {
+                _autoMoveExpandedGroups.add(fp);
+              }
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${members.length} 個のアプリ',
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 14),
+                            ),
+                          ),
+                          Text(modeName(mode),
+                              style: const TextStyle(
+                                  color: Colors.white54, fontSize: 12)),
+                        ],
+                      ),
+                      if (summary != null && summary.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(summary,
+                              style: const TextStyle(
+                                  color: Colors.tealAccent, fontSize: 11)),
+                        ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  isExpanded ? Icons.expand_less : Icons.expand_more,
+                  color: Colors.white38,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ));
+
+      if (isExpanded) {
+        for (final pkg in members) {
+          final name = _apps.firstWhere(
+            (a) => a.packageName == pkg,
+            orElse: () => AppConfig(packageName: pkg, appName: pkg, floor: 1),
+          );
+          final displayName = (name.customName?.isNotEmpty == true)
+              ? name.customName!
+              : name.appName;
+          widgets.add(Material(
+            color: Colors.white.withOpacity(0.02),
+            child: InkWell(
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AutoMoveScreen(
+                      settingsService: _ss,
+                      packageNames: [pkg],
+                      allApps: _apps,
+                    ),
+                  ),
+                );
+                setState(() {});
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(40, 8, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(displayName,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13)),
+                    ),
+                    const Icon(Icons.chevron_right,
+                        color: Colors.white24, size: 14),
+                  ],
+                ),
+              ),
+            ),
+          ));
+        }
+      }
+    }
+    return widgets;
+  }
+
+  /// Canonical JSON of an app's full auto-move config. Two apps with
+  /// identical fingerprints share the exact same behaviour, so they
+  /// can be safely shown as one row in the grouped view.
+  /// Includes mode, schedule data, interval days+floors. Apps that
+  /// differ in any field (mode swap, slot change, floor list edit,
+  /// etc.) end up in different groups.
+  String _scheduleFingerprint(String pkg) {
+    final mode = _ss.autoMoveMode(pkg);
+    final payload = <String, dynamic>{
+      'mode': mode,
+      if (mode == 'schedule') 'schedule': _ss.autoMoveSchedule(pkg),
+      if (mode == 'interval') ...{
+        'intervalDays': _ss.autoMoveIntervalDays(pkg),
+        'intervalFloors': _ss.autoMoveIntervalFloors(pkg),
+      },
+    };
+    return _canonicalJson(payload);
+  }
+
+  /// JSON-encode [value] with map keys sorted alphabetically so the
+  /// output is deterministic regardless of insertion order. Needed
+  /// because the schedule JSON is built incrementally over time and
+  /// two semantically-equal schedules might serialize in different
+  /// orders otherwise.
+  String _canonicalJson(Object? value) {
+    if (value is Map) {
+      final keys = value.keys.map((k) => k.toString()).toList()..sort();
+      final buf = StringBuffer('{');
+      for (var i = 0; i < keys.length; i++) {
+        if (i > 0) buf.write(',');
+        buf.write(jsonEncode(keys[i]));
+        buf.write(':');
+        buf.write(_canonicalJson(value[keys[i]]));
+      }
+      buf.write('}');
+      return buf.toString();
+    }
+    if (value is List) {
+      final buf = StringBuffer('[');
+      for (var i = 0; i < value.length; i++) {
+        if (i > 0) buf.write(',');
+        buf.write(_canonicalJson(value[i]));
+      }
+      buf.write(']');
+      return buf.toString();
+    }
+    return jsonEncode(value);
   }
 
   /// Two-line app row used in the auto-move section: title + mode
