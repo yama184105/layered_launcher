@@ -73,6 +73,7 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
           final mode = _ss.autoMoveMode(pkg);
           final scheduleSummary = _autoMoveScheduleSummary(pkg, mode);
           return _autoMoveAppRow(
+            pkg: pkg,
             displayName: displayName,
             modeLabel: modeName(mode),
             summary: scheduleSummary,
@@ -93,22 +94,10 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
         }),
       if (_autoMoveListExpanded && _autoMoveGrouped)
         ..._autoMoveGroupedRows(autoApps, modeName),
-      _settingRow(s.selectAppsToConfigure, '', () async {
-        final selected = await _showAppMultiSelectDialog();
-        if (selected != null && selected.isNotEmpty) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AutoMoveScreen(
-                settingsService: _ss,
-                packageNames: selected,
-                allApps: _apps,
-              ),
-            ),
-          );
-          setState(() {});
-        }
-      }),
+      // Floating-style bulk-edit button: appears when something is
+      // selected so the user can apply the same change to the whole
+      // selection in one go.
+      if (_autoMoveSelected.isNotEmpty) _autoMoveSelectionBar(),
       _rowDivider,
       _settingRow(
         s.usageCountRulesScreenTitle,
@@ -312,19 +301,32 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
   /// auto-move configuration (mode + schedule JSON + interval
   /// settings) are merged into one row. Tap a row to expand and
   /// see member apps; tap a member to jump into its config screen.
+  /// Long-press to enter selection mode for bulk edit.
   ///
   /// Fingerprint = canonical JSON of (mode, schedule, interval)
   /// so any change — including AI-driven tweaks — moves the app
-  /// into its own group automatically.
+  /// into its own group automatically. Apps with mode=='none'
+  /// land in a dedicated "未設定" group so the user can configure
+  /// them without a separate "アプリを選択" entry point.
   List<Widget> _autoMoveGroupedRows(
     List<String> autoApps,
     String Function(String) modeName,
   ) {
     // pkgs grouped by fingerprint, in insertion order.
     final groups = <String, List<String>>{};
+    // Configured apps (mode != 'none') first.
     for (final pkg in autoApps) {
       final fp = _scheduleFingerprint(pkg);
       groups.putIfAbsent(fp, () => []).add(pkg);
+    }
+    // Unconfigured (mode == 'none'): collect every installed app
+    // not already in autoApps into a single 未設定 group. Same
+    // canonical-JSON fingerprint as setting mode='none' explicitly.
+    final configured = autoApps.toSet();
+    final unconfiguredFp = _canonicalJson({'mode': 'none'});
+    for (final a in _apps) {
+      if (configured.contains(a.packageName)) continue;
+      groups.putIfAbsent(unconfiguredFp, () => []).add(a.packageName);
     }
     // Sort groups by size descending so the biggest cluster (most
     // commonly "the default schedule of 90 apps") shows first.
@@ -339,16 +341,50 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
       final mode = _ss.autoMoveMode(repPkg);
       final summary = _autoMoveScheduleSummary(repPkg, mode);
       final isExpanded = _autoMoveExpandedGroups.contains(fp);
+      final selectionMode = _autoMoveSelected.isNotEmpty;
+      // A group is "fully selected" when all of its members are in
+      // _autoMoveSelected. Used to show ✓ on the group row and to
+      // bulk-toggle when tapped in selection mode.
+      final fullySelected =
+          members.every((m) => _autoMoveSelected.contains(m));
+      final partiallySelected =
+          !fullySelected && members.any((m) => _autoMoveSelected.contains(m));
 
       widgets.add(Material(
-        color: Colors.transparent,
+        color: fullySelected
+            ? Colors.tealAccent.withOpacity(0.08)
+            : partiallySelected
+                ? Colors.tealAccent.withOpacity(0.04)
+                : Colors.transparent,
         child: InkWell(
+          // Default tap = expand/collapse. In selection mode, tap
+          // toggles the whole group. Bulk-edit is via long-press OR
+          // the dedicated 編集 button on the right of the row.
           onTap: () {
+            if (selectionMode) {
+              setState(() {
+                if (fullySelected) {
+                  _autoMoveSelected.removeAll(members);
+                } else {
+                  _autoMoveSelected.addAll(members);
+                }
+              });
+            } else {
+              setState(() {
+                if (isExpanded) {
+                  _autoMoveExpandedGroups.remove(fp);
+                } else {
+                  _autoMoveExpandedGroups.add(fp);
+                }
+              });
+            }
+          },
+          onLongPress: () {
             setState(() {
-              if (isExpanded) {
-                _autoMoveExpandedGroups.remove(fp);
+              if (fullySelected) {
+                _autoMoveSelected.removeAll(members);
               } else {
-                _autoMoveExpandedGroups.add(fp);
+                _autoMoveSelected.addAll(members);
               }
             });
           },
@@ -356,6 +392,21 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
+                if (selectionMode)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: Icon(
+                      fullySelected
+                          ? Icons.check_box
+                          : partiallySelected
+                              ? Icons.indeterminate_check_box
+                              : Icons.check_box_outline_blank,
+                      color: fullySelected || partiallySelected
+                          ? Colors.tealAccent
+                          : Colors.white38,
+                      size: 18,
+                    ),
+                  ),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,8 +416,11 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
                           Expanded(
                             child: Text(
                               '${members.length} 個のアプリ',
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 14),
+                              style: TextStyle(
+                                  color: fullySelected
+                                      ? Colors.tealAccent
+                                      : Colors.white,
+                                  fontSize: 14),
                             ),
                           ),
                           Text(modeName(mode),
@@ -384,6 +438,38 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
                     ],
                   ),
                 ),
+                // Inline "編集" button so the user can jump straight
+                // to bulk-edit on a whole group without going through
+                // long-press → selection mode → 編集 button.
+                if (!selectionMode)
+                  GestureDetector(
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AutoMoveScreen(
+                            settingsService: _ss,
+                            packageNames: members,
+                            allApps: _apps,
+                          ),
+                        ),
+                      );
+                      if (mounted) setState(() {});
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: Colors.tealAccent.withOpacity(0.4)),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text('編集',
+                          style: TextStyle(
+                              color: Colors.tealAccent, fontSize: 11)),
+                    ),
+                  ),
+                const SizedBox(width: 6),
                 Icon(
                   isExpanded ? Icons.expand_less : Icons.expand_more,
                   color: Colors.white38,
@@ -404,10 +490,23 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
           final displayName = (name.customName?.isNotEmpty == true)
               ? name.customName!
               : name.appName;
+          final memberSelected = _autoMoveSelected.contains(pkg);
           widgets.add(Material(
-            color: Colors.white.withOpacity(0.02),
+            color: memberSelected
+                ? Colors.tealAccent.withOpacity(0.08)
+                : Colors.white.withOpacity(0.02),
             child: InkWell(
               onTap: () async {
+                if (selectionMode) {
+                  setState(() {
+                    if (memberSelected) {
+                      _autoMoveSelected.remove(pkg);
+                    } else {
+                      _autoMoveSelected.add(pkg);
+                    }
+                  });
+                  return;
+                }
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -420,17 +519,43 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
                 );
                 setState(() {});
               },
+              onLongPress: () {
+                setState(() {
+                  if (memberSelected) {
+                    _autoMoveSelected.remove(pkg);
+                  } else {
+                    _autoMoveSelected.add(pkg);
+                  }
+                });
+              },
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(40, 8, 16, 8),
                 child: Row(
                   children: [
+                    if (selectionMode)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Icon(
+                          memberSelected
+                              ? Icons.check_box
+                              : Icons.check_box_outline_blank,
+                          color: memberSelected
+                              ? Colors.tealAccent
+                              : Colors.white38,
+                          size: 16,
+                        ),
+                      ),
                     Expanded(
                       child: Text(displayName,
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 13)),
+                          style: TextStyle(
+                              color: memberSelected
+                                  ? Colors.tealAccent
+                                  : Colors.white70,
+                              fontSize: 13)),
                     ),
-                    const Icon(Icons.chevron_right,
-                        color: Colors.white24, size: 14),
+                    if (!selectionMode)
+                      const Icon(Icons.chevron_right,
+                          color: Colors.white24, size: 14),
                   ],
                 ),
               ),
@@ -494,19 +619,60 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
   /// Two-line app row used in the auto-move section: title + mode
   /// label on the first line, schedule summary on the second.
   Widget _autoMoveAppRow({
+    required String pkg,
     required String displayName,
     required String modeLabel,
     required String? summary,
     required VoidCallback onTap,
   }) {
+    final selected = _autoMoveSelected.contains(pkg);
+    final selectionMode = _autoMoveSelected.isNotEmpty;
     return Material(
-      color: Colors.transparent,
+      color: selected
+          ? Colors.tealAccent.withOpacity(0.08)
+          : Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          // In selection mode, taps toggle membership instead of
+          // jumping to the detail screen — same UX as the photo
+          // gallery / file manager idiom.
+          if (selectionMode) {
+            setState(() {
+              if (selected) {
+                _autoMoveSelected.remove(pkg);
+              } else {
+                _autoMoveSelected.add(pkg);
+              }
+            });
+          } else {
+            onTap();
+          }
+        },
+        onLongPress: () {
+          setState(() {
+            if (selected) {
+              _autoMoveSelected.remove(pkg);
+            } else {
+              _autoMoveSelected.add(pkg);
+            }
+          });
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
+              if (selectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: Icon(
+                    selected
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                    color:
+                        selected ? Colors.tealAccent : Colors.white38,
+                    size: 18,
+                  ),
+                ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,8 +681,11 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
                       children: [
                         Expanded(
                           child: Text(displayName,
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 14)),
+                              style: TextStyle(
+                                  color: selected
+                                      ? Colors.tealAccent
+                                      : Colors.white,
+                                  fontSize: 14)),
                         ),
                         Text(modeLabel,
                             style: const TextStyle(
@@ -533,11 +702,74 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right,
-                  color: Colors.white24, size: 16),
+              if (!selectionMode)
+                const Icon(Icons.chevron_right,
+                    color: Colors.white24, size: 16),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Action bar shown when one or more apps are selected. Provides
+  /// the bulk-edit entry point + a quick deselect. Rendered inline
+  /// in the settings list (not a true floating action bar) so it
+  /// sits right under the relevant app rows.
+  Widget _autoMoveSelectionBar() {
+    final n = _autoMoveSelected.length;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.tealAccent.withOpacity(0.1),
+        border: Border.all(color: Colors.tealAccent.withOpacity(0.4)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '$n 件選択中',
+              style: const TextStyle(
+                color: Colors.tealAccent,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => setState(() => _autoMoveSelected.clear()),
+            child: const Text('解除',
+                style: TextStyle(color: Colors.white54, fontSize: 12)),
+          ),
+          const SizedBox(width: 4),
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.tealAccent.withOpacity(0.2),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            ),
+            onPressed: () async {
+              final selected = _autoMoveSelected.toList();
+              setState(() => _autoMoveSelected.clear());
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AutoMoveScreen(
+                    settingsService: _ss,
+                    packageNames: selected,
+                    allApps: _apps,
+                  ),
+                ),
+              );
+              if (mounted) setState(() {});
+            },
+            child: const Text('編集',
+                style: TextStyle(
+                    color: Colors.tealAccent, fontSize: 12)),
+          ),
+        ],
       ),
     );
   }

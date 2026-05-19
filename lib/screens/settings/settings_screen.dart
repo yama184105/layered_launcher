@@ -327,6 +327,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Which group fingerprints are currently expanded in the
   /// grouped view. Local UI state only; not persisted.
   final Set<String> _autoMoveExpandedGroups = {};
+  /// Packages selected for bulk edit (multi-select mode). When
+  /// non-empty, a bulk-edit action bar appears at the bottom of
+  /// the auto-move section. Cleared on edit-complete or cancel.
+  final Set<String> _autoMoveSelected = {};
 
   SettingsService get _ss => widget.settingsService;
   AppService get _as => widget.appService;
