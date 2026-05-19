@@ -38,6 +38,19 @@ class AppConfig extends HiveObject {
   @HiveField(10)
   String folderPosition;
 
+  /// Underlying default floor saved before a temporary override took
+  /// effect. Used to restore [floor] back to the user's normal
+  /// placement once [temporaryFloorExpiry] passes. Null when no
+  /// override is active.
+  @HiveField(11)
+  int? permanentFloor;
+
+  /// When the current temporary floor override expires. After this
+  /// timestamp, [floor] is restored from [permanentFloor]. Null when
+  /// no override is active.
+  @HiveField(12)
+  DateTime? temporaryFloorExpiry;
+
   AppConfig({
     required this.packageName,
     required this.appName,
@@ -50,5 +63,8 @@ class AppConfig extends HiveObject {
     this.mindfulDelay = false,
     this.folderPinned = false,
     this.folderPosition = 'alphabetical',
+    this.permanentFloor,
+    this.temporaryFloorExpiry,
   });
 }
+

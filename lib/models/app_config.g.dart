@@ -22,19 +22,21 @@ class AppConfigAdapter extends TypeAdapter<AppConfig> {
       floor: fields[2] as int,
       isEmergency: fields[3] as bool,
       emergencyUntil: fields[4] as DateTime?,
-      isPinned: (fields[5] as bool?) ?? false,
+      isPinned: fields[5] as bool,
       customName: fields[6] as String?,
       folderName: fields[7] as String?,
-      mindfulDelay: (fields[8] as bool?) ?? false,
-      folderPinned: (fields[9] as bool?) ?? false,
-      folderPosition: (fields[10] as String?) ?? 'alphabetical',
+      mindfulDelay: fields[8] as bool,
+      folderPinned: fields[9] as bool,
+      folderPosition: fields[10] as String,
+      permanentFloor: fields[11] as int?,
+      temporaryFloorExpiry: fields[12] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, AppConfig obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.packageName)
       ..writeByte(1)
@@ -56,7 +58,11 @@ class AppConfigAdapter extends TypeAdapter<AppConfig> {
       ..writeByte(9)
       ..write(obj.folderPinned)
       ..writeByte(10)
-      ..write(obj.folderPosition);
+      ..write(obj.folderPosition)
+      ..writeByte(11)
+      ..write(obj.permanentFloor)
+      ..writeByte(12)
+      ..write(obj.temporaryFloorExpiry);
   }
 
   @override

@@ -94,6 +94,76 @@ class AppService {
     await DeviceApps.openApp(packageName);
   }
 
+  // ── Temporary floor override ────────────────────────────────────────
+  // The "今日だけ 1F に" pattern. Saves the original floor in
+  // permanentFloor and writes the temporary value to floor; once
+  // temporaryFloorExpiry passes, expireTemporaryFloors() restores
+  // floor from permanentFloor. UI code reads `app.floor` unchanged.
+
+  /// Apply a temporary floor change to [app] that auto-reverts at
+  /// [expiry]. If a temporary override is already active, replaces
+  /// it (preserving the underlying permanent floor).
+  Future<void> setTemporaryFloor(
+    AppConfig app, {
+    required int floor,
+    required DateTime expiry,
+  }) async {
+    // Only capture the original floor once; subsequent calls keep
+    // the same "original" anchor.
+    if (app.permanentFloor == null) {
+      app.permanentFloor = app.floor;
+    }
+    app.floor = floor;
+    app.temporaryFloorExpiry = expiry;
+    await saveConfig(app);
+  }
+
+  /// Cancel any active temporary override on [app], restoring its
+  /// original floor immediately. No-op if no override was active.
+  Future<void> clearTemporaryFloor(AppConfig app) async {
+    if (app.permanentFloor == null) return;
+    app.floor = app.permanentFloor!;
+    app.permanentFloor = null;
+    app.temporaryFloorExpiry = null;
+    await saveConfig(app);
+  }
+
+  /// Update the underlying permanent floor for an app. If a temporary
+  /// override is currently active, [app.floor] stays at the override
+  /// value but the new permanent will take effect once it expires.
+  Future<void> setPermanentFloor(AppConfig app, int floor) async {
+    if (app.permanentFloor != null) {
+      // Temp override active — just update the saved baseline.
+      app.permanentFloor = floor;
+    } else {
+      app.floor = floor;
+    }
+    await saveConfig(app);
+  }
+
+  /// Walks every app and restores [floor] from [permanentFloor] when
+  /// the override expiry has passed. Called from a periodic timer on
+  /// the home screen so reverts happen in the foreground without
+  /// requiring native AlarmManager wakeups. Returns the packages
+  /// whose floor changed.
+  Future<List<String>> expireTemporaryFloors() async {
+    final now = DateTime.now();
+    final reverted = <String>[];
+    for (final app in _box.values) {
+      final exp = app.temporaryFloorExpiry;
+      if (exp == null) continue;
+      if (exp.isAfter(now)) continue;
+      if (app.permanentFloor != null) {
+        app.floor = app.permanentFloor!;
+      }
+      app.permanentFloor = null;
+      app.temporaryFloorExpiry = null;
+      await app.save();
+      reverted.add(app.packageName);
+    }
+    return reverted;
+  }
+
   /// Resolves the apps that populate the persistent quick-launcher
   /// notification, given a [source]:
   /// - 'favorites':  isPinned apps (alphabetical)

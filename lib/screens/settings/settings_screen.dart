@@ -18,6 +18,8 @@ import '../../services/settings_service.dart';
 import '../home/home_screen.dart'
     show floorLabel, showStrictTimerDialog, formatLastUsedRelative;
 import 'automove_screen.dart';
+import '../ai_command/ai_command_screen.dart';
+import '../ai_command/ai_settings_screen.dart';
 
 part 'app_block_screen.dart';
 part 'batch_groups_screen.dart';
@@ -784,6 +786,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ]),
         _accordionSection('language', s.languageSection, [_buildLanguageSection()]),
+        _accordionSection('ai', 'AI コマンド', [
+          _settingRow('AI コマンド', '自然言語でアプリ配置を変更', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AiCommandScreen(
+                  appService: _as,
+                  settingsService: _ss,
+                ),
+              ),
+            );
+          }),
+          _rowDivider,
+          _settingRow('API キー / モデル設定',
+              _ss.openaiApiKey == null || _ss.openaiApiKey!.isEmpty
+                  ? '未設定'
+                  : '${_ss.openaiModel} (キー設定済み)',
+              () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AiSettingsScreen(settingsService: _ss),
+              ),
+            );
+            if (mounted) setState(() {});
+          }),
+        ]),
         const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),

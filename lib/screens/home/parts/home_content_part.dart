@@ -211,6 +211,24 @@ extension HomeContentMethods on _HomeScreenState {
           earliest = rem;
         }
       }
+      // Temporary floor override (e.g. "今日だけ 1F") — restore the
+      // saved permanent floor once the expiry passes. Done inline
+      // here so the next _tick redraws the app on its original floor.
+      final tempExp = app.temporaryFloorExpiry;
+      if (tempExp != null) {
+        if (tempExp.isBefore(now)) {
+          if (app.permanentFloor != null) {
+            app.floor = app.permanentFloor!;
+          }
+          app.permanentFloor = null;
+          app.temporaryFloorExpiry = null;
+          app.save();
+          changed = true;
+        } else {
+          final rem = tempExp.difference(now);
+          if (earliest == null || rem < earliest) earliest = rem;
+        }
+      }
     }
     // Check new emergency 1F mode expiry
     if (_emergencyEndTime != null) {

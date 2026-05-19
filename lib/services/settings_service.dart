@@ -110,6 +110,28 @@ class SettingsService {
     await _box.put('hasCompletedOnboarding', v);
   }
 
+  /// OpenAI API key used by the AI command bar. Stored locally in the
+  /// Hive box (no encryption beyond Hive's own — adequate for a
+  /// personal launcher on a single device). Read by OpenAIClient.
+  String? get openaiApiKey => _box.get('openaiApiKey') as String?;
+  Future<void> setOpenaiApiKey(String? key) async {
+    if (key == null || key.isEmpty) {
+      await _box.delete('openaiApiKey');
+    } else {
+      await _box.put('openaiApiKey', key);
+    }
+  }
+
+  /// OpenAI model used for command interpretation. Defaults to
+  /// 'gpt-5-mini' which is the chosen sweet spot of cost/precision
+  /// for the launcher command tool-use task. User can swap to
+  /// 'gpt-5', 'gpt-4o-mini', etc. via the AI settings screen.
+  String get openaiModel =>
+      (_box.get('openaiModel') as String?) ?? 'gpt-5-mini';
+  Future<void> setOpenaiModel(String model) async {
+    await _box.put('openaiModel', model);
+  }
+
   /// App locale code: 'ja' or 'en'. Null = follow system locale.
   String? get languageCode => _box.get('languageCode') as String?;
   Future<void> setLanguageCode(String? code) async {
