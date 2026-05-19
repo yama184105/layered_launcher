@@ -1472,18 +1472,44 @@ extension FloorContentMethods on _HomeScreenState {
   }
 
   void _stopEmergencyMode() {
+    // Walk the Hive box directly (not the in-memory _allApps copy)
+    // so we catch every app that still has isEmergency / emergencyUntil
+    // set — including any that were enrolled in a prior process and
+    // haven't been re-read into _allApps yet (e.g. after an APK update
+    // where the in-memory list hasn't reconciled).
+    final box = widget.appService.box;
+    final cleared = <String>[];
+    for (final app in box.values) {
+      if (app.isEmergency || app.emergencyUntil != null) {
+        app.isEmergency = false;
+        app.emergencyUntil = null;
+        app.save();
+        cleared.add(app.packageName);
+      }
+    }
     setState(() {
       _emergency1FApps.clear();
       _emergencyEndTime = null;
-      // Also clear old-style emergency flags
+      // Reflect the cleanup in the local copy so the next _tick
+      // doesn't immediately resurrect the banner.
       for (final app in _allApps) {
-        if (app.isEmergency) {
+        if (cleared.contains(app.packageName)) {
           app.isEmergency = false;
           app.emergencyUntil = null;
-          widget.appService.saveConfig(app);
         }
       }
     });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('緊急モードを停止しました (${cleared.length}件クリア)'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+    // Schedule an immediate _tick so _emergencyRemaining recomputes
+    // without waiting for the next 1-second timer fire.
+    _tick();
   }
 
   void _activateEmergency(String mode, Set<String> packages, int minutes) {

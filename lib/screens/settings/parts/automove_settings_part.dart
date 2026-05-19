@@ -50,19 +50,29 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
           );
           final displayName = (name.customName?.isNotEmpty == true) ? name.customName! : name.appName;
           final mode = _ss.autoMoveMode(pkg);
-          return _settingRow(displayName, modeName(mode), () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AutoMoveScreen(
-                  settingsService: _ss,
-                  packageNames: [pkg],
-                  allApps: _apps,
+          // Two-line summary: mode label on the first line, the
+          // currently-effective slot + next-change preview on the
+          // second. Generated inline so it always reflects fresh
+          // schedule data (no caching).
+          final scheduleSummary = _autoMoveScheduleSummary(pkg, mode);
+          return _autoMoveAppRow(
+            displayName: displayName,
+            modeLabel: modeName(mode),
+            summary: scheduleSummary,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AutoMoveScreen(
+                    settingsService: _ss,
+                    packageNames: [pkg],
+                    allApps: _apps,
+                  ),
                 ),
-              ),
-            );
-            setState(() {});
-          });
+              );
+              setState(() {});
+            },
+          );
         }),
       _settingRow(s.selectAppsToConfigure, '', () async {
         final selected = await _showAppMultiSelectDialog();
@@ -163,6 +173,139 @@ extension AutoMoveSettingsMethods on _SettingsScreenState {
             ],
           );
         },
+      ),
+    );
+  }
+
+  /// Builds an at-a-glance description of [pkg]'s auto-move schedule
+  /// as it would apply RIGHT NOW. Two parts:
+  ///   - effective floor of the currently-active slot
+  ///   - timestamp of the next slot change
+  /// e.g. "現在 2F / 次: 20:00 → 4F"
+  /// Returns null when the app's mode is 'none' or for interval
+  /// mode (which doesn't have intra-day slots).
+  String? _autoMoveScheduleSummary(String pkg, String mode) {
+    if (mode == 'interval') {
+      final days = _ss.autoMoveIntervalDays(pkg);
+      final floors = _ss.autoMoveIntervalFloors(pkg);
+      if (floors.isEmpty) return null;
+      return '${days}日ごとにランダム移動 (候補: ${floors.map((f) => floorLabel(f)).join(", ")})';
+    }
+    if (mode != 'schedule') return null;
+    final raw = _ss.autoMoveSchedule(pkg);
+    if (raw.isEmpty) return null;
+
+    final now = DateTime.now();
+    final weekday = now.weekday; // 1..7
+    final nowMinute = now.hour * 60 + now.minute;
+
+    final dayKey = weekday.toString();
+    final dayData = raw[dayKey];
+    if (dayData is! Map) return 'スケジュール未設定 (本日)';
+    final defaultCfg = (dayData['default'] is Map)
+        ? Map<String, dynamic>.from(dayData['default'] as Map)
+        : null;
+    final slots = (dayData['slots'] as List?) ?? [];
+
+    // Find active slot now
+    Map<String, dynamic>? active;
+    int? activeEnd;
+    int? nextStart;
+    Map<String, dynamic>? nextSlot;
+    for (final s in slots) {
+      if (s is! Map) continue;
+      final m = Map<String, dynamic>.from(s);
+      final start = (m['startMinute'] as num?)?.toInt() ?? 0;
+      final end = (m['endMinute'] as num?)?.toInt() ?? 0;
+      if (nowMinute >= start && nowMinute < end) {
+        active = m;
+        activeEnd = end;
+      } else if (start > nowMinute && (nextStart == null || start < nextStart)) {
+        nextStart = start;
+        nextSlot = m;
+      }
+    }
+
+    String describeSlot(Map<String, dynamic> cfg) {
+      final type = cfg['type'] as String? ?? 'fixed';
+      if (type == 'random') {
+        final list = (cfg['floors'] as List?)
+                ?.map((e) => (e as num).toInt())
+                .toList() ??
+            const <int>[];
+        if (list.isEmpty) return 'ランダム';
+        return 'ランダム(${list.map((f) => floorLabel(f)).join(",")})';
+      }
+      final floor = (cfg['floor'] as num?)?.toInt();
+      return floor != null ? floorLabel(floor) : '?';
+    }
+
+    final activeDesc = active != null
+        ? describeSlot(active)
+        : (defaultCfg != null ? describeSlot(defaultCfg) : '未設定');
+
+    String fmtMin(int minute) {
+      final h = (minute ~/ 60) % 24;
+      final m = minute % 60;
+      return '${h.toString().padLeft(2, "0")}:${m.toString().padLeft(2, "0")}';
+    }
+
+    final parts = <String>['現在 $activeDesc'];
+    if (active != null && activeEnd != null) {
+      parts.add('${fmtMin(activeEnd)} まで');
+    } else if (nextSlot != null && nextStart != null) {
+      parts.add('次: ${fmtMin(nextStart)} → ${describeSlot(nextSlot)}');
+    }
+    return parts.join(' / ');
+  }
+
+  /// Two-line app row used in the auto-move section: title + mode
+  /// label on the first line, schedule summary on the second.
+  Widget _autoMoveAppRow({
+    required String displayName,
+    required String modeLabel,
+    required String? summary,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(displayName,
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 14)),
+                        ),
+                        Text(modeLabel,
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 12)),
+                      ],
+                    ),
+                    if (summary != null && summary.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(summary,
+                            style: const TextStyle(
+                                color: Colors.tealAccent, fontSize: 11)),
+                      ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right,
+                  color: Colors.white24, size: 16),
+            ],
+          ),
+        ),
       ),
     );
   }

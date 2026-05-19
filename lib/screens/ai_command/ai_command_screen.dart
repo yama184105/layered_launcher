@@ -33,11 +33,48 @@ class _AiCommandScreenState extends State<AiCommandScreen> {
   final List<_ConversationItem> _items = [];
   bool _busy = false;
 
+  /// Persistent agent + client for this screen instance so the
+  /// OpenAI conversation history (prior user turns, tool results)
+  /// is preserved across submissions. Without this, follow-up
+  /// commands like "一階に移動させて" lose the context from the
+  /// prior "Chrome の位置は？" turn.
+  OpenAIClient? _client;
+  AiCommandAgent? _agent;
+  String? _agentApiKey;
+  String? _agentModel;
+
   @override
   void dispose() {
     _inputCtrl.dispose();
     _scrollCtrl.dispose();
+    _client?.close();
     super.dispose();
+  }
+
+  /// Lazily creates the OpenAI client + agent. Rebuilds if the
+  /// API key or model changed since last use (so the user can
+  /// switch models mid-session without restarting the screen).
+  void _ensureAgent() {
+    final apiKey = widget.settingsService.openaiApiKey;
+    final model = widget.settingsService.openaiModel;
+    if (_agent != null &&
+        _agentApiKey == apiKey &&
+        _agentModel == model) {
+      return;
+    }
+    _client?.close();
+    _client = OpenAIClient(apiKey: apiKey!, model: model);
+    _agent = AiCommandAgent(
+      client: _client!,
+      tools: AiTools(widget.appService),
+    );
+    _agentApiKey = apiKey;
+    _agentModel = model;
+  }
+
+  void _resetConversation() {
+    _agent?.resetHistory();
+    setState(() => _items.clear());
   }
 
   Future<void> _submit() async {
@@ -57,17 +94,10 @@ class _AiCommandScreenState extends State<AiCommandScreen> {
     _inputCtrl.clear();
     _scrollToEnd();
 
-    final client = OpenAIClient(
-      apiKey: apiKey,
-      model: widget.settingsService.openaiModel,
-    );
-    final agent = AiCommandAgent(
-      client: client,
-      tools: AiTools(widget.appService),
-    );
+    _ensureAgent();
 
     try {
-      final result = await agent.run(text);
+      final result = await _agent!.run(text);
       if (!mounted) return;
       setState(() {
         for (final entry in result.transcript) {
@@ -91,7 +121,6 @@ class _AiCommandScreenState extends State<AiCommandScreen> {
         _busy = false;
       });
     } finally {
-      client.close();
       _scrollToEnd();
     }
   }
@@ -124,6 +153,13 @@ class _AiCommandScreenState extends State<AiCommandScreen> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: const Text('AI コマンド', style: TextStyle(fontSize: 16)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 18),
+            tooltip: '会話をリセット',
+            onPressed: _items.isEmpty ? null : _resetConversation,
+          ),
+        ],
       ),
       body: Column(
         children: [

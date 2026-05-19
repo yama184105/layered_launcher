@@ -1,41 +1,66 @@
 import 'ai_tools.dart';
 import 'openai_client.dart';
 
-/// Runs the chat → tool_use → tool_result loop for a single user
-/// command. Stops when the model emits a final assistant message
-/// with no further tool calls, or when [maxRounds] is hit (safety
-/// net so a misbehaving model can't spin forever).
+/// Runs the chat → tool_use → tool_result loop. Stateful: keeps
+/// the full message history across calls to [run] so the AI
+/// remembers prior turns ("Chrome の位置は？" → "一階に移動させて"
+/// stays grounded in Chrome). Stops a single round when the model
+/// emits a final assistant message with no further tool calls, or
+/// when [maxRounds] is hit (safety net so a misbehaving model
+/// can't spin forever).
 class AiCommandAgent {
   final OpenAIClient client;
   final AiTools tools;
   final int maxRounds;
 
+  /// Full conversation history. system prompt is the first entry;
+  /// every user message + assistant reply + tool_call/tool_result
+  /// pair is appended. Passed to OpenAI on every round so the
+  /// model has the prior context.
+  final List<Map<String, dynamic>> _messages = [];
+
   AiCommandAgent({
     required this.client,
     required this.tools,
     this.maxRounds = 8,
-  });
+  }) {
+    _messages.add({
+      'role': 'system',
+      'content': _systemPrompt(),
+    });
+  }
 
-  /// Runs one full conversation for [userMessage]. Returns the
-  /// transcript including each round's tool calls and results so
-  /// the UI can render an audit trail of what the AI did.
-  Future<AiCommandResult> run(String userMessage) async {
-    final messages = <Map<String, dynamic>>[
-      {
+  /// Number of user turns recorded so far. UI uses this to detect
+  /// fresh agents vs continuing ones.
+  int get userTurnCount =>
+      _messages.where((m) => m['role'] == 'user').length;
+
+  /// Wipes conversation history back to just the system prompt.
+  /// Useful when the user wants to start a new topic without
+  /// dragging in unrelated prior context.
+  void resetHistory() {
+    _messages
+      ..clear()
+      ..add({
         'role': 'system',
         'content': _systemPrompt(),
-      },
-      {
-        'role': 'user',
-        'content': userMessage,
-      },
-    ];
+      });
+  }
+
+  /// Runs one full turn for [userMessage]. Returns the transcript
+  /// of THIS turn's tool calls and final reply for the UI to render.
+  /// Earlier turns stay in [_messages] so the model sees them.
+  Future<AiCommandResult> run(String userMessage) async {
+    _messages.add({
+      'role': 'user',
+      'content': userMessage,
+    });
 
     final transcript = <AiTranscriptEntry>[];
 
     for (var round = 0; round < maxRounds; round++) {
       final asst = await client.chat(
-        messages: messages,
+        messages: _messages,
         tools: AiTools.definitions,
       );
 
@@ -43,17 +68,17 @@ class AiCommandAgent {
         transcript.add(AiTranscriptEntry.assistant(asst.content!));
       }
 
+      // Always append the assistant reply (with any tool_calls) to
+      // the history so subsequent rounds and turns can reference it.
+      _messages.add(asst.toJson());
+
       if (asst.toolCalls.isEmpty) {
-        // Model finished — final text reply is in asst.content.
+        // Model finished this turn.
         return AiCommandResult(
           finalMessage: asst.content ?? '',
           transcript: transcript,
         );
       }
-
-      // Append the assistant's tool_call message so the next round
-      // can refer back to it. Required by OpenAI's contract.
-      messages.add(asst.toJson());
 
       for (final call in asst.toolCalls) {
         final result = await tools.dispatch(call.name, call.arguments);
@@ -62,7 +87,7 @@ class AiCommandAgent {
           arguments: call.arguments,
           result: result,
         ));
-        messages.add({
+        _messages.add({
           'role': 'tool',
           'tool_call_id': call.id,
           'content': encodeToolResult(result),
