@@ -154,5 +154,15 @@ class OpenAIException implements Exception {
   OpenAIException({required this.statusCode, required this.body});
 
   @override
-  String toString() => 'OpenAI API error $statusCode: $body';
+  String toString() {
+    final hint = switch (statusCode) {
+      401 => 'APIキーが無効です。設定 > AI コマンドで正しいキーを登録してください。',
+      429 => 'レート制限に達しました。しばらく待ってから試してください。',
+      500 || 502 || 503 => 'OpenAI サーバーエラーが発生しました。時間をおいて試してください。',
+      _ => null,
+    };
+    return hint != null
+        ? 'OpenAI API エラー $statusCode: $hint'
+        : 'OpenAI API エラー $statusCode: $body';
+  }
 }
