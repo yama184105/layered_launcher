@@ -952,15 +952,19 @@ class _AppListScreenState extends State<_AppListScreen> {
                         final result = await showDialog<int>(
                           context: context,
                           builder: (ctx) => StatefulBuilder(
-                            builder: (ctx, si) => AlertDialog(
+                            builder: (ctx, si) {
+                              final selectableFloors = <int>[
+                                for (int i = _ss.undergroundFloors; i >= 1; i--) -i,
+                                for (int i = 1; i <= _ss.maxFloors; i++) i,
+                              ];
+                              return AlertDialog(
                               backgroundColor: const Color(0xFF1A1A1A),
                               title: Text(S.of(ctx).moveCount(_selectedPkgs.length),
                                   style: const TextStyle(color: Colors.white, fontSize: 14)),
                               content: Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
-                                children: List.generate(10, (i) {
-                                  final f = i + 1;
+                                children: selectableFloors.map((f) {
                                   final sel = selectedFloor == f;
                                   return GestureDetector(
                                     onTap: () => si(() => selectedFloor = f),
@@ -977,7 +981,7 @@ class _AppListScreenState extends State<_AppListScreen> {
                                           style: TextStyle(color: sel ? Colors.black : Colors.white54, fontSize: 12)),
                                     ),
                                   );
-                                }),
+                                }).toList(),
                               ),
                               actions: [
                                 TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
@@ -986,7 +990,8 @@ class _AppListScreenState extends State<_AppListScreen> {
                                   child: Text(S.of(ctx).actionMove, style: const TextStyle(color: Colors.white)),
                                 ),
                               ],
-                            ),
+                            );
+                            },
                           ),
                         );
                         if (result != null && mounted) {
