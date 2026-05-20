@@ -51,6 +51,7 @@ class AiCommandAgent {
   /// of THIS turn's tool calls and final reply for the UI to render.
   /// Earlier turns stay in [_messages] so the model sees them.
   Future<AiCommandResult> run(String userMessage) async {
+    final rollbackIdx = _messages.length;
     _messages.add({
       'role': 'user',
       'content': userMessage,
@@ -58,41 +59,48 @@ class AiCommandAgent {
 
     final transcript = <AiTranscriptEntry>[];
 
-    for (var round = 0; round < maxRounds; round++) {
-      final asst = await client.chat(
-        messages: _messages,
-        tools: AiTools.definitions,
-      );
-
-      if (asst.content != null && asst.content!.isNotEmpty) {
-        transcript.add(AiTranscriptEntry.assistant(asst.content!));
-      }
-
-      // Always append the assistant reply (with any tool_calls) to
-      // the history so subsequent rounds and turns can reference it.
-      _messages.add(asst.toJson());
-
-      if (asst.toolCalls.isEmpty) {
-        // Model finished this turn.
-        return AiCommandResult(
-          finalMessage: asst.content ?? '',
-          transcript: transcript,
+    try {
+      for (var round = 0; round < maxRounds; round++) {
+        final asst = await client.chat(
+          messages: _messages,
+          tools: AiTools.definitions,
         );
-      }
 
-      for (final call in asst.toolCalls) {
-        final result = await tools.dispatch(call.name, call.arguments);
-        transcript.add(AiTranscriptEntry.toolCall(
-          name: call.name,
-          arguments: call.arguments,
-          result: result,
-        ));
-        _messages.add({
-          'role': 'tool',
-          'tool_call_id': call.id,
-          'content': encodeToolResult(result),
-        });
+        if (asst.content != null && asst.content!.isNotEmpty) {
+          transcript.add(AiTranscriptEntry.assistant(asst.content!));
+        }
+
+        // Always append the assistant reply (with any tool_calls) to
+        // the history so subsequent rounds and turns can reference it.
+        _messages.add(asst.toJson());
+
+        if (asst.toolCalls.isEmpty) {
+          return AiCommandResult(
+            finalMessage: asst.content ?? '',
+            transcript: transcript,
+          );
+        }
+
+        for (final call in asst.toolCalls) {
+          final result = await tools.dispatch(call.name, call.arguments);
+          transcript.add(AiTranscriptEntry.toolCall(
+            name: call.name,
+            arguments: call.arguments,
+            result: result,
+          ));
+          _messages.add({
+            'role': 'tool',
+            'tool_call_id': call.id,
+            'content': encodeToolResult(result),
+          });
+        }
       }
+    } catch (_) {
+      // API呼び出しが失敗したら、このターンで追加したメッセージを全て取り消す。
+      // これをしないと次の送信時に連続ユーザーメッセージになり
+      // 毎回同じAPIエラーが続く悪循環になる。
+      _messages.removeRange(rollbackIdx, _messages.length);
+      rethrow;
     }
 
     return AiCommandResult(
