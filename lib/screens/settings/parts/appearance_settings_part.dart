@@ -176,7 +176,7 @@ extension AppearanceSettingsMethods on _SettingsScreenState {
       _showSnack(S.of(context).animationLocked);
       return false;
     }
-    final confirmed = await showStrictTimerDialog(context, seconds: 10);
+    final confirmed = await showStrictTimerDialog(context, seconds: _ss.strictSubTimerSeconds('animation'));
     return confirmed && mounted;
   }
 

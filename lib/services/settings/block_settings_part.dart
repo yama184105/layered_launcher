@@ -41,9 +41,12 @@ extension BlockSettings on SettingsService {
   }
 
   Future<void> startStrictSubCooldown(String key) async {
+    final minutes = strictSubTimerMinutes(key);
     await _box.put('strict_${key}_cooldownUntil',
-        DateTime.now().add(const Duration(seconds: 10)).millisecondsSinceEpoch);
+        DateTime.now().add(Duration(minutes: minutes)).millisecondsSinceEpoch);
   }
+
+  int strictSubTimerSeconds(String key) => strictSubTimerMinutes(key) * 60;
 
   // ── Floor-move locked apps (per-app selection) ────────────────────────────
   List<String> get floorMoveLockedApps {

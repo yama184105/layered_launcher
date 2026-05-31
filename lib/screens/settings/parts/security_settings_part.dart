@@ -59,7 +59,7 @@ extension SecuritySettingsMethods on _SettingsScreenState {
                             return;
                           }
                           // Timer-before-apply
-                          final confirmed = await showStrictTimerDialog(context, seconds: 10);
+                          final confirmed = await showStrictTimerDialog(context, seconds: ss.strictSubTimerSeconds('submode'));
                           if (!confirmed || !mounted) return;
                         }
                         await ss.setStrictSubEnabled(key, v);

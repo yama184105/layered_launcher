@@ -339,7 +339,7 @@ extension DialogsMethods on _HomeScreenState {
                   // Timer mode: show countdown, apply only if confirmed
                   if (ctx.mounted) Navigator.pop(ctx);
                   if (!mounted) return;
-                  final confirmed = await showStrictTimerDialog(context, seconds: 10);
+                  final confirmed = await showStrictTimerDialog(context, seconds: ss.strictSubTimerSeconds('floorMove'));
                   if (!confirmed || !mounted) return;
                   app.floor = selectedFloor;
                   await widget.appService.saveConfig(app);
@@ -594,7 +594,7 @@ extension DialogsMethods on _HomeScreenState {
           }
         } else {
           // Timer mode
-          final confirmed = await showStrictTimerDialog(context, seconds: 10);
+          final confirmed = await showStrictTimerDialog(context, seconds: ss.strictSubTimerSeconds('floorMove'));
           if (confirmed && mounted) {
             for (final pkg in lockedPkgs) {
               final app = _allApps.firstWhere((a) => a.packageName == pkg,

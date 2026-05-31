@@ -582,7 +582,10 @@ extension AppManagementMethods on _SettingsScreenState {
                   if (sg['approved'] == true) {
                     final app = sg['app'] as AppConfig;
                     final newFloor = sg['suggestedFloor'] as int;
-                    if (_ss.lockModeEnabled) {
+                    if (_ss.isFloorMoveLocked(app.packageName)) {
+                      // Skip locked apps in optimization
+                      continue;
+                    } else if (_ss.lockModeEnabled) {
                       await _ss.requestFloorChange(
                           app.packageName, newFloor);
                     } else {
@@ -995,13 +998,31 @@ class _AppListScreenState extends State<_AppListScreen> {
                           ),
                         );
                         if (result != null && mounted) {
-                          for (final pkg in _selectedPkgs) {
+                          final lockedPkgs = _selectedPkgs.where((pkg) => _ss.isFloorMoveLocked(pkg)).toList();
+                          final unlockedPkgs = _selectedPkgs.where((pkg) => !_ss.isFloorMoveLocked(pkg)).toList();
+                          // Unlocked apps (or legacy lock mode)
+                          for (final pkg in unlockedPkgs) {
                             final app = _apps.firstWhere((a) => a.packageName == pkg, orElse: () => AppConfig(packageName: pkg, appName: pkg, floor: 1));
                             if (_ss.lockModeEnabled) {
                               await _ss.requestFloorChange(pkg, result);
                             } else {
                               app.floor = result;
                               await _as.saveConfig(app);
+                            }
+                          }
+                          // Strict-locked apps
+                          if (lockedPkgs.isNotEmpty && mounted) {
+                            if (_ss.strictSubType('floorMove') == 'block') {
+                              _showSnack(S.of(context).floorMoveLockedSome);
+                            } else {
+                              final confirmed = await showStrictTimerDialog(context, seconds: _ss.strictSubTimerSeconds('floorMove'));
+                              if (confirmed && mounted) {
+                                for (final pkg in lockedPkgs) {
+                                  final app = _apps.firstWhere((a) => a.packageName == pkg, orElse: () => AppConfig(packageName: pkg, appName: pkg, floor: 1));
+                                  app.floor = result;
+                                  await _as.saveConfig(app);
+                                }
+                              }
                             }
                           }
                           setState(() { _selectionMode = false; _selectedPkgs.clear(); });
@@ -1174,7 +1195,17 @@ class _AppDetailScreenState extends State<_AppDetailScreen> {
 
     // Floor change
     if (!_lockBlocked && _selectedFloor != app.floor) {
-      if (_ss.lockModeEnabled) {
+      if (_ss.isFloorMoveLocked(app.packageName)) {
+        if (_ss.strictSubType('floorMove') == 'block') {
+          if (mounted) _showSnack(S.of(context).floorMoveLockedAll);
+          return;
+        }
+        // Timer mode: show countdown, apply only if confirmed
+        if (!mounted) return;
+        final confirmed = await showStrictTimerDialog(context, seconds: _ss.strictSubTimerSeconds('floorMove'));
+        if (!confirmed || !mounted) return;
+        app.floor = _selectedFloor;
+      } else if (_ss.lockModeEnabled) {
         final ok = await _ss.requestFloorChange(
             app.packageName, _selectedFloor);
         if (!ok && mounted) _showSnack(S.of(context).cooldownActive);
