@@ -14,7 +14,7 @@ class _HomeClockPainter extends CustomPainter {
 
     // Always draw faint background circle
     final bgPaint = Paint()
-      ..color = Colors.white.withOpacity(0.15)
+      ..color = Colors.white.withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     canvas.drawCircle(center, radius, bgPaint);
@@ -22,7 +22,7 @@ class _HomeClockPainter extends CustomPainter {
     // Charging arc (sweeps half revolution in 30s)
     if (isCharging) {
       final arcPaint = Paint()
-        ..color = Colors.white.withOpacity(0.85)
+        ..color = Colors.white.withValues(alpha: 0.85)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.0
         ..strokeCap = StrokeCap.round;

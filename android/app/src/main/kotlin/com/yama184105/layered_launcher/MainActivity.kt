@@ -3,6 +3,7 @@ package com.yama184105.layered_launcher
 import android.Manifest
 import android.app.AppOpsManager
 import android.app.admin.DevicePolicyManager
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.ContentUris
 import android.content.Context
@@ -26,6 +27,84 @@ class MainActivity : FlutterActivity() {
 
     private val CHANNEL = "com.yama184105.layered_launcher/native"
     private var homeChannel: MethodChannel? = null
+
+    /// アプリのインストール/アンインストールを Flutter 側へ流す。
+    /// device_apps の listenToAppsChanges() の置き換え。
+    private val packageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val pkg = intent?.data?.schemeSpecificPart ?: return
+            // 更新（REMOVED + ADDED のペア）はノイズなので落とす
+            if (intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) return
+            val event = when (intent.action) {
+                Intent.ACTION_PACKAGE_ADDED -> "installed"
+                Intent.ACTION_PACKAGE_REMOVED -> "uninstalled"
+                else -> return
+            }
+            homeChannel?.invokeMethod(
+                "onAppsChanged",
+                mapOf("packageName" to pkg, "event" to event)
+            )
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addDataScheme("package")
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(packageReceiver, filter, RECEIVER_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(packageReceiver, filter)
+        }
+    }
+
+    override fun onDestroy() {
+        try {
+            unregisterReceiver(packageReceiver)
+        } catch (_: Exception) {
+        }
+        super.onDestroy()
+    }
+
+    /// インストール済みアプリの一覧。[onlyLaunchable] が true のときは
+    /// ランチャーから起動できるものだけを返す。
+    private fun getInstalledApps(onlyLaunchable: Boolean): List<Map<String, Any?>> {
+        val pm = packageManager
+        val out = ArrayList<Map<String, Any?>>()
+        if (onlyLaunchable) {
+            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            val resolved = pm.queryIntentActivities(intent, 0)
+            val seen = HashSet<String>()
+            for (info in resolved) {
+                val pkg = info.activityInfo.packageName
+                if (!seen.add(pkg)) continue
+                out.add(
+                    mapOf(
+                        "packageName" to pkg,
+                        "appName" to info.loadLabel(pm).toString(),
+                        "systemApp" to ((info.activityInfo.applicationInfo.flags
+                                and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0)
+                    )
+                )
+            }
+        } else {
+            for (app in pm.getInstalledApplications(0)) {
+                out.add(
+                    mapOf(
+                        "packageName" to app.packageName,
+                        "appName" to pm.getApplicationLabel(app).toString(),
+                        "systemApp" to ((app.flags
+                                and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0)
+                    )
+                )
+            }
+        }
+        return out
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -341,6 +420,9 @@ class MainActivity : FlutterActivity() {
                     "getUsageStats30Days" -> {
                         result.success(getUsageStats30Days())
                     }
+                    "getUsageStatsToday" -> {
+                        result.success(getUsageStatsToday())
+                    }
                     "getLastTimeUsedMap" -> {
                         result.success(getLastTimeUsedMap())
                     }
@@ -397,6 +479,33 @@ class MainActivity : FlutterActivity() {
                             result.success(true)
                         } catch (e: Exception) {
                             result.success(false)
+                        }
+                    }
+                    "getInstalledApps" -> {
+                        val onlyLaunchable =
+                            call.argument<Boolean>("onlyWithLaunchIntent") ?: true
+                        // ランチャーとして起動のたびに呼ばれる重い処理。
+                        // PackageManager の全走査＋ラベル読み込みをメインスレッドで
+                        // やるとホームに戻るたびフリーズするので裏スレッドで実行し、
+                        // 結果だけメインスレッドへ戻す。
+                        Thread {
+                            val apps = getInstalledApps(onlyLaunchable)
+                            runOnUiThread { result.success(apps) }
+                        }.start()
+                    }
+                    "launchApp" -> {
+                        val pkg = call.argument<String>("packageName") ?: ""
+                        val intent = packageManager.getLaunchIntentForPackage(pkg)
+                        if (intent == null) {
+                            result.success(false)
+                        } else {
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            try {
+                                startActivity(intent)
+                                result.success(true)
+                            } catch (_: Exception) {
+                                result.success(false)
+                            }
                         }
                     }
                     else -> result.notImplemented()
@@ -486,6 +595,33 @@ class MainActivity : FlutterActivity() {
         val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_MONTHLY, startTime, endTime)
         val result = mutableMapOf<String, Int>()
         for (s in stats) {
+            if (s.totalTimeInForeground > 0) {
+                val minutes = (s.totalTimeInForeground / 60000).toInt()
+                result[s.packageName] = (result[s.packageName] ?: 0) + minutes
+            }
+        }
+        return result
+    }
+
+    /// Returns a map of packageName -> today's foreground time in minutes
+    /// (since local midnight). Empty map if usage-stats permission is not
+    /// granted. Used by the usage-time mode to pick floor by daily usage.
+    private fun getUsageStatsToday(): Map<String, Int> {
+        if (!isUsageStatsGranted()) return emptyMap()
+        val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        val startTime = cal.timeInMillis
+        val endTime = System.currentTimeMillis()
+        val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime)
+        val result = mutableMapOf<String, Int>()
+        for (s in stats) {
+            // INTERVAL_DAILY can return buckets that started before today —
+            // skip them so yesterday's usage doesn't leak into today's total.
+            if (s.firstTimeStamp < startTime) continue
             if (s.totalTimeInForeground > 0) {
                 val minutes = (s.totalTimeInForeground / 60000).toInt()
                 result[s.packageName] = (result[s.packageName] ?: 0) + minutes

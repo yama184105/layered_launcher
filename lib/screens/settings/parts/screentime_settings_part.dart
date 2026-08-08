@@ -256,7 +256,7 @@ extension ScreenTimeSettingsMethods on _SettingsScreenState {
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
               child: TextButton(
                 style: TextButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.05),
+                  backgroundColor: Colors.white.withValues(alpha: 0.05),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4),
@@ -421,7 +421,7 @@ class _QuickLauncherAppPickerScreenState
                       prefixIcon:
                           const Icon(Icons.search, color: Colors.white38),
                       filled: true,
-                      fillColor: Colors.white.withOpacity(0.05),
+                      fillColor: Colors.white.withValues(alpha: 0.05),
                       contentPadding: EdgeInsets.zero,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(4),
@@ -462,7 +462,7 @@ class _QuickLauncherAppPickerScreenState
                       final orderIdx = isSelected ? _selected.indexOf(pkg) : -1;
                       return Material(
                         color: isSelected
-                            ? Colors.tealAccent.withOpacity(0.08)
+                            ? Colors.tealAccent.withValues(alpha: 0.08)
                             : Colors.transparent,
                         child: InkWell(
                           onTap: () async {
@@ -509,7 +509,7 @@ class _QuickLauncherAppPickerScreenState
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.tealAccent.withOpacity(0.2),
+                                      color: Colors.tealAccent.withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
@@ -700,7 +700,7 @@ class _MindfulDelaySettingsScreenState
                                       color: Colors.white38),
                                   filled: true,
                                   fillColor:
-                                      Colors.white.withOpacity(0.07),
+                                      Colors.white.withValues(alpha: 0.07),
                                   border: OutlineInputBorder(
                                     borderRadius:
                                         BorderRadius.circular(4),
@@ -809,7 +809,7 @@ class _MindfulDelaySettingsScreenState
                       )
                     : null,
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.07),
+                fillColor: Colors.white.withValues(alpha: 0.07),
                 contentPadding:
                     const EdgeInsets.symmetric(vertical: 6),
                 border: OutlineInputBorder(

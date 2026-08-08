@@ -188,8 +188,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 child: TextButton(
                   style: TextButton.styleFrom(
                     backgroundColor: allRequired
-                        ? Colors.tealAccent.withOpacity(0.15)
-                        : Colors.white.withOpacity(0.05),
+                        ? Colors.tealAccent.withValues(alpha: 0.15)
+                        : Colors.white.withValues(alpha: 0.05),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(6),
@@ -240,8 +240,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             height: 28,
             decoration: BoxDecoration(
               color: granted
-                  ? Colors.tealAccent.withOpacity(0.15)
-                  : Colors.white.withOpacity(0.05),
+                  ? Colors.tealAccent.withValues(alpha: 0.15)
+                  : Colors.white.withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,

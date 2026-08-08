@@ -40,19 +40,58 @@ extension SearchMethods on _HomeScreenState {
     return '#';
   }
 
-  Widget _buildIndexSidebar(List<AppConfig> apps, Map<String, GlobalKey> sectionKeys) {
-    if (!widget.settingsService.showAlphabetIndex) return const SizedBox.shrink();
+  Widget _buildIndexSidebar(
+    List<AppConfig> apps,
+    Map<String, GlobalKey> sectionKeys,
+  ) {
+    if (!widget.settingsService.showAlphabetIndex)
+      return const SizedBox.shrink();
     // No artificial app-count threshold; we still want to reserve the same
     // 32px column when the floor has no apps so the floor-move buttons stay
     // pinned to the same horizontal position regardless of content.
 
     const normalOrder = [
-      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-      'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-      'あ', 'か', 'さ', 'た', 'な', 'は', 'ま', 'や', 'ら', 'わ',
-      '#'
+      'A',
+      'B',
+      'C',
+      'D',
+      'E',
+      'F',
+      'G',
+      'H',
+      'I',
+      'J',
+      'K',
+      'L',
+      'M',
+      'N',
+      'O',
+      'P',
+      'Q',
+      'R',
+      'S',
+      'T',
+      'U',
+      'V',
+      'W',
+      'X',
+      'Y',
+      'Z',
+      'あ',
+      'か',
+      'さ',
+      'た',
+      'な',
+      'は',
+      'ま',
+      'や',
+      'ら',
+      'わ',
+      '#',
     ];
-    final normalSorted = normalOrder.where((c) => sectionKeys.containsKey(c)).toList();
+    final normalSorted = normalOrder
+        .where((c) => sectionKeys.containsKey(c))
+        .toList();
     final hasEmergencyIndex = sectionKeys.containsKey('🚨');
     // Collect emergency sub-indices (keys like '🚨A', '🚨B', etc.)
     final emgSubKeys = <String>[];
@@ -82,20 +121,52 @@ extension SearchMethods on _HomeScreenState {
       final ctx = globalKey?.currentContext;
       if (ctx != null) {
         // Duration.zero で即時ジャンプ。ドラッグ追従でアニメ重なりが起きない。
-        Scrollable.ensureVisible(
-          ctx,
-          duration: Duration.zero,
-          alignment: 0.0,
-        );
+        Scrollable.ensureVisible(ctx, duration: Duration.zero, alignment: 0.0);
       } else if (_scrollController.hasClients) {
         // ctx 未解決（off-screen で未ビルド）の保険：先に近い位置までジャンプして
         // 次フレームでもう一度 ensureVisible を試す。
         final anchorOrder = [
-          'A','B','C','D','E','F','G','H','I','J','K','L','M',
-          'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-          'あ','か','さ','た','な','は','ま','や','ら','わ','#',
+          'A',
+          'B',
+          'C',
+          'D',
+          'E',
+          'F',
+          'G',
+          'H',
+          'I',
+          'J',
+          'K',
+          'L',
+          'M',
+          'N',
+          'O',
+          'P',
+          'Q',
+          'R',
+          'S',
+          'T',
+          'U',
+          'V',
+          'W',
+          'X',
+          'Y',
+          'Z',
+          'あ',
+          'か',
+          'さ',
+          'た',
+          'な',
+          'は',
+          'ま',
+          'や',
+          'ら',
+          'わ',
+          '#',
         ];
-        final pos = anchorOrder.indexOf(key.startsWith('🚨') && key.length > 1 ? key.substring(1) : key);
+        final pos = anchorOrder.indexOf(
+          key.startsWith('🚨') && key.length > 1 ? key.substring(1) : key,
+        );
         if (pos >= 0) {
           final maxScroll = _scrollController.position.maxScrollExtent;
           final estimate = maxScroll * (pos / anchorOrder.length);
@@ -103,7 +174,11 @@ extension SearchMethods on _HomeScreenState {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             final ctx2 = sectionKeys[key]?.currentContext;
             if (ctx2 != null) {
-              Scrollable.ensureVisible(ctx2, duration: Duration.zero, alignment: 0.0);
+              Scrollable.ensureVisible(
+                ctx2,
+                duration: Duration.zero,
+                alignment: 0.0,
+              );
             }
           });
         }
@@ -121,20 +196,40 @@ extension SearchMethods on _HomeScreenState {
     Widget indexItem(String key, {Color? colorOverride}) {
       final isActive = key == _activeIndexChar;
       // Display label: for prefixed keys like '🚨A', show just 'A'
-      final display = key.startsWith('🚨') && key.length > 2 ? key.substring(2) : key;
+      final display = key.startsWith('🚨') && key.length > 2
+          ? key.substring(2)
+          : key;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: isActive
             ? Container(
-                width: 18, height: 18,
-                decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-                child: Center(child: Text(display, textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.w700))),
+                width: 18,
+                height: 18,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                ),
+                child: Center(
+                  child: Text(
+                    display,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               )
-            : Text(display, textAlign: TextAlign.center,
+            : Text(
+                display,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                    color: colorOverride ?? Colors.white38,
-                    fontSize: 10, fontWeight: FontWeight.w600)),
+                  color: colorOverride ?? Colors.white38,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       );
     }
 
@@ -142,16 +237,24 @@ extension SearchMethods on _HomeScreenState {
     Widget indexStrip(List<String> items, {Color? itemColor}) {
       return LayoutBuilder(
         builder: (ctx, constraints) {
-          final totalH = constraints.maxHeight > 0 ? constraints.maxHeight : items.length * 22.0;
+          final totalH = constraints.maxHeight > 0
+              ? constraints.maxHeight
+              : items.length * 22.0;
           const double itemH = 22.0;
           final totalItemsH = items.length * itemH;
-          final itemsStartY = ((totalH - totalItemsH) / 2).clamp(0.0, double.infinity);
+          final itemsStartY = ((totalH - totalItemsH) / 2).clamp(
+            0.0,
+            double.infinity,
+          );
 
           void handleAt(double localY) {
             final relY = localY - itemsStartY;
             // 範囲外でも端の項目にスナップさせて反応を切らさない
             final clampedRelY = relY.clamp(0.0, totalItemsH - 0.001);
-            final idx = (clampedRelY / itemH).floor().clamp(0, items.length - 1);
+            final idx = (clampedRelY / itemH).floor().clamp(
+              0,
+              items.length - 1,
+            );
             scrollTo(items[idx]);
           }
 
@@ -165,7 +268,9 @@ extension SearchMethods on _HomeScreenState {
             onPointerCancel: (_) => dismissHighlight(),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: items.map((c) => indexItem(c, colorOverride: itemColor)).toList(),
+              children: items
+                  .map((c) => indexItem(c, colorOverride: itemColor))
+                  .toList(),
             ),
           );
         },
@@ -177,30 +282,38 @@ extension SearchMethods on _HomeScreenState {
       final emgItems = ['🚨', ...emgSubKeys];
       return SizedBox(
         width: 32,
-        child: LayoutBuilder(builder: (ctx, constraints) {
-          const divH = 5.0; // divider area height
-          final half = (constraints.maxHeight - divH) / 2;
-          final itemH = 22.0;
-          final maxPerHalf = (half / itemH).floor().clamp(1, 999);
-          final emgThinned = _thinIndexItems(emgItems, maxPerHalf);
-          final normalThinned = _thinIndexItems(normalSorted, maxPerHalf);
-          return Column(children: [
-            SizedBox(height: half, child: indexStrip(emgThinned, itemColor: Colors.redAccent)),
-            Container(width: 16, height: 1, color: Colors.white12),
-            const SizedBox(height: divH - 1),
-            SizedBox(height: half, child: indexStrip(normalThinned)),
-          ]);
-        }),
+        child: LayoutBuilder(
+          builder: (ctx, constraints) {
+            const divH = 5.0; // divider area height
+            final half = (constraints.maxHeight - divH) / 2;
+            final itemH = 22.0;
+            final maxPerHalf = (half / itemH).floor().clamp(1, 999);
+            final emgThinned = _thinIndexItems(emgItems, maxPerHalf);
+            final normalThinned = _thinIndexItems(normalSorted, maxPerHalf);
+            return Column(
+              children: [
+                SizedBox(
+                  height: half,
+                  child: indexStrip(emgThinned, itemColor: Colors.redAccent),
+                ),
+                Container(width: 16, height: 1, color: Colors.white12),
+                const SizedBox(height: divH - 1),
+                SizedBox(height: half, child: indexStrip(normalThinned)),
+              ],
+            );
+          },
+        ),
       );
     }
 
     // Only emergency, or only normal
-    final items = hasEmergencyIndex
-        ? ['🚨', ...emgSubKeys]
-        : normalSorted;
+    final items = hasEmergencyIndex ? ['🚨', ...emgSubKeys] : normalSorted;
     return SizedBox(
       width: 32,
-      child: indexStrip(items, itemColor: hasEmergencyIndex ? Colors.redAccent : null),
+      child: indexStrip(
+        items,
+        itemColor: hasEmergencyIndex ? Colors.redAccent : null,
+      ),
     );
   }
 
@@ -220,17 +333,22 @@ extension SearchMethods on _HomeScreenState {
 
   Widget _buildSearchResults() {
     final q = _searchQuery.toLowerCase();
-    final results = _allApps
-        .where((a) =>
-            _displayName(a).toLowerCase().contains(q) ||
-            a.appName.toLowerCase().contains(q))
-        .toList()
-      ..sort((a, b) => _displayName(a).compareTo(_displayName(b)));
+    final results =
+        _allApps
+            .where(
+              (a) =>
+                  _displayName(a).toLowerCase().contains(q) ||
+                  a.appName.toLowerCase().contains(q),
+            )
+            .toList()
+          ..sort((a, b) => _displayName(a).compareTo(_displayName(b)));
 
     if (results.isEmpty) {
       return Center(
-        child: Text(S.of(context).noMatchingApps,
-            style: const TextStyle(color: Colors.white38, fontSize: 14)),
+        child: Text(
+          S.of(context).noMatchingApps,
+          style: const TextStyle(color: Colors.white38, fontSize: 14),
+        ),
       );
     }
 
@@ -240,22 +358,24 @@ extension SearchMethods on _HomeScreenState {
       itemBuilder: (_, i) {
         final app = results[i];
         final folder = _folderOf(app);
-        final location =
-            folder != null ? '${floorLabel(app.floor)} / $folder' : floorLabel(app.floor);
+        final location = folder != null
+            ? '${floorLabel(app.floor)} / $folder'
+            : floorLabel(app.floor);
 
         return Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
               Expanded(
-                child: Text(_displayName(app),
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 15)),
+                child: Text(
+                  _displayName(app),
+                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                ),
               ),
-              Text(location,
-                  style: const TextStyle(
-                      color: Colors.white38, fontSize: 13)),
+              Text(
+                location,
+                style: const TextStyle(color: Colors.white38, fontSize: 13),
+              ),
             ],
           ),
         );
@@ -272,39 +392,82 @@ extension SearchMethods on _HomeScreenState {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-          child: TextField(
-            controller: _searchCtrl,
-            focusNode: _searchFocusNode,
-            style: TextStyle(color: textColor, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: S.of(context).appSearchHint,
-              hintStyle: TextStyle(color: textColor.withOpacity(0.5), fontSize: 13),
-              prefixIcon: Icon(Icons.search, color: textColor.withOpacity(0.5), size: 18),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear, color: textColor.withOpacity(0.5), size: 18),
-                      onPressed: _searchCtrl.clear,
-                    )
-                  : null,
-              filled: true,
-              fillColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(vertical: 6),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  focusNode: _searchFocusNode,
+                  style: TextStyle(color: textColor, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: S.of(context).appSearchHint,
+                    hintStyle: TextStyle(
+                      color: textColor.withValues(alpha: 0.5),
+                      fontSize: 13,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: textColor.withValues(alpha: 0.5),
+                      size: 18,
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(
+                              Icons.clear,
+                              color: textColor.withValues(alpha: 0.5),
+                              size: 18,
+                            ),
+                            onPressed: _searchCtrl.clear,
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: Colors.transparent,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
+              // モード一覧（ノーマル/スケジュール/使用回数/使用時間）への入口
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip:
+                    '${S.of(context).appList} / ${S.of(context).modesTitle}',
+                icon: Icon(
+                  Icons.layers_outlined,
+                  color: textColor.withValues(alpha: 0.6),
+                  size: 20,
+                ),
+                onPressed: () async {
+                  _isInExternalScreen = true;
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AppListAndModesScreen(
+                        appService: widget.appService,
+                        settingsService: widget.settingsService,
+                        initialApps: _allApps,
+                      ),
+                    ),
+                  );
+                  _isInExternalScreen = false;
+                  await _refreshAppsNow();
+                },
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
+            ],
           ),
         ),
-        Divider(height: 1, thickness: 1, color: _fontColor.withOpacity(0.15)),
+        Divider(height: 1, thickness: 1, color: _fontColor.withValues(alpha: 0.15)),
       ],
     );
   }

@@ -1,15 +1,17 @@
 part of '../settings_service.dart';
 
 extension BlockSettings on SettingsService {
-  // ── Legacy Lock Mode (kept for backward compat) ────────────────────────────
-  bool get lockModeEnabled => (_box.get('lockMode') as bool?) ?? false;
-  Future<void> setLockMode(bool v) => _box.put('lockMode', v);
-
   // ── Strict Sub-modes ─────────────────────────────────────────────────────
   // Keys: 'floorMove', 'animation', 'submode', 'emergency', 'shortcut'
   // Localized labels/descriptions live in the UI layer (security_settings_part.dart)
   // so that this service file stays free of hardcoded strings.
-  static const strictSubKeys = ['floorMove', 'animation', 'submode', 'emergency', 'shortcut'];
+  static const strictSubKeys = [
+    'floorMove',
+    'animation',
+    'submode',
+    'emergency',
+    'shortcut',
+  ];
 
   bool strictSubEnabled(String key) =>
       (_box.get('strict_${key}_enabled') as bool?) ?? false;
@@ -27,6 +29,10 @@ extension BlockSettings on SettingsService {
   Future<void> setStrictSubTimerMinutes(String key, int v) =>
       _box.put('strict_${key}_timer', v);
 
+  /// 待ち時間を秒で。タイマーダイアログとクールダウンの両方がこれを使う
+  /// （以前はどちらも10秒固定だった）。
+  int strictSubTimerSeconds(String key) => strictSubTimerMinutes(key) * 60;
+
   bool isStrictSubCooldownActive(String key) {
     final ms = _box.get('strict_${key}_cooldownUntil') as int?;
     if (ms == null) return false;
@@ -36,13 +42,19 @@ extension BlockSettings on SettingsService {
   Duration? strictSubCooldownRemaining(String key) {
     final ms = _box.get('strict_${key}_cooldownUntil') as int?;
     if (ms == null) return null;
-    final rem = DateTime.fromMillisecondsSinceEpoch(ms).difference(DateTime.now());
+    final rem = DateTime.fromMillisecondsSinceEpoch(
+      ms,
+    ).difference(DateTime.now());
     return rem.isNegative ? null : rem;
   }
 
   Future<void> startStrictSubCooldown(String key) async {
-    await _box.put('strict_${key}_cooldownUntil',
-        DateTime.now().add(const Duration(seconds: 10)).millisecondsSinceEpoch);
+    await _box.put(
+      'strict_${key}_cooldownUntil',
+      DateTime.now()
+          .add(Duration(minutes: strictSubTimerMinutes(key)))
+          .millisecondsSinceEpoch,
+    );
   }
 
   // ── Floor-move locked apps (per-app selection) ────────────────────────────
@@ -54,26 +66,24 @@ extension BlockSettings on SettingsService {
   Future<void> setFloorMoveLockedApps(List<String> v) =>
       _box.put('floorMoveLockedApps', v);
 
+  /// ロック対象への「追加」だけを即時に適用する。削除はストリクトの
+  /// タイマー待ちか予約が要るので、呼び出し側（UI）がゲートを通す。
+  Future<void> addFloorMoveLockedApps(Iterable<String> pkgs) async {
+    final list = floorMoveLockedApps;
+    var changed = false;
+    for (final pkg in pkgs) {
+      if (!list.contains(pkg)) {
+        list.add(pkg);
+        changed = true;
+      }
+    }
+    if (changed) await setFloorMoveLockedApps(list);
+  }
+
   bool isFloorMoveLocked(String packageName) {
     if (!strictSubEnabled('floorMove')) return false;
     final locked = floorMoveLockedApps;
     // If no apps selected, lock applies to ALL (backward compat)
-    if (locked.isEmpty) return true;
-    return locked.contains(packageName);
-  }
-
-  // ── Emergency-lock per-app selection ─────────────────────────────────────
-  List<String> get emergencyLockedApps {
-    final raw = (_box.get('emergencyLockedApps') as List?) ?? [];
-    return List<String>.from(raw);
-  }
-
-  Future<void> setEmergencyLockedApps(List<String> v) =>
-      _box.put('emergencyLockedApps', v);
-
-  bool isEmergencyLocked(String packageName) {
-    if (!strictSubEnabled('emergency')) return false;
-    final locked = emergencyLockedApps;
     if (locked.isEmpty) return true;
     return locked.contains(packageName);
   }
@@ -100,8 +110,7 @@ extension BlockSettings on SettingsService {
     await _box.put('emergencyApps', list);
   }
 
-  Future<void> setEmergencyApps(List<String> v) =>
-      _box.put('emergencyApps', v);
+  Future<void> setEmergencyApps(List<String> v) => _box.put('emergencyApps', v);
 
   bool isEmergencyApp(String pkg) => getEmergencyApps().contains(pkg);
 
@@ -109,77 +118,43 @@ extension BlockSettings on SettingsService {
   List<String> get emergencyQuickApps => getEmergencyApps();
   Future<void> setEmergencyQuickApps(List<String> v) => setEmergencyApps(v);
 
-  DateTime? get _lockUntil {
-    final ms = _box.get('lockCooldownUntil') as int?;
-    return ms != null ? DateTime.fromMillisecondsSinceEpoch(ms) : null;
-  }
+  // ── レガシーロックモードからの移行 ──────────────────────────────────────
+  // 旧: lockMode + pendingFloorMap + 10秒クールダウン。
+  // 新: ストリクトのサブモード（タイマー/予約）に一本化。移行時は
+  //     lockMode が ON だったなら floorMove ロック（タイマー）を有効にし、
+  //     保留中だったフロア変更はその場で適用してキーごと捨てる。
+  Future<void> migrateLegacyLockIfNeeded(Box<AppConfig> appBox) async {
+    if ((_box.get('legacyLockMigrated') as bool?) == true) return;
 
-  bool get isLockCooldownActive {
-    final u = _lockUntil;
-    return u != null && u.isAfter(DateTime.now());
-  }
-
-  Duration? get lockCooldownRemaining {
-    final u = _lockUntil;
-    if (u == null) return null;
-    final rem = u.difference(DateTime.now());
-    return rem.isNegative ? null : rem;
-  }
-
-  Future<void> _startLockCooldown() => _box.put(
-      'lockCooldownUntil',
-      DateTime.now()
-          .add(const Duration(seconds: 10))
-          .millisecondsSinceEpoch);
-
-  // ── Pending Floor Changes ──────────────────────────────────────────────────
-
-  bool get hasPendingFloorChanges => _box.containsKey('pendingFloorMap') &&
-      (_box.get('pendingFloorMap') as Map?)?.isNotEmpty == true;
-
-  Map<String, int>? get pendingFloorChanges {
-    final raw = _box.get('pendingFloorMap');
-    if (raw == null) return null;
-    return (raw as Map).map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
-  }
-
-  /// Stages a floor change for [packageName].
-  /// Returns false if blocked or cooldown is running.
-  Future<bool> requestFloorChange(String packageName, int newFloor) async {
-    // Check new strict sub-mode first — only for selected apps
-    if (isFloorMoveLocked(packageName)) {
-      if (strictSubType('floorMove') == 'block') return false;
-      if (isStrictSubCooldownActive('floorMove')) return false;
-      final current = pendingFloorChanges ?? {};
-      current[packageName] = newFloor;
-      await _box.put('pendingFloorMap', current);
-      await startStrictSubCooldown('floorMove');
-      return true;
-    }
-    // Legacy lock mode fallback
-    if (isLockCooldownActive) return false;
-    if (lockModeEnabled) {
-      final current = pendingFloorChanges ?? {};
-      current[packageName] = newFloor;
-      await _box.put('pendingFloorMap', current);
-      await _startLockCooldown();
-    }
-    return true;
-  }
-
-  /// Applies all pending floor changes to the AppConfig box and clears them.
-  Future<void> applyPendingFloorChanges(Box<AppConfig> appBox) async {
-    final pending = pendingFloorChanges;
-    if (pending == null) return;
-    for (final e in pending.entries) {
-      final cfg = appBox.get(e.key);
-      if (cfg != null) {
-        cfg.floor = e.value;
+    final pending = _box.get('pendingFloorMap');
+    if (pending is Map) {
+      for (final e in pending.entries) {
+        final cfg = appBox.get(e.key.toString());
+        final floor = (e.value as num?)?.toInt();
+        if (cfg == null || floor == null) continue;
+        cfg.floor = floor;
         await cfg.save();
       }
     }
-    await _box.delete('pendingFloorMap');
-    await _box.delete('lockCooldownUntil');
+    if ((_box.get('lockMode') as bool?) == true &&
+        !strictSubEnabled('floorMove')) {
+      await setStrictSubEnabled('floorMove', true);
+      await setStrictSubType('floorMove', 'timer');
+    }
+    for (final key in [
+      'lockMode',
+      'pendingFloorMap',
+      'lockCooldownUntil',
+      'animCooldownUntil',
+      'pendingAnimationType',
+      'pendingAnimationSpeedMs',
+      'pendingEmergencyLimit',
+      'emergencyLimitCooldownUntil',
+      'emergencyLockedApps',
+    ]) {
+      await _box.delete(key);
+    }
+    await _box.put('legacyLockMigrated', true);
   }
 
   // ── App Block ──────────────────────────────────────────────────────────────
@@ -199,8 +174,7 @@ extension BlockSettings on SettingsService {
       _box.put('blockStart_$pkg', minutes);
 
   /// End of block time range in minutes from midnight (0-1439). Default 420 (07:00).
-  int blockEndForApp(String pkg) =>
-      (_box.get('blockEnd_$pkg') as int?) ?? 420;
+  int blockEndForApp(String pkg) => (_box.get('blockEnd_$pkg') as int?) ?? 420;
 
   Future<void> setBlockEndForApp(String pkg, int minutes) =>
       _box.put('blockEnd_$pkg', minutes);
@@ -243,7 +217,9 @@ extension BlockSettings on SettingsService {
   Duration? blockCooldownRemaining(String pkg) {
     final ms = _box.get('blockCooldownUntil_$pkg') as int?;
     if (ms == null) return null;
-    final rem = DateTime.fromMillisecondsSinceEpoch(ms).difference(DateTime.now());
+    final rem = DateTime.fromMillisecondsSinceEpoch(
+      ms,
+    ).difference(DateTime.now());
     return rem.isNegative ? null : rem;
   }
 
@@ -257,10 +233,9 @@ extension BlockSettings on SettingsService {
     if (isAppBlocked(pkg)) {
       await _box.put('pendingBlockType_$pkg', newType);
       await _box.put(
-          'blockCooldownUntil_$pkg',
-          DateTime.now()
-              .add(const Duration(seconds: 10))
-              .millisecondsSinceEpoch);
+        'blockCooldownUntil_$pkg',
+        DateTime.now().add(const Duration(seconds: 10)).millisecondsSinceEpoch,
+      );
     } else {
       await _box.put('blockType_$pkg', newType);
     }
@@ -283,7 +258,8 @@ extension BlockSettings on SettingsService {
   }
 
   // ── Recently Added Apps ────────────────────────────────────────────────────
-  bool get showRecentlyAdded => (_box.get('showRecentlyAdded') as bool?) ?? false;
+  bool get showRecentlyAdded =>
+      (_box.get('showRecentlyAdded') as bool?) ?? false;
   Future<void> setShowRecentlyAdded(bool v) => _box.put('showRecentlyAdded', v);
 
   int get recentlyAddedDays => (_box.get('recentlyAddedDays') as int?) ?? 7;
@@ -317,18 +293,76 @@ extension BlockSettings on SettingsService {
   // Rules are sorted by threshold ascending. When daily count >= threshold, floor changes.
 
   List<Map<String, int>> usageCountFloorRules(String pkg) {
+    final byDay = usageCountFloorRulesByWeekday(pkg);
+    if (byDay.isNotEmpty) {
+      return byDay[DateTime.now().weekday] ?? const [];
+    }
     final raw = _box.get('usageCountRules_$pkg') as List?;
     if (raw == null) return [];
     return raw.map((e) {
       final m = e as Map;
-      return {'threshold': (m['threshold'] as num).toInt(), 'floor': (m['floor'] as num).toInt()};
+      return {
+        'threshold': (m['threshold'] as num).toInt(),
+        'floor': (m['floor'] as num).toInt(),
+      };
     }).toList();
   }
 
-  Future<void> setUsageCountFloorRules(String pkg, List<Map<String, int>> rules) =>
-      _box.put('usageCountRules_$pkg', rules);
+  Future<void> setUsageCountFloorRules(
+    String pkg,
+    List<Map<String, int>> rules,
+  ) => _box.put('usageCountRules_$pkg', rules);
 
-  Future<void> clearUsageCountFloorRules(String pkg) => _box.delete('usageCountRules_$pkg');
+  Map<int, List<Map<String, int>>> usageCountFloorRulesByWeekday(String pkg) {
+    final raw = _box.get('usageCountRulesByDay_$pkg') as String?;
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw) as Map;
+      return decoded.map((key, value) {
+        final list = (value as List? ?? const []).map((e) {
+          final m = e as Map;
+          return {
+            'threshold': (m['threshold'] as num).toInt(),
+            'floor': (m['floor'] as num).toInt(),
+          };
+        }).toList();
+        return MapEntry(int.parse(key.toString()), list);
+      });
+    } catch (_) {
+      return {};
+    }
+  }
+
+  List<Map<String, int>> usageCountFloorRulesForWeekday(
+    String pkg,
+    int weekday,
+  ) {
+    final byDay = usageCountFloorRulesByWeekday(pkg);
+    if (byDay.isNotEmpty) return byDay[weekday] ?? const [];
+    final raw = _box.get('usageCountRules_$pkg') as List?;
+    if (raw == null) return [];
+    return raw.map((e) {
+      final m = e as Map;
+      return {
+        'threshold': (m['threshold'] as num).toInt(),
+        'floor': (m['floor'] as num).toInt(),
+      };
+    }).toList();
+  }
+
+  Future<void> setUsageCountFloorRulesByWeekday(
+    String pkg,
+    Map<int, List<Map<String, int>>> rules,
+  ) async {
+    final encoded = rules.map((key, value) => MapEntry(key.toString(), value));
+    await _box.put('usageCountRulesByDay_$pkg', jsonEncode(encoded));
+    await _box.delete('usageCountRules_$pkg');
+  }
+
+  Future<void> clearUsageCountFloorRules(String pkg) async {
+    await _box.delete('usageCountRules_$pkg');
+    await _box.delete('usageCountRulesByDay_$pkg');
+  }
 
   /// Returns today's launch count for [pkg], resetting if date has changed.
   int dailyLaunchCount(String pkg) {
@@ -342,7 +376,9 @@ extension BlockSettings on SettingsService {
   Future<int> incrementDailyLaunchCount(String pkg) async {
     final today = _todayString();
     final savedDate = _box.get('usageDailyDate_$pkg') as String?;
-    final count = savedDate == today ? ((_box.get('usageDailyCount_$pkg') as int?) ?? 0) : 0;
+    final count = savedDate == today
+        ? ((_box.get('usageDailyCount_$pkg') as int?) ?? 0)
+        : 0;
     final newCount = count + 1;
     await _box.put('usageDailyDate_$pkg', today);
     await _box.put('usageDailyCount_$pkg', newCount);
@@ -355,7 +391,8 @@ extension BlockSettings on SettingsService {
     if (rules.isEmpty) return null;
     final count = dailyLaunchCount(pkg);
     // Sort descending by threshold; return floor for first satisfied rule
-    final sorted = [...rules]..sort((a, b) => b['threshold']!.compareTo(a['threshold']!));
+    final sorted = [...rules]
+      ..sort((a, b) => b['threshold']!.compareTo(a['threshold']!));
     for (final rule in sorted) {
       if (count >= rule['threshold']!) return rule['floor'];
     }

@@ -9,6 +9,9 @@ part 'settings/block_settings_part.dart';
 part 'settings/gesture_settings_part.dart';
 part 'settings/emergency_settings_part.dart';
 part 'settings/automove_settings_part.dart';
+part 'settings/mode_settings_part.dart';
+part 'settings/reservation_settings_part.dart';
+part 'settings/backup_settings_part.dart';
 
 /// Global app settings stored in a Hive dynamic box.
 class SettingsService {
@@ -44,9 +47,14 @@ class SettingsService {
     List<Map<String, String>> apps,
   )? onQuickLauncherChanged;
 
+  /// newScheduleId() が同じマイクロ秒で衝突しないための連番。
+  int _scheduleIdSeq = 0;
+
   Future<void> init() async {
     _box = await Hive.openBox<dynamic>(_boxName);
     await migrateBatchGroupsIfNeeded();
+    await migrateAppModesIfNeeded();
+    await migrateScheduleIdsIfNeeded();
   }
 
   /// Whether the persistent quick-launcher notification is enabled. When
@@ -108,28 +116,6 @@ class SettingsService {
       _box.get('hasCompletedOnboarding', defaultValue: false) as bool;
   Future<void> setOnboardingCompleted(bool v) async {
     await _box.put('hasCompletedOnboarding', v);
-  }
-
-  /// OpenAI API key used by the AI command bar. Stored locally in the
-  /// Hive box (no encryption beyond Hive's own — adequate for a
-  /// personal launcher on a single device). Read by OpenAIClient.
-  String? get openaiApiKey => _box.get('openaiApiKey') as String?;
-  Future<void> setOpenaiApiKey(String? key) async {
-    if (key == null || key.isEmpty) {
-      await _box.delete('openaiApiKey');
-    } else {
-      await _box.put('openaiApiKey', key);
-    }
-  }
-
-  /// OpenAI model used for command interpretation. Defaults to
-  /// 'gpt-5-mini' which is the chosen sweet spot of cost/precision
-  /// for the launcher command tool-use task. User can swap to
-  /// 'gpt-5', 'gpt-4o-mini', etc. via the AI settings screen.
-  String get openaiModel =>
-      (_box.get('openaiModel') as String?) ?? 'gpt-5-mini';
-  Future<void> setOpenaiModel(String model) async {
-    await _box.put('openaiModel', model);
   }
 
   /// App locale code: 'ja' or 'en'. Null = follow system locale.

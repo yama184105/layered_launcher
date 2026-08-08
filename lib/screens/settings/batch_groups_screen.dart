@@ -14,30 +14,16 @@ class _BatchGroupsScreen extends StatefulWidget {
 }
 
 class _BatchGroupsScreenState extends State<_BatchGroupsScreen> {
-  List<AppConfig> _apps = [];
   bool _loading = true;
   SettingsService get _ss => widget.settingsService;
 
   @override
   void initState() {
     super.initState();
-    widget.appService.getAllApps().then((apps) {
+    widget.appService.getAllApps().then((_) {
       if (!mounted) return;
-      setState(() {
-        _apps = apps;
-        _loading = false;
-      });
+      setState(() => _loading = false);
     });
-  }
-
-  String _displayName(String pkg) {
-    final app = _apps.firstWhere(
-      (a) => a.packageName == pkg,
-      orElse: () => AppConfig(packageName: pkg, appName: pkg, floor: 1),
-    );
-    return (app.customName?.isNotEmpty == true)
-        ? app.customName!
-        : app.appName;
   }
 
   Future<void> _editGroup(Map<String, dynamic>? existing) async {
@@ -417,7 +403,7 @@ class _BatchGroupEditScreenState extends State<_BatchGroupEditScreen> {
                   const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.07),
+                fillColor: Colors.white.withValues(alpha: 0.07),
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 8),
                 border: OutlineInputBorder(
@@ -606,7 +592,7 @@ class _BatchGroupEditScreenState extends State<_BatchGroupEditScreen> {
                     hintStyle:
                         const TextStyle(color: Colors.white38),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.07),
+                    fillColor: Colors.white.withValues(alpha: 0.07),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 8),
                     border: OutlineInputBorder(
@@ -788,7 +774,7 @@ class _TimeChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.tealAccent.withOpacity(0.6)),
+        border: Border.all(color: Colors.tealAccent.withValues(alpha: 0.6)),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(

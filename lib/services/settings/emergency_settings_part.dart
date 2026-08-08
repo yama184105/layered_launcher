@@ -8,55 +8,6 @@ extension EmergencySettings on SettingsService {
       (_box.get('emergencyLimit') as String?) ?? 'unlimited';
   Future<void> setEmergencyLimit(String v) => _box.put('emergencyLimit', v);
 
-  String? get pendingEmergencyLimit =>
-      _box.get('pendingEmergencyLimit') as String?;
-
-  DateTime? get _emergencyLimitUntil {
-    final ms = _box.get('emergencyLimitCooldownUntil') as int?;
-    return ms != null ? DateTime.fromMillisecondsSinceEpoch(ms) : null;
-  }
-
-  bool get isEmergencyLimitCooldownActive {
-    final u = _emergencyLimitUntil;
-    return u != null && u.isAfter(DateTime.now());
-  }
-
-  Duration? get emergencyLimitCooldownRemaining {
-    final u = _emergencyLimitUntil;
-    if (u == null) return null;
-    final rem = u.difference(DateTime.now());
-    return rem.isNegative ? null : rem;
-  }
-
-  /// Stages a new emergency limit. Returns false if blocked/cooldown active.
-  Future<bool> requestEmergencyLimitChange(String newValue) async {
-    // Check new strict sub-mode first
-    if (strictSubEnabled('emergency')) {
-      if (strictSubType('emergency') == 'block') return false;
-      if (isStrictSubCooldownActive('emergency')) return false;
-      await _box.put('pendingEmergencyLimit', newValue);
-      await startStrictSubCooldown('emergency');
-      return true;
-    }
-    // Legacy fallback
-    if (isEmergencyLimitCooldownActive) return false;
-    await _box.put('pendingEmergencyLimit', newValue);
-    await _box.put(
-        'emergencyLimitCooldownUntil',
-        DateTime.now()
-            .add(const Duration(seconds: 10))
-            .millisecondsSinceEpoch);
-    return true;
-  }
-
-  Future<void> applyPendingEmergencyLimit() async {
-    final pending = pendingEmergencyLimit;
-    if (pending == null) return;
-    await _box.put('emergencyLimit', pending);
-    await _box.delete('pendingEmergencyLimit');
-    await _box.delete('emergencyLimitCooldownUntil');
-  }
-
   // ── Emergency Usage Tracking (legacy, kept for backups/restore) ──────────
   List<DateTime> get emergencyUsageLog {
     final raw = _box.get('emergencyUsageLog') as List<dynamic>?;
@@ -359,4 +310,46 @@ extension EmergencySettings on SettingsService {
   /// used to short-circuit the chooser dialog when literally everything is
   /// blocked.
   bool canActivateEmergency() => _legacyGlobalAllows();
+
+  // ── 残り回数 ───────────────────────────────────────────────────────────────
+
+  /// [mode] ('all' | 'pick' | 'registered') の残り使用回数ラベル。
+  /// 上限が設定されていなければ「無制限」。緊急使用ボタンの選択欄に出す。
+  ///
+  /// registered は「登録アプリ全体の上限」を見る。アプリ個別・フォルダ個別の
+  /// 上限は選ぶアプリが決まらないと確定しないので、ここでは含めない。
+  String emergencyRemainingLabel(AppLocalizations s, String mode) {
+    final Map<String, dynamic> cap;
+    switch (mode) {
+      case 'all':
+        cap = emergencyCapAll;
+        break;
+      case 'pick':
+        cap = emergencyCapPick;
+        break;
+      default:
+        cap = emergencyCapRegisteredGlobal;
+    }
+    final count = (cap['count'] as num?)?.toInt() ?? 0;
+    if (count > 0) {
+      final period = cap['period'] as String? ?? 'daily';
+      final used = _countUsage(mode: mode, period: period);
+      final remaining = (count - used).clamp(0, count);
+      return s.emergencyRemainingCount(
+        periodLabel(s, period),
+        remaining,
+        count,
+      );
+    }
+    // 詳細上限なし — レガシーのグローバル上限（期間内1回）を見る
+    final legacy = emergencyLimit;
+    if (legacy != 'unlimited') {
+      return s.emergencyRemainingCount(
+        limitLabel(s, legacy),
+        _legacyGlobalAllows() ? 1 : 0,
+        1,
+      );
+    }
+    return s.unlimited;
+  }
 }

@@ -4,10 +4,8 @@ extension HomeContentMethods on _HomeScreenState {
   // ── notifications init ────────────────────────────────────────
 
   Future<void> _initNotifications() async {
-    const androidInit =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    await _flnp.initialize(
-        const InitializationSettings(android: androidInit));
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await _flnp.initialize(const InitializationSettings(android: androidInit));
   }
 
   Future<void> _checkNotifPerm() async {
@@ -28,28 +26,35 @@ extension HomeContentMethods on _HomeScreenState {
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: Text(S.of(ctx).notificationAccessTitle,
-              style: const TextStyle(color: Colors.white)),
+          title: Text(
+            S.of(ctx).notificationAccessTitle,
+            style: const TextStyle(color: Colors.white),
+          ),
           content: Text(
             S.of(ctx).notificationAccessMessage,
             style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           actions: [
             TextButton(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  // Remember the deferral so we don't pester them again.
-                  await ss.setNotifPermDeferred(true);
-                },
-                child: Text(S.of(ctx).actionLater,
-                    style: const TextStyle(color: Colors.white54))),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                // Remember the deferral so we don't pester them again.
+                await ss.setNotifPermDeferred(true);
+              },
+              child: Text(
+                S.of(ctx).actionLater,
+                style: const TextStyle(color: Colors.white54),
+              ),
+            ),
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
                 _native.openNotificationAccessSettings();
               },
-              child: Text(S.of(ctx).openSettings,
-                  style: const TextStyle(color: Colors.white)),
+              child: Text(
+                S.of(ctx).openSettings,
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -105,7 +110,8 @@ extension HomeContentMethods on _HomeScreenState {
         lon = loc['lon']!;
       }
       final url = Uri.parse(
-          'https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current_weather=true&timezone=auto');
+        'https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current_weather=true&timezone=auto',
+      );
       await http.get(url).timeout(const Duration(seconds: 8));
     } catch (_) {
       // weather fetch failed – nothing to update
@@ -125,7 +131,9 @@ extension HomeContentMethods on _HomeScreenState {
 
   void _startChargingTimer() {
     _chargingCheckTimer?.cancel();
-    _chargingCheckTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+    _chargingCheckTimer = Timer.periodic(const Duration(seconds: 30), (
+      _,
+    ) async {
       final charging = await _native.isCharging();
       if (mounted) setState(() => _isCharging = charging);
     });
@@ -149,7 +157,15 @@ extension HomeContentMethods on _HomeScreenState {
 
   String _formatDate() {
     final s = S.of(context);
-    final wd = [s.weekdayMon, s.weekdayTue, s.weekdayWed, s.weekdayThu, s.weekdayFri, s.weekdaySat, s.weekdaySun];
+    final wd = [
+      s.weekdayMon,
+      s.weekdayTue,
+      s.weekdayWed,
+      s.weekdayThu,
+      s.weekdayFri,
+      s.weekdaySat,
+      s.weekdaySun,
+    ];
     final ss = widget.settingsService;
     final fmt = ss.dateFormatString;
     // Simple substitution-based formatter
@@ -166,13 +182,20 @@ extension HomeContentMethods on _HomeScreenState {
 
   Future<void> _loadApps() async {
     final apps = await widget.appService.getAllApps(
-        defaultFloor: widget.settingsService.defaultNewAppFloor);
+      defaultFloor: widget.settingsService.defaultNewAppFloor,
+    );
     if (!mounted) return;
     setState(() {
       _allApps = apps;
       _loading = false;
     });
     _tick();
+  }
+
+  Future<void> _refreshAppsNow() async {
+    await _loadApps();
+    await _processAutoMoves();
+    await _loadApps();
   }
 
   /// Re-pushes the persistent quick-launcher notification config to
@@ -238,13 +261,15 @@ extension HomeContentMethods on _HomeScreenState {
         changed = true;
       }
     }
-    if (!widget.settingsService.isLockCooldownActive &&
-        widget.settingsService.hasPendingFloorChanges) {
+    // 予約変更（ストリクト）— 次の適用時刻を過ぎたときだけ Hive を読む。
+    // 毎秒リストを全件パースしないためのガード。
+    final nextDue = widget.settingsService.nextReservationDueMs;
+    if (nextDue != null && now.millisecondsSinceEpoch >= nextDue) {
       widget.settingsService
-          .applyPendingFloorChanges(widget.appService.box)
-          .then((_) {
-        if (mounted) _loadApps();
-      });
+          .applyDueStrictReservations(widget.appService.box)
+          .then((applied) {
+            if (mounted && applied.isNotEmpty) _loadApps();
+          });
     }
     // Auto-move check (once per minute)
     final currentMinute = now.hour * 60 + now.minute;
@@ -260,6 +285,11 @@ extension HomeContentMethods on _HomeScreenState {
         if (!mounted || m.isEmpty) return;
         setState(() => _lastUsedMap = m);
       });
+    }
+    if (_isHomePageAnimating) {
+      _emergencyRemaining = earliest;
+      if (changed) _allApps = List.of(_allApps);
+      return;
     }
     setState(() {
       _emergencyRemaining = earliest;
@@ -295,8 +325,12 @@ extension HomeContentMethods on _HomeScreenState {
       return Stack(
         fit: StackFit.expand,
         children: [
-          Image.file(file, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-          ColoredBox(color: Colors.black.withOpacity(ss.homeOverlayOpacity)),
+          Image.file(
+            file,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          ),
+          ColoredBox(color: Colors.black.withValues(alpha: ss.homeOverlayOpacity)),
           child,
         ],
       );
@@ -312,8 +346,14 @@ extension HomeContentMethods on _HomeScreenState {
       return Stack(
         fit: StackFit.expand,
         children: [
-          Image.file(File(wallpaper), fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-          ColoredBox(color: Colors.black.withOpacity(ss.floorOverlayOpacity(floor))),
+          Image.file(
+            File(wallpaper),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          ),
+          ColoredBox(
+            color: Colors.black.withValues(alpha: ss.floorOverlayOpacity(floor)),
+          ),
           child,
         ],
       );
@@ -329,8 +369,8 @@ extension HomeContentMethods on _HomeScreenState {
     final clockFontSize = ss.clockSize == 'large'
         ? 48.0
         : ss.clockSize == 'small'
-            ? 32.0
-            : 40.0;
+        ? 32.0
+        : 40.0;
     TextStyle clockStyle() {
       final base = TextStyle(
         color: textColor,
@@ -355,8 +395,9 @@ extension HomeContentMethods on _HomeScreenState {
     )..layout();
     final dateTp = TextPainter(
       text: TextSpan(
-          text: _formatDate(),
-          style: TextStyle(color: textColor.withOpacity(0.54), fontSize: 13)),
+        text: _formatDate(),
+        style: TextStyle(color: textColor.withValues(alpha: 0.54), fontSize: 13),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
     final contentW = max(clockTp.width, dateTp.width);
@@ -411,7 +452,9 @@ extension HomeContentMethods on _HomeScreenState {
                   Text(
                     _formatDate(),
                     style: TextStyle(
-                        color: textColor.withOpacity(0.54), fontSize: 13),
+                      color: textColor.withValues(alpha: 0.54),
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -422,7 +465,8 @@ extension HomeContentMethods on _HomeScreenState {
     );
 
     // Status info below circle: battery + screen time (always visible when available)
-    final hasStatusInfo = _batteryLevel >= 0 ||
+    final hasStatusInfo =
+        _batteryLevel >= 0 ||
         (_usagePermGranted && _screenTimeMinutes >= 0) ||
         !_usagePermGranted;
 
@@ -431,16 +475,25 @@ extension HomeContentMethods on _HomeScreenState {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_batteryLevel >= 0)
-          Text('🔋 $_batteryLevel%',
-              style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 12)),
+          Text(
+            '🔋 $_batteryLevel%',
+            style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 12),
+          ),
         if (_usagePermGranted && _screenTimeMinutes >= 0)
-          Text('📱 ${_fmtScreenTime(_screenTimeMinutes)}',
-              style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 12)),
+          Text(
+            '📱 ${_fmtScreenTime(_screenTimeMinutes)}',
+            style: TextStyle(color: textColor.withValues(alpha: 0.6), fontSize: 12),
+          ),
         if (!_usagePermGranted)
           GestureDetector(
             onTap: () => _native.openUsageStatsSettings(),
-            child: Text(S.of(context).usageStatsPermissionRequired,
-                style: TextStyle(color: Colors.amber.withOpacity(0.8), fontSize: 11)),
+            child: Text(
+              S.of(context).usageStatsPermissionRequired,
+              style: TextStyle(
+                color: Colors.amber.withValues(alpha: 0.8),
+                fontSize: 11,
+              ),
+            ),
           ),
       ],
     );
@@ -489,8 +542,10 @@ extension HomeContentMethods on _HomeScreenState {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => setState(() => _reorderMode = false),
-                child: Text(S.of(context).actionDone,
-                    style: const TextStyle(color: Colors.white)),
+                child: Text(
+                  S.of(context).actionDone,
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
             ),
           ],
@@ -503,12 +558,16 @@ extension HomeContentMethods on _HomeScreenState {
             if (item.isFolder) {
               return _favoriteFolderTile(item.folderName!);
             }
-            return _appTile(item.app!, item.app!.floor, onLongPressOverride: () {
-              setState(() {
-                _reorderMode = true;
-                _cachedFavorites = _orderedFavorites();
-              });
-            });
+            return _appTile(
+              item.app!,
+              item.app!.floor,
+              onLongPressOverride: () {
+                setState(() {
+                  _reorderMode = true;
+                  _cachedFavorites = _orderedFavorites();
+                });
+              },
+            );
           }).toList(),
         );
       }
@@ -534,8 +593,7 @@ extension HomeContentMethods on _HomeScreenState {
         GestureDetector(
           behavior: HitTestBehavior.translucent,
           onVerticalDragEnd: _handleHomeGestureUp,
-          onDoubleTap: () =>
-              _executeGestureAction(ss.gestureDoubleTapApp),
+          onDoubleTap: () => _executeGestureAction(ss.gestureDoubleTapApp),
           child: const SizedBox(height: 40, width: double.infinity),
         ),
         // Favorites in middle (scroll-only, no gesture conflict)
@@ -552,14 +610,18 @@ extension HomeContentMethods on _HomeScreenState {
         GestureDetector(
           behavior: HitTestBehavior.translucent,
           onVerticalDragEnd: _handleHomeGestureUp,
-          onDoubleTap: () =>
-              _executeGestureAction(ss.gestureDoubleTapApp),
+          onDoubleTap: () => _executeGestureAction(ss.gestureDoubleTapApp),
           child: const SizedBox(height: 40, width: double.infinity),
         ),
         // Phone / Camera shortcuts at bottom — above nav bar
         if (ss.showDialShortcut || ss.showCameraShortcut)
           Padding(
-            padding: EdgeInsets.fromLTRB(4, 0, 4, MediaQuery.of(context).viewPadding.bottom + 8),
+            padding: EdgeInsets.fromLTRB(
+              4,
+              0,
+              4,
+              MediaQuery.of(context).viewPadding.bottom + 8,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -567,7 +629,9 @@ extension HomeContentMethods on _HomeScreenState {
                   IconButton(
                     onPressed: () {
                       final pkg = ss.dialShortcutPackage;
-                      pkg.isNotEmpty ? widget.appService.launchApp(pkg) : _native.openDial();
+                      pkg.isNotEmpty
+                          ? widget.appService.launchApp(pkg)
+                          : _native.openDial();
                     },
                     icon: Icon(Icons.phone, color: _fontColor, size: 28),
                     padding: const EdgeInsets.all(12),
@@ -577,7 +641,9 @@ extension HomeContentMethods on _HomeScreenState {
                   IconButton(
                     onPressed: () {
                       final pkg = ss.cameraShortcutPackage;
-                      pkg.isNotEmpty ? widget.appService.launchApp(pkg) : _native.openCamera();
+                      pkg.isNotEmpty
+                          ? widget.appService.launchApp(pkg)
+                          : _native.openCamera();
                     },
                     icon: Icon(Icons.camera_alt, color: _fontColor, size: 28),
                     padding: const EdgeInsets.all(12),

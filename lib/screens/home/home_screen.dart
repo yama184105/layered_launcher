@@ -2,9 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:android_intent_plus/android_intent.dart';
-import 'package:device_apps/device_apps.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -15,6 +13,8 @@ import '../../services/native_service.dart';
 import '../../services/settings_service.dart';
 import '../settings/settings_screen.dart';
 import '../settings/automove_screen.dart';
+import '../modes/mode_actions.dart';
+import '../strict/strict_gate.dart';
 
 part 'home_helpers.dart';
 part 'home_clock_painter.dart';
@@ -30,8 +30,11 @@ part 'parts/selection_part.dart';
 class HomeScreen extends StatefulWidget {
   final AppService appService;
   final SettingsService settingsService;
-  const HomeScreen(
-      {super.key, required this.appService, required this.settingsService});
+  const HomeScreen({
+    super.key,
+    required this.appService,
+    required this.settingsService,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -119,8 +122,14 @@ class _HomeScreenState extends State<HomeScreen>
   bool _selectionInFavorites = false;
   final Set<String> _selectedPackages = {};
 
+  // ── folder selection mode ─────────────────────────────────────
+  /// フォルダの複数選択。要素は '<floor>:<folderName>'（同名フォルダが
+  /// 別フロアにもあるので、フロアと組で識別する）。
+  bool _folderSelectionMode = false;
+  final Set<String> _selectedFolders = {};
+
   // ── app install watcher ───────────────────────────────────────
-  StreamSubscription<ApplicationEvent>? _appChangeSub;
+  StreamSubscription<Map<String, String>>? _appChangeSub;
   StreamSubscription<void>? _homePressedSub;
 
   // ── external app tracking ─────────────────────────────────────
@@ -128,6 +137,7 @@ class _HomeScreenState extends State<HomeScreen>
   /// When the user presses the Android home button and returns here,
   /// we reset to homeFloor.
   bool _launchedExternalApp = false;
+
   /// True while we are inside an in-app screen (settings etc.) via Navigator.push.
   bool _isInExternalScreen = false;
 
@@ -141,6 +151,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ── page controller (home ↔ 1F) ──────────────────────────────
   late PageController _pageCtrl;
+  bool _isHomePageAnimating = false;
 
   // ── alphabet index highlight ──────────────────────────────────
   String? _activeIndexChar;
@@ -149,36 +160,46 @@ class _HomeScreenState extends State<HomeScreen>
 
   int get _maxFloor => widget.settingsService.maxFloors;
 
-
   // ── lifecycle ─────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _ctrl =
-        AnimationController(vsync: this, duration: const Duration(seconds: 3));
-    _stairAnim =
-        CurvedAnimation(parent: _ctrl, curve: const _StairCurve(steps: 4));
-    _smoothAnim =
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    );
+    _stairAnim = CurvedAnimation(
+      parent: _ctrl,
+      curve: const _StairCurve(steps: 4),
+    );
+    _smoothAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
     _slideCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
-    _slideAnim =
-        CurvedAnimation(parent: _slideCtrl, curve: Curves.easeInOut);
-    _discreteStairAnim =
-        CurvedAnimation(parent: _ctrl, curve: const _DiscreteStairCurve(steps: 6));
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _slideAnim = CurvedAnimation(parent: _slideCtrl, curve: Curves.easeInOut);
+    _discreteStairAnim = CurvedAnimation(
+      parent: _ctrl,
+      curve: const _DiscreteStairCurve(steps: 6),
+    );
     _chargingCtrl = AnimationController(
-        vsync: this, duration: const Duration(seconds: 30))
-      ..repeat();
-    _chargingAnim = CurvedAnimation(parent: _chargingCtrl, curve: Curves.linear);
+      vsync: this,
+      duration: const Duration(seconds: 30),
+    )..repeat();
+    _chargingAnim = CurvedAnimation(
+      parent: _chargingCtrl,
+      curve: Curves.linear,
+    );
     _pageCtrl = PageController(initialPage: _currentFloor == 1 ? 1 : 0);
-    _searchCtrl
-        .addListener(() => setState(() => _searchQuery = _searchCtrl.text));
+    _searchCtrl.addListener(
+      () => setState(() => _searchQuery = _searchCtrl.text),
+    );
     _loadApps();
-    _appChangeSub = DeviceApps.listenToAppsChanges().listen((event) {
-      if (event.event == ApplicationEventType.installed) {
-        widget.settingsService.recordAppInstallDate(event.packageName);
+    _appChangeSub = _native.onAppsChanged.listen((event) {
+      if (event['event'] == 'installed') {
+        widget.settingsService.recordAppInstallDate(event['packageName'] ?? '');
       }
       _loadApps();
     }, onError: (_) {});
@@ -186,7 +207,9 @@ class _HomeScreenState extends State<HomeScreen>
     _initNotifications();
     _loadHomeWidgets();
     _widgetRefreshTimer = Timer.periodic(
-        const Duration(minutes: 5), (_) => _loadHomeWidgets());
+      const Duration(minutes: 5),
+      (_) => _loadHomeWidgets(),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkNotifPerm());
     _startBatchTimer();
     _startChargingTimer();
@@ -204,52 +227,53 @@ class _HomeScreenState extends State<HomeScreen>
     _processAutoMoves();
   }
 
+  /// モード適用エンジン。毎分呼ばれ、各アプリの実効モード
+  /// （一時モード考慮）に応じてフロアを決定する。
+  /// - schedule:   曜日別スロット。該当スロットなし＆デフォルトが
+  ///               位置保持(keep)なら動かさない。
+  /// - usageTime:  今日の使用時間(分)の閾値ルール。閾値未満は位置保持。
+  /// - usageCount: 起動時に _trackUsageCountFloor で処理（ここでは何もしない）。
+  /// - normal:     何もしない（位置保持）。
   Future<void> _processAutoMoves() async {
     final ss = widget.settingsService;
-    final apps = ss.allAutoMoveApps;
-    if (apps.isEmpty) return;
+    final pkgs = <String>{...ss.allModeAssignedApps, ...ss.allTempModeApps};
+    if (pkgs.isEmpty) return;
     final now = DateTime.now();
     final rng = Random();
     bool changed = false;
 
-    for (final pkg in apps) {
-      final mode = ss.autoMoveMode(pkg);
+    // 使用時間モードのアプリが1つでもあれば今日の使用時間を一括取得
+    Map<String, int>? usageToday;
+    if (pkgs.any((p) {
+      final mode = ss.effectiveAppMode(p);
+      return mode == 'usageTime' || mode == 'schedule';
+    })) {
+      usageToday = await _native.getUsageStatsToday();
+    }
+
+    for (final pkg in pkgs) {
+      final mode = ss.effectiveAppMode(pkg);
       final app = _allApps.cast<AppConfig?>().firstWhere(
         (a) => a?.packageName == pkg,
         orElse: () => null,
       );
       if (app == null) continue;
 
-      if (mode == 'interval') {
-        // Mode B: interval random
-        final intervalDays = ss.autoMoveIntervalDays(pkg);
-        final floors = ss.autoMoveIntervalFloors(pkg);
-        if (floors.isEmpty) continue;
-        final lastMs = ss.autoMoveLastMovedMs(pkg);
-        final intervalMs = intervalDays * 24 * 60 * 60 * 1000;
+      // 一時的にフロアを固定中のアプリはエンジンを止める。期限が切れると
+      // _tick が元のフロアに戻し、そこから通常のモード制御が再開する。
+      final tempFloorExpiry = app.temporaryFloorExpiry;
+      if (tempFloorExpiry != null && tempFloorExpiry.isAfter(now)) continue;
 
-        bool shouldMove = false;
-        if (lastMs == null) {
-          shouldMove = true;
-        } else if (intervalDays == 0) {
-          // 0 days = every check (once per minute cycle, but effectively once per day)
-          final lastDate = DateTime.fromMillisecondsSinceEpoch(lastMs);
-          if (now.day != lastDate.day || now.month != lastDate.month || now.year != lastDate.year) {
-            shouldMove = true;
-          }
-        } else if (now.millisecondsSinceEpoch - lastMs >= intervalMs) {
-          shouldMove = true;
-        }
-
-        if (shouldMove) {
-          final newFloor = floors[rng.nextInt(floors.length)];
-          app.floor = newFloor;
+      if (mode == 'usageTime') {
+        final used = usageToday?[pkg] ?? 0;
+        final target = ss.usageTimeTargetFloor(pkg, used);
+        // 閾値未満（target == null）は位置保持
+        if (target != null && app.floor != target) {
+          app.floor = target;
           await widget.appService.saveConfig(app);
-          await ss.setAutoMoveLastMovedMs(pkg, now.millisecondsSinceEpoch);
           changed = true;
         }
       } else if (mode == 'schedule') {
-        // Mode A: schedule
         final schedule = ss.autoMoveSchedule(pkg);
         final wdKey = now.weekday.toString();
         final dayData = schedule[wdKey];
@@ -287,7 +311,12 @@ class _HomeScreenState extends State<HomeScreen>
         final lastSlot = ss.autoMoveLastSlotKey(pkg);
         final type = (activeSlot['type'] as String?) ?? 'fixed';
 
-        if (type == 'fixed') {
+        if (type == 'keep') {
+          // 位置保持 — スロット外の時間帯はフロアを動かさない。
+          // lastSlotKey は更新せず、次に fixed/random スロットへ入った
+          // ときに必ず移動が走るようにする。
+          continue;
+        } else if (type == 'fixed') {
           final targetFloor = (activeSlot['floor'] as num?)?.toInt() ?? 1;
           if (app.floor != targetFloor || lastSlot != slotKey) {
             app.floor = targetFloor;
@@ -295,9 +324,43 @@ class _HomeScreenState extends State<HomeScreen>
             await ss.setAutoMoveLastSlotKey(pkg, slotKey);
             changed = true;
           }
+        } else if (type == 'usageCount' || type == 'usageTime') {
+          final rawRules = (type == 'usageTime')
+              ? (activeSlot['timeRules'] as List?)
+              : (activeSlot['countRules'] as List?);
+          final rules =
+              (rawRules ?? const []).map((e) {
+                  final m = e as Map;
+                  return {
+                    'threshold': (m['threshold'] as num).toInt(),
+                    'floor': (m['floor'] as num).toInt(),
+                  };
+                }).toList()
+                ..sort((a, b) => b['threshold']!.compareTo(a['threshold']!));
+          if (rules.isEmpty) continue;
+          final value = type == 'usageTime'
+              ? (usageToday?[pkg] ?? 0)
+              : ss.dailyLaunchCount(pkg);
+          int? targetFloor;
+          for (final rule in rules) {
+            if (value >= rule['threshold']!) {
+              targetFloor = rule['floor'];
+              break;
+            }
+          }
+          if (targetFloor != null && app.floor != targetFloor) {
+            app.floor = targetFloor;
+            await widget.appService.saveConfig(app);
+            await ss.setAutoMoveLastSlotKey(pkg, slotKey);
+            changed = true;
+          }
         } else {
           // random
-          final floors = (activeSlot['floors'] as List?)?.map((e) => (e as num).toInt()).toList() ?? [1];
+          final floors =
+              (activeSlot['floors'] as List?)
+                  ?.map((e) => (e as num).toInt())
+                  .toList() ??
+              [1];
           if (floors.isEmpty) continue;
           final shuffleMode = (activeSlot['shuffleMode'] as String?) ?? 'once';
 
@@ -310,15 +373,23 @@ class _HomeScreenState extends State<HomeScreen>
             changed = true;
           } else if (shuffleMode == 'repeat') {
             final repeatDays = (activeSlot['repeatDays'] as num?)?.toInt() ?? 0;
-            final repeatHours = (activeSlot['repeatHours'] as num?)?.toInt() ?? 1;
-            final repeatMins = (activeSlot['repeatMinutes'] as num?)?.toInt() ?? 0;
-            final intervalMs = ((repeatDays * 24 * 60 + repeatHours * 60 + repeatMins) * 60 * 1000);
+            final repeatHours =
+                (activeSlot['repeatHours'] as num?)?.toInt() ?? 1;
+            final repeatMins =
+                (activeSlot['repeatMinutes'] as num?)?.toInt() ?? 0;
+            final intervalMs =
+                ((repeatDays * 24 * 60 + repeatHours * 60 + repeatMins) *
+                60 *
+                1000);
             if (intervalMs <= 0) continue;
             final lastShuffle = ss.autoMoveLastShuffleMs(pkg) ?? 0;
             if (now.millisecondsSinceEpoch - lastShuffle >= intervalMs) {
               app.floor = floors[rng.nextInt(floors.length)];
               await widget.appService.saveConfig(app);
-              await ss.setAutoMoveLastShuffleMs(pkg, now.millisecondsSinceEpoch);
+              await ss.setAutoMoveLastShuffleMs(
+                pkg,
+                now.millisecondsSinceEpoch,
+              );
               changed = true;
             }
           } else if (shuffleMode == 'count') {
@@ -333,8 +404,14 @@ class _HomeScreenState extends State<HomeScreen>
                 if (expectedCount > currentCount) {
                   app.floor = floors[rng.nextInt(floors.length)];
                   await widget.appService.saveConfig(app);
-                  await ss.setAutoMoveShuffleCount(pkg, expectedCount.clamp(0, maxCount));
-                  await ss.setAutoMoveLastShuffleMs(pkg, now.millisecondsSinceEpoch);
+                  await ss.setAutoMoveShuffleCount(
+                    pkg,
+                    expectedCount.clamp(0, maxCount),
+                  );
+                  await ss.setAutoMoveLastShuffleMs(
+                    pkg,
+                    now.millisecondsSinceEpoch,
+                  );
                   changed = true;
                 }
               }
@@ -400,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
     if (state == AppLifecycleState.resumed) {
       _loadHomeWidgets();
-      _loadApps();
+      _refreshAppsNow();
       // Re-push the quick-launcher notification config on every
       // resume so the persistent notification reappears in the shade
       // even when POST_NOTIFICATIONS was granted after the initial
@@ -433,7 +510,10 @@ class _HomeScreenState extends State<HomeScreen>
     final screenH = MediaQuery.of(context).size.height;
 
     return PopScope(
-      canPop: _currentFloor == _homeFloor && !_selectionMode && !_reorderMode,
+      canPop: _currentFloor == _homeFloor &&
+          !_selectionMode &&
+          !_folderSelectionMode &&
+          !_reorderMode,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           if (_selectionMode) {
@@ -441,6 +521,11 @@ class _HomeScreenState extends State<HomeScreen>
               _selectionMode = false;
               _selectionInFavorites = false;
               _selectedPackages.clear();
+            });
+          } else if (_folderSelectionMode) {
+            setState(() {
+              _folderSelectionMode = false;
+              _selectedFolders.clear();
             });
           } else if (_reorderMode) {
             setState(() => _reorderMode = false);
@@ -457,69 +542,112 @@ class _HomeScreenState extends State<HomeScreen>
           bottom: false,
           child: _loading
               ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white))
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
               : Stack(
                   children: [
                     Column(
                       children: [
                         // Emergency banner with stop button
-                        if (_emergencyRemaining != null || (_emergencyEndTime != null && _emergencyEndTime!.isAfter(DateTime.now())))
-                          Builder(builder: (ctx) {
-                            final remaining = _emergencyEndTime != null && _emergencyEndTime!.isAfter(DateTime.now())
-                                ? _emergencyEndTime!.difference(DateTime.now())
-                                : _emergencyRemaining;
-                            return Container(
-                              width: double.infinity,
-                              color: const Color(0xFF7B0000),
-                              padding: EdgeInsets.fromLTRB(
+                        if (_emergencyRemaining != null ||
+                            (_emergencyEndTime != null &&
+                                _emergencyEndTime!.isAfter(DateTime.now())))
+                          Builder(
+                            builder: (ctx) {
+                              final remaining =
+                                  _emergencyEndTime != null &&
+                                      _emergencyEndTime!.isAfter(DateTime.now())
+                                  ? _emergencyEndTime!.difference(
+                                      DateTime.now(),
+                                    )
+                                  : _emergencyRemaining;
+                              return Container(
+                                width: double.infinity,
+                                color: const Color(0xFF7B0000),
+                                padding: EdgeInsets.fromLTRB(
                                   16,
                                   MediaQuery.of(context).padding.top + 6,
                                   8,
-                                  6),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      S.of(context).emergencyBannerActive(
-                                        remaining != null ? _fmt(remaining) : '',
-                                        _emergency1FApps.length,
+                                  6,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        S
+                                            .of(context)
+                                            .emergencyBannerActive(
+                                              remaining != null
+                                                  ? _fmt(remaining)
+                                                  : '',
+                                              _emergency1FApps.length,
+                                            ),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                        ),
                                       ),
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 13),
                                     ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () => _showEmergencyAddDialog(),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      margin: const EdgeInsets.only(right: 6),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: Colors.white54),
-                                        borderRadius: BorderRadius.circular(4),
+                                    GestureDetector(
+                                      onTap: () => _showEmergencyAddDialog(),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        margin: const EdgeInsets.only(right: 6),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: Colors.white54,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          S.of(context).actionAdd,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                          ),
+                                        ),
                                       ),
-                                      child: Text(S.of(context).actionAdd,
-                                          style: const TextStyle(color: Colors.white, fontSize: 11)),
                                     ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () => _stopEmergencyMode(),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: Colors.white54),
-                                        borderRadius: BorderRadius.circular(4),
+                                    GestureDetector(
+                                      onTap: () => _stopEmergencyMode(),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: Colors.white54,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          S.of(context).actionStop,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                          ),
+                                        ),
                                       ),
-                                      child: Text(S.of(context).actionStop,
-                                          style: const TextStyle(color: Colors.white, fontSize: 11)),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
                         // Main content (search bar is embedded in floor content for all floors)
                         Expanded(
-                          child: ((_currentFloor == _homeFloor || _currentFloor == 1) && !_isAnimating)
+                          child:
+                              ((_currentFloor == _homeFloor ||
+                                      _currentFloor == 1) &&
+                                  !_isAnimating)
                               ? _buildHomeAnd1F()
                               : _buildFloorWithNav(screenH),
                         ),
@@ -532,6 +660,13 @@ class _HomeScreenState extends State<HomeScreen>
                         right: 0,
                         child: _buildSelectionBar(),
                       ),
+                    if (_folderSelectionMode)
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: _buildFolderSelectionBar(),
+                      ),
                     if (_activeIndexChar != null)
                       Positioned.fill(
                         child: IgnorePointer(
@@ -540,7 +675,7 @@ class _HomeScreenState extends State<HomeScreen>
                               width: 80,
                               height: 80,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Center(

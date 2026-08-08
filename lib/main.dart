@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'l10n/generated/app_localizations.dart';
@@ -28,6 +27,9 @@ void main() async {
 
   final settingsService = SettingsService();
   await settingsService.init();
+  // 旧ロックモード（lockMode + pendingFloorMap）からストリクトへの移行。
+  // AppConfig の box が要るので init のあとで一度だけ走らせる。
+  await settingsService.migrateLegacyLockIfNeeded(appService.box);
 
   // Wire SettingsService → native notification listener so the policy
   // (default mode + OFF set + allow set) and batch groups stay in sync

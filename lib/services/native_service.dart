@@ -12,12 +12,59 @@ class NativeService {
   final _homePressedController = StreamController<void>.broadcast();
   Stream<void> get onHomePressed => _homePressedController.stream;
 
+  /// アプリのインストール/アンインストール通知。
+  /// {'packageName': String, 'event': 'installed'|'uninstalled'}
+  final _appsChangedController =
+      StreamController<Map<String, String>>.broadcast();
+  Stream<Map<String, String>> get onAppsChanged =>
+      _appsChangedController.stream;
+
   NativeService._internal() {
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'onHomePressed') {
-        _homePressedController.add(null);
+      switch (call.method) {
+        case 'onHomePressed':
+          _homePressedController.add(null);
+          break;
+        case 'onAppsChanged':
+          final args = call.arguments;
+          if (args is Map) {
+            _appsChangedController.add({
+              'packageName': args['packageName']?.toString() ?? '',
+              'event': args['event']?.toString() ?? '',
+            });
+          }
+          break;
       }
     });
+  }
+
+  /// インストール済みアプリ一覧。device_apps の置き換え。
+  /// 各要素: {packageName, appName, systemApp}
+  Future<List<Map<String, dynamic>>> getInstalledApps({
+    bool onlyWithLaunchIntent = true,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod('getInstalledApps', {
+        'onlyWithLaunchIntent': onlyWithLaunchIntent,
+      });
+      if (result == null) return [];
+      return (result as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<bool> launchApp(String packageName) async {
+    try {
+      final ok = await _channel.invokeMethod<bool>('launchApp', {
+        'packageName': packageName,
+      });
+      return ok ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   void dispose() {
@@ -284,6 +331,20 @@ class NativeService {
     try {
       final result =
           await _channel.invokeMethod('getUsageStats30Days');
+      if (result == null) return {};
+      return (result as Map)
+          .map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// Returns a map of packageName -> today's foreground usage in minutes
+  /// (since local midnight). Empty map if the usage-stats permission is
+  /// not granted. Used by the usage-time mode.
+  Future<Map<String, int>> getUsageStatsToday() async {
+    try {
+      final result = await _channel.invokeMethod('getUsageStatsToday');
       if (result == null) return {};
       return (result as Map)
           .map((k, v) => MapEntry(k.toString(), (v as num).toInt()));

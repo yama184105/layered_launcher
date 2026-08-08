@@ -9,29 +9,7 @@ extension AutoMoveSettings on SettingsService {
   Future<void> setAutoMoveMode(String pkg, String mode) =>
       _box.put('autoMove_mode_$pkg', mode);
 
-  // ── Mode B: Interval Random ───────────────────────────────────────────────
-  int autoMoveIntervalDays(String pkg) =>
-      (_box.get('autoMove_intervalDays_$pkg') as int?) ?? 1;
-
-  Future<void> setAutoMoveIntervalDays(String pkg, int days) =>
-      _box.put('autoMove_intervalDays_$pkg', days);
-
-  List<int> autoMoveIntervalFloors(String pkg) {
-    final raw = _box.get('autoMove_intervalFloors_$pkg') as List?;
-    if (raw == null) return [1, 2, 3];
-    return raw.map((e) => (e as num).toInt()).toList();
-  }
-
-  Future<void> setAutoMoveIntervalFloors(String pkg, List<int> floors) =>
-      _box.put('autoMove_intervalFloors_$pkg', floors);
-
-  int? autoMoveLastMovedMs(String pkg) =>
-      _box.get('autoMove_lastMoved_$pkg') as int?;
-
-  Future<void> setAutoMoveLastMovedMs(String pkg, int ms) =>
-      _box.put('autoMove_lastMoved_$pkg', ms);
-
-  // ── Mode A: Schedule ──────────────────────────────────────────────────────
+  // ── Schedule ──────────────────────────────────────────────────────────────
   // Stored as JSON string: per-weekday default + slot list
   // Structure: { "weekday": {
   //   "default": { "type": "fixed"|"random", "floor": 1, "floors": [...],
@@ -58,6 +36,39 @@ extension AutoMoveSettings on SettingsService {
   Future<void> setAutoMoveSchedule(String pkg, Map<String, dynamic> schedule) =>
       _box.put('autoMove_schedule_$pkg', jsonEncode(schedule));
 
+  // ── Schedule identity ─────────────────────────────────────────────────────
+  // スケジュールは「内容」ではなく「実体」で区別する。同じ内容でも別々に
+  // 作ったものは別スケジュール（使用回数などが混ざらないように）。
+  // 同じスケジュールを共有するアプリだけが同じIDを持つ。
+
+  String? autoMoveScheduleId(String pkg) =>
+      _box.get('autoMove_scheduleId_$pkg') as String?;
+
+  Future<void> setAutoMoveScheduleId(String pkg, String id) =>
+      _box.put('autoMove_scheduleId_$pkg', id);
+
+  /// 新しいスケジュール実体のID。
+  String newScheduleId() =>
+      'sch_${DateTime.now().microsecondsSinceEpoch}_${_scheduleIdSeq++}';
+
+  /// 既存データ（IDが無い時代のスケジュール）にIDを振る。
+  /// これまでは内容が同じものが1グループとして扱われていたので、その
+  /// グループ分けを引き継ぐ（同一内容 → 同じID）。
+  Future<void> migrateScheduleIdsIfNeeded() async {
+    if ((_box.get('scheduleIdsMigrated') as bool?) == true) return;
+    final idByCanonical = <String, String>{};
+    for (final key in _box.keys.toList()) {
+      final k = key.toString();
+      if (!k.startsWith('autoMove_schedule_')) continue;
+      final pkg = k.substring('autoMove_schedule_'.length);
+      if (autoMoveScheduleId(pkg) != null) continue;
+      final canonical = scheduleCanonical(autoMoveSchedule(pkg));
+      final id = idByCanonical.putIfAbsent(canonical, newScheduleId);
+      await setAutoMoveScheduleId(pkg, id);
+    }
+    await _box.put('scheduleIdsMigrated', true);
+  }
+
   // ── Last schedule slot tracking (to detect slot changes) ──────────────────
   String? autoMoveLastSlotKey(String pkg) =>
       _box.get('autoMove_lastSlot_$pkg') as String?;
@@ -79,28 +90,15 @@ extension AutoMoveSettings on SettingsService {
   Future<void> setAutoMoveShuffleCount(String pkg, int count) =>
       _box.put('autoMove_shuffleCount_$pkg', count);
 
-  // ── Get all apps with auto-move enabled ───────────────────────────────────
-  List<String> get allAutoMoveApps {
-    final result = <String>[];
-    for (final key in _box.keys) {
-      final k = key.toString();
-      if (k.startsWith('autoMove_mode_')) {
-        final mode = _box.get(k) as String?;
-        if (mode != null && mode != 'none') {
-          result.add(k.substring('autoMove_mode_'.length));
-        }
-      }
-    }
-    return result;
-  }
-
   // ── Clear auto-move for app ───────────────────────────────────────────────
+  // interval系キーは廃止済みの旧モードBデータの掃除のため削除し続ける。
   Future<void> clearAutoMove(String pkg) async {
     await _box.delete('autoMove_mode_$pkg');
     await _box.delete('autoMove_intervalDays_$pkg');
     await _box.delete('autoMove_intervalFloors_$pkg');
     await _box.delete('autoMove_lastMoved_$pkg');
     await _box.delete('autoMove_schedule_$pkg');
+    await _box.delete('autoMove_scheduleId_$pkg');
     await _box.delete('autoMove_lastSlot_$pkg');
     await _box.delete('autoMove_lastShuffle_$pkg');
     await _box.delete('autoMove_shuffleCount_$pkg');

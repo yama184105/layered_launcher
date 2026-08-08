@@ -209,7 +209,7 @@ extension HomeSettingsMethods on _SettingsScreenState {
       return false;
     }
     final confirmed = await showStrictTimerDialog(context,
-        seconds: ss.strictSubTimerMinutes('shortcut') * 60);
+        seconds: ss.strictSubTimerSeconds('shortcut'));
     if (!confirmed) return false;
     return true;
   }

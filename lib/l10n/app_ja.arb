@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "ja",
 
   "appTitle": "LayeredLauncher",
@@ -11,7 +11,6 @@
   "sectionFloors": "階層",
   "sectionAppearance": "外観",
   "sectionAppManagement": "アプリ管理",
-  "sectionAutoMove": "自動移動",
   "sectionScreenTime": "スクリーンタイム管理",
   "sectionLockSecurity": "ロック・セキュリティ",
   "sectionBackupRestore": "バックアップ・復元",
@@ -30,6 +29,15 @@
   "actionDisabled": "無効",
   "actionExecute": "実行",
   "actionMove": "移動",
+  "actionMerge": "合体",
+  "mergeSchedulesPickHint": "合体するスケジュールを選んでください（内容は同じです）",
+  "mergeSchedulesTitle": "スケジュールを合体しますか？",
+  "mergeSchedulesMessage": "同じ条件のスケジュール{count}件をまとめます。対象の{apps}個のアプリが1つのスケジュールになります。",
+  "@mergeSchedulesMessage": {
+    "placeholders": { "count": { "type": "int" }, "apps": { "type": "int" } }
+  },
+  "actionDuplicate": "複製",
+  "selectTargetAppsFirst": "対象アプリを選択してください",
   "actionEdit": "編集",
   "actionReset": "リセット",
   "actionSelectAll": "すべて選択",
@@ -146,15 +154,26 @@
   "@minutesValue": {
     "placeholders": { "minutes": { "type": "int" } }
   },
-  "minutesUsedToFloor1": "使用時間 {minutes}分 → 1Fへ",
-  "@minutesUsedToFloor1": {
-    "placeholders": { "minutes": { "type": "int" } }
+  "countRangeRule": "{from}〜{to}回 → {floor}",
+  "@countRangeRule": {
+    "placeholders": { "from": {"type":"int"}, "to": {"type":"int"}, "floor": {"type":"String"} }
   },
-  "noUsageToFloor3": "使用時間なし → 3Fへ",
-  "todayLaunchCount": "今日の起動回数: {count}回",
-  "@todayLaunchCount": {
-    "placeholders": { "count": { "type": "int" } }
+  "countExactRule": "{count}回 → {floor}",
+  "@countExactRule": {
+    "placeholders": { "count": {"type":"int"}, "floor": {"type":"String"} }
   },
+  "timeRangeRule": "{from}〜{to}分 → {floor}",
+  "@timeRangeRule": {
+    "placeholders": { "from": {"type":"int"}, "to": {"type":"int"}, "floor": {"type":"String"} }
+  },
+  "timeExactRule": "{count}分 → {floor}",
+  "@timeExactRule": {
+    "placeholders": { "count": {"type":"int"}, "floor": {"type":"String"} }
+  },
+  "rangeStartCountLabel": "この回数から（区間の開始）:",
+  "rangeStartTimeLabel": "この時間（分）から（区間の開始）:",
+  "usageCountRangeHelp": "起動回数の区間ごとにフロアを決めます。例: 1〜2回→2F、3回以上→5F。毎日0時にリセット。",
+  "usageTimeRangeHelp": "1日の使用時間（分）の区間ごとにフロアを決めます。例: 0〜29分→保持、30分以上→5F。毎日0時にリセット。",
   "thresholdRule": "{threshold}回以上 → {floor}",
   "@thresholdRule": {
     "placeholders": {
@@ -219,7 +238,6 @@
   "markAsEmergency": "緊急アプリに指定",
   "emergencyDuration": "緊急継続時間（分）",
   "emergencyOnOff": "緊急モード ON/OFF",
-  "usageCountFloorChange": "起動回数フロア変更",
   "noRules": "ルールなし",
   "ruleAdd": "ルールを追加",
   "ruleEdit": "ルールを編集",
@@ -239,10 +257,6 @@
 
   "randomPlacement": "ランダム配置",
   "randomPlacementSelectApps": "ランダム配置するアプリを選択",
-  "floorOptimizationProposal": "フロア最適化を提案",
-  "floorOptimizationProposalDialog": "フロア最適化の提案",
-  "floorOptimizationDone": "フロアを最適化しました",
-  "floorOptimizationNoProposals": "最適化の提案はありません",
 
   "emergencyMode": "緊急モード",
   "emergencyAppsRegister": "緊急アプリ登録",
@@ -334,6 +348,13 @@
   "@addAppsToFolder": {
     "placeholders": { "count": { "type": "int" } }
   },
+  "moveCancelTitle": "移動をキャンセルしますか？",
+  "moveCancelMessage": "ロック中の{locked}個の移動はキャンセルされます。ロック外の{unlocked}個はどうしますか？",
+  "@moveCancelMessage": {
+    "placeholders": { "locked": { "type": "int" }, "unlocked": { "type": "int" } }
+  },
+  "moveCancelUnlockedOnly": "ロック外だけ移動",
+  "moveCancelAll": "すべてキャンセル",
   "floorMoveLockedAll": "フロア移動がロックされています",
   "floorMoveLockedSome": "一部のアプリはフロア移動がロックされています",
   "appBlockedTitle": "「{name}」はブロック中",
@@ -351,6 +372,18 @@
   },
   "deleteFolderMessage": "フォルダを削除します。{count}件のアプリはフォルダなしになります。",
   "@deleteFolderMessage": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "selectedFoldersCount": "{count}個のフォルダを選択中",
+  "@selectedFoldersCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "folderPositionBulkTitle": "{count}個のフォルダの位置",
+  "@folderPositionBulkTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "deleteFoldersTitle": "{count}個のフォルダを削除",
+  "@deleteFoldersTitle": {
     "placeholders": { "count": { "type": "int" } }
   },
   "folderPositionTitle": "「{name}」の表示位置",
@@ -646,15 +679,7 @@
   "gestureNotificationPanel": "通知パネルを表示",
   "recommendedApps": "推奨アプリ",
 
-  "modeSchedule": "スケジュール制",
-  "modeIntervalRandom": "日数間隔ランダム",
-  "autoMoveAppsCount": "{count}アプリに自動移動が設定されています",
-  "@autoMoveAppsCount": {
-    "placeholders": { "count": { "type": "int" } }
-  },
-  "noAutoMoveApps": "自動移動が設定されているアプリはありません",
   "selectAppsToConfigure": "アプリを選んで設定",
-  "configuredLabel": "設定済み",
   "actionConfigure": "設定",
   "selectionCountSuffix": "{count}個",
   "@selectionCountSuffix": {
@@ -847,16 +872,9 @@
   "@automoveTitleSingle": {
     "placeholders": { "name": { "type": "String" } }
   },
-  "tabSchedule": "スケジュール制",
-  "tabIntervalRandom": "日数間隔ランダム",
   "actionRelease": "解除",
-  "intervalRandomDesc": "指定日数ごとにランダムなフロアに配置",
-  "intervalLabel": "間隔: ",
-  "intervalDays": " 日ごと",
-  "intervalDaysHint": "(0=毎日)",
   "targetFloorsLabel": "対象フロア:",
   "defaultFloorLabel": "デフォルトフロア",
-  "defaultFloorDesc": "スケジュール外の時間帯に適用されるフロアです",
   "scheduleLabel": "スケジュール",
   "addSchedule": "＋ 追加",
   "noScheduleHint": "スケジュールなし（デフォルトフロアが常に適用されます）",
@@ -902,14 +920,7 @@
   "copyToWeekdaysTitle": "コピー先の曜日",
   "actionCopy": "コピー",
 
-  "usageCountRulesScreenTitle": "起動回数フロア変更",
   "usageCountRulesHelp": "1日の起動回数が閾値に達したら自動でフロアを変更します。毎日0時にカウントはリセットされます。",
-  "usageCountAddAppButton": "アプリを追加",
-  "usageCountNoApps": "ルールが設定されたアプリはありません",
-  "usageCountSummaryFmt": "{count}ルール",
-  "@usageCountSummaryFmt": {
-    "placeholders": { "count": { "type": "int" } }
-  },
 
   "batchGroupsTitle": "バッチグループ",
   "batchGroupsHelp": "バッチ通知の対象アプリをまとめ、グループごとに配信スケジュールを設定できます。",
@@ -1000,5 +1011,203 @@
     "placeholders": { "time": { "type": "String" } }
   },
   "batchPendingNoFireScheduled": "次回未定",
-  "batchPendingGroupEmpty": "保留なし"
+  "batchPendingGroupEmpty": "保留なし",
+
+  "modesTitle": "モード",
+  "modeNormal": "ノーマル",
+  "modeScheduleName": "スケジュール",
+  "modeUsageCount": "使用回数",
+  "modeUsageTime": "使用時間",
+  "modeCustomDesc": "スケジュール（時間帯・使用回数・使用時間でフロアが変わる）",
+  "allDay": "一日中",
+  "modeNormalDesc": "固定フロア（手動でのみ移動）",
+  "modeScheduleDesc": "時間帯でフロアが変わる",
+  "modeUsageCountDesc": "1日の起動回数でフロアが変わる",
+  "modeUsageTimeDesc": "1日の使用時間でフロアが変わる",
+  "groupAppsCount": "{count}個のアプリ",
+  "@groupAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "addAppsToMode": "アプリを追加",
+  "modeNoApps": "このモードのアプリはありません",
+  "releaseFromModeConfirm": "割り振りから外しますか？アプリは現在のフロアに留まります（位置保持）。",
+  "minuteThresholdLabel": "使用時間の閾値（分）:",
+  "minutesSuffix": "分",
+  "minuteThresholdRule": "{threshold}分以上 → {floor}",
+  "@minuteThresholdRule": {
+    "placeholders": { "threshold": { "type": "int" }, "floor": { "type": "String" } }
+  },
+  "usageTimeRulesHelp": "1日の使用時間（分）が閾値に達したら自動でフロアを変更します。閾値未満は位置保持。毎日0時にリセットされます。",
+  "scheduleNowLabel": "現在 {desc}",
+  "@scheduleNowLabel": {
+    "placeholders": { "desc": { "type": "String" } }
+  },
+  "scheduleUntilLabel": "{time} まで",
+  "@scheduleUntilLabel": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "scheduleNextLabel": "次: {time} → {desc}",
+  "@scheduleNextLabel": {
+    "placeholders": { "time": { "type": "String" }, "desc": { "type": "String" } }
+  },
+  "tempModeActive": "一時: {mode}",
+  "@tempModeActive": {
+    "placeholders": { "mode": { "type": "String" } }
+  },
+  "currentModeLabel": "現在: {mode}",
+  "@currentModeLabel": {
+    "placeholders": { "mode": { "type": "String" } }
+  },
+  "noRulesKeepPosition": "ルール未設定（位置保持）。「追加」からルールを作成してください。",
+  "tempMoveTitle": "一時的に移動",
+  "tempMoveRelease": "一時移動を解除",
+  "tempMoveTargetLabel": "移動先モード:",
+  "tempMoveDurationLabel": "期間:",
+  "tempDuration15m": "15分",
+  "tempDuration1h": "1時間",
+  "tempDuration3h": "3時間",
+  "tempDurationToday": "今日中",
+  "tempMoveHint": "期限が切れると元のモードに自動で戻ります（フロアは位置保持）。",
+  "scheduleEveryDay": "毎日",
+  "scheduleByWeekday": "曜日別",
+  "keepPosition": "位置保持",
+  "defaultKeepDesc": "スケジュール外の時間帯の扱い。位置保持＝フロアを動かさない。",
+
+  "modeTemp": "一時的",
+  "modeTempDesc": "期限つきでフロア／モードを上書き（期限切れで自動復帰）",
+  "modeTempNoApps": "一時的に移動中のアプリはありません",
+  "tempTargetFloor": "フロア",
+  "tempTargetMode": "モード",
+  "tempMoveFloorLabel": "移動先フロア:",
+  "tempMoveHintFloor": "期限が切れると元のフロアに自動で戻ります。",
+  "tempMoveCountTitle": "{count}個を一時的に移動",
+  "@tempMoveCountTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "tempRemaining": "残り {time}",
+  "@tempRemaining": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "tempExpired": "まもなく復帰",
+  "durationHourMinute": "{hours}時間{minutes}分",
+  "@durationHourMinute": {
+    "placeholders": { "hours": { "type": "int" }, "minutes": { "type": "int" } }
+  },
+  "durationMinute": "{minutes}分",
+  "@durationMinute": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "releaseKeepsPosition": "ノーマルに戻す（フロアは位置保持）",
+  "releaseCountConfirm": "{count}個を割り振りから外しますか？アプリは現在のフロアに留まります（位置保持）。",
+  "@releaseCountConfirm": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "selectionMode": "モード",
+  "selectionTemp": "一時的",
+  "modeSwitchCountTitle": "{count}個のモードを切り替え",
+  "@modeSwitchCountTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "targetAppsCount": "対象 {count}",
+  "@targetAppsCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "targetAppsSelect": "この設定を適用するアプリ",
+  "applyToMoreApps": "他のアプリにも適用",
+  "modeAppliedCount": "{count}個に適用しました",
+  "@modeAppliedCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "tempMoveExtend": "延長・変更",
+  "tempMoveReleaseDesc": "今すぐ元のフロア／モードに戻す",
+
+  "strictReservation": "予約変更",
+  "strictReservationDesc": "すぐには変更できないが、指定時間後に自動で適用する予約を作れる",
+  "strictReservationMinutes": "予約の待ち時間（分）",
+  "reservationsTitle": "予約の状況",
+  "reservationsEmpty": "予約はありません。ロックされた変更を行うときに「予約する」を選ぶとここに並びます。",
+  "reservationCreated": "{time} に適用するよう予約しました",
+  "@reservationCreated": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "reservationAppliesIn": "{duration}後に自動で適用",
+  "@reservationAppliesIn": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "reservationApplyingSoon": "まもなく適用されます",
+  "reservationCancelAll": "すべて取り消し",
+  "reservationCancelAllConfirm": "予約をすべて取り消しますか？変更は適用されません。",
+  "reservationPendingCount": "予約 {count}件",
+  "@reservationPendingCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "reservationExists": "この項目はすでに予約済みです（{time} に適用）",
+  "@reservationExists": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "strictChoiceMessage": "この変更はストリクトモードで制限されています。待ち時間を過ごすか、後で適用するよう予約してください。",
+  "strictChoiceWaitNow": "今すぐ待つ",
+  "strictChoiceReserve": "予約する",
+  "strictLockRemoveLocked": "ロック対象からの削除は制限されています",
+  "backupIncludesHint": "設定とアプリのフロア配置を丸ごと書き出します。",
+  "backupCopy": "コピー",
+  "backupCopied": "バックアップをクリップボードにコピーしました",
+  "backupPaste": "クリップボードから貼り付け",
+  "restoreDone": "{count}個のアプリ配置を復元しました",
+  "@restoreDone": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "restoreFailed": "バックアップの形式が正しくありません",
+  "emergencyLimitLocked": "緊急使用の制限設定は変更できません",
+  "strictLockAddedCount": "{count}個をロック対象に追加しました",
+  "@strictLockAddedCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "strictLockRemoveLabel": "フロア移動ロックの解除（{count}個）",
+  "@strictLockRemoveLabel": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "strictLockAddImmediateHint": "追加はすぐ反映されます。解除は待ち時間か予約が必要です。",
+  "scheduleTemplateLabel": "保存されたスケジュール（アプリ0個）",
+  "cancelKeepScheduleTitle": "キャンセルしますか？",
+  "cancelKeepScheduleMessage": "キャンセルすると元のスケジュール（モード）のままになります。ノーマルへは移行しません。",
+  "cancelKeepScheduleBack": "フロアを選ぶ",
+  "scheduleKeepTitle": "スケジュールを残しますか？",
+  "scheduleKeepMessage": "このスケジュールを使うアプリが無くなります。残すと「既存のスケジュールに追加」やカスタム一覧に残ります。",
+  "scheduleKeepKeep": "残す",
+  "scheduleKeepDelete": "消す",
+  "scheduleAddToExisting": "既存のスケジュールに追加",
+  "scheduleCreateNew": "新しくスケジュールを作成",
+  "reservationTempMoveLabel": "{app} を {floor} へ一時移動",
+  "@reservationTempMoveLabel": {
+    "placeholders": { "app": { "type": "String" }, "floor": { "type": "String" } }
+  },
+  "reservationTempMoveBulkLabel": "{count}個を一時移動",
+  "@reservationTempMoveBulkLabel": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "reservationScheduleLabel": "{count}個をスケジュールへ",
+  "@reservationScheduleLabel": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "reservationFloorMoveBulkLabel": "{count}個のフロアを移動",
+  "@reservationFloorMoveBulkLabel": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "reservationFloorMoveLabel": "{app} を {floor} へ移動",
+  "@reservationFloorMoveLabel": {
+    "placeholders": { "app": { "type": "String" }, "floor": { "type": "String" } }
+  },
+  "reservationStrictToggleLabel": "{name} を{state}にする",
+  "@reservationStrictToggleLabel": {
+    "placeholders": { "name": { "type": "String" }, "state": { "type": "String" } }
+  },
+  "emergencyRemainingCount": "{period} 残り {remaining}/{cap}回",
+  "@emergencyRemainingCount": {
+    "placeholders": {
+      "period": { "type": "String" },
+      "remaining": { "type": "int" },
+      "cap": { "type": "int" }
+    }
+  }
 }

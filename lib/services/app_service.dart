@@ -1,7 +1,7 @@
 import 'dart:math';
-import 'package:device_apps/device_apps.dart';
 import 'package:hive/hive.dart';
 import '../models/app_config.dart';
+import 'native_service.dart';
 
 class AppService {
   static const String _boxName = 'app_configs';
@@ -10,12 +10,14 @@ class AppService {
   /// Known system apps that should always be included when installed,
   /// even if they lack a standard launch intent.
   static const _forceIncludeApps = [
-    'com.sec.android.app.myfiles',      // Samsung My Files
-    'com.samsung.android.app.myfiles',  // Samsung My Files (alt package)
-    'com.android.documentsui',           // AOSP Files
+    'com.sec.android.app.myfiles', // Samsung My Files
+    'com.samsung.android.app.myfiles', // Samsung My Files (alt package)
+    'com.android.documentsui', // AOSP Files
     'com.google.android.apps.nbu.files', // Google Files
     'com.mi.android.globalFileexplorer', // Xiaomi File Manager
   ];
+
+  final NativeService _native = NativeService();
 
   Future<void> init() async {
     _box = await Hive.openBox<AppConfig>(_boxName);
@@ -23,66 +25,72 @@ class AppService {
 
   Box<AppConfig> get box => _box;
 
+  /// ネイティブから返るアプリ情報 {packageName, appName, systemApp} のラベル。
+  String _appLabel(Map<String, dynamic> app) {
+    final name = (app['appName'] as String? ?? '').trim();
+    final pkg = app['packageName'] as String? ?? '';
+    return name.isNotEmpty ? name : pkg;
+  }
+
+  String _configLabel(AppConfig app) {
+    final custom = app.customName?.trim();
+    if (custom?.isNotEmpty == true) return custom!;
+    final name = app.appName.trim();
+    return name.isNotEmpty ? name : app.packageName;
+  }
+
   Future<List<AppConfig>> getAllApps({int defaultFloor = 1}) async {
-    // 1. Get all apps with launch intent (the normal set)
-    final launchable = await DeviceApps.getInstalledApplications(
-      includeSystemApps: true,
-      onlyAppsWithLaunchIntent: true,
-    );
     final seen = <String>{};
     final List<AppConfig> result = [];
-    for (final app in launchable) {
-      seen.add(app.packageName);
-      final existing = _box.get(app.packageName);
+
+    /// 保存済み設定があればそれを、無ければ既定フロアで新規に作る。
+    Future<void> add(Map<String, dynamic> app) async {
+      final pkg = app['packageName'] as String? ?? '';
+      if (pkg.isEmpty || !seen.add(pkg)) return;
+      final existing = _box.get(pkg);
       if (existing != null) {
+        if (existing.appName.trim().isEmpty) {
+          existing.appName = _appLabel(app);
+          await existing.save();
+        }
         result.add(existing);
       } else {
-        result.add(AppConfig(
-          packageName: app.packageName,
-          appName: app.appName,
-          floor: defaultFloor,
-          isEmergency: false,
-        ));
-      }
-    }
-
-    // 2. Get ALL installed apps (including those without launch intent)
-    //    to find system apps like Samsung My Files
-    final allInstalled = await DeviceApps.getInstalledApplications(
-      includeSystemApps: true,
-      onlyAppsWithLaunchIntent: false,
-    );
-    for (final app in allInstalled) {
-      if (seen.contains(app.packageName)) continue;
-      // Only include if it's in our force-include list
-      if (_forceIncludeApps.contains(app.packageName)) {
-        seen.add(app.packageName);
-        final existing = _box.get(app.packageName);
-        if (existing != null) {
-          result.add(existing);
-        } else {
-          result.add(AppConfig(
-            packageName: app.packageName,
-            appName: app.appName,
+        result.add(
+          AppConfig(
+            packageName: pkg,
+            appName: _appLabel(app),
             floor: defaultFloor,
             isEmergency: false,
-          ));
-        }
+          ),
+        );
       }
     }
 
-    // 3. Include any previously saved configs whose apps are still installed
+    // 1. ランチャーから起動できるアプリ（通常の一覧）
+    for (final app in await _native.getInstalledApps()) {
+      await add(app);
+    }
+
+    // 2. 起動インテントを持たないシステムアプリのうち、明示的に拾うもの
+    //    （Galaxy の「マイファイル」など）
+    final allInstalled =
+        await _native.getInstalledApps(onlyWithLaunchIntent: false);
+    final installedPkgs = {
+      for (final app in allInstalled) app['packageName'] as String? ?? '',
+    };
+    for (final app in allInstalled) {
+      if (_forceIncludeApps.contains(app['packageName'])) await add(app);
+    }
+
+    // 3. 保存済み設定のうち、まだ端末に入っているもの
     for (final key in _box.keys) {
       final pkg = key.toString();
-      if (seen.contains(pkg)) continue;
-      final app = await DeviceApps.getApp(pkg);
-      if (app != null) {
-        seen.add(pkg);
-        result.add(_box.get(pkg)!);
-      }
+      if (seen.contains(pkg) || !installedPkgs.contains(pkg)) continue;
+      seen.add(pkg);
+      result.add(_box.get(pkg)!);
     }
 
-    result.sort((a, b) => a.appName.compareTo(b.appName));
+    result.sort((a, b) => _configLabel(a).compareTo(_configLabel(b)));
     return result;
   }
 
@@ -91,13 +99,13 @@ class AppService {
   }
 
   Future<void> launchApp(String packageName) async {
-    await DeviceApps.openApp(packageName);
+    await _native.launchApp(packageName);
   }
 
   // ── Temporary floor override ────────────────────────────────────────
   // The "今日だけ 1F に" pattern. Saves the original floor in
   // permanentFloor and writes the temporary value to floor; once
-  // temporaryFloorExpiry passes, expireTemporaryFloors() restores
+  // temporaryFloorExpiry passes, the home screen's _tick restores
   // floor from permanentFloor. UI code reads `app.floor` unchanged.
 
   /// Apply a temporary floor change to [app] that auto-reverts at
@@ -141,29 +149,6 @@ class AppService {
     await saveConfig(app);
   }
 
-  /// Walks every app and restores [floor] from [permanentFloor] when
-  /// the override expiry has passed. Called from a periodic timer on
-  /// the home screen so reverts happen in the foreground without
-  /// requiring native AlarmManager wakeups. Returns the packages
-  /// whose floor changed.
-  Future<List<String>> expireTemporaryFloors() async {
-    final now = DateTime.now();
-    final reverted = <String>[];
-    for (final app in _box.values) {
-      final exp = app.temporaryFloorExpiry;
-      if (exp == null) continue;
-      if (exp.isAfter(now)) continue;
-      if (app.permanentFloor != null) {
-        app.floor = app.permanentFloor!;
-      }
-      app.permanentFloor = null;
-      app.temporaryFloorExpiry = null;
-      await app.save();
-      reverted.add(app.packageName);
-    }
-    return reverted;
-  }
-
   /// Resolves the apps that populate the persistent quick-launcher
   /// notification, given a [source]:
   /// - 'favorites':  isPinned apps (alphabetical)
@@ -190,48 +175,50 @@ class AppService {
           ? all.where((a) => a.floor == 1)
           : all.where((a) => a.isPinned);
       selected = filtered.toList()
-        ..sort((a, b) =>
-            a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
+        ..sort(
+          (a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()),
+        );
     }
 
     return selected
-        .map((a) => {
-              'packageName': a.packageName,
-              'label': (a.customName != null && a.customName!.isNotEmpty)
-                  ? a.customName!
-                  : a.appName,
-            })
+        .map(
+          (a) => {
+            'packageName': a.packageName,
+            'label': (a.customName != null && a.customName!.isNotEmpty)
+                ? a.customName!
+                : a.appName,
+          },
+        )
         .toList();
   }
 
   /// Randomly assigns floors 1–10 to every non-pinned app.
-  Future<Map<String, int>> buildRandomFloorMap() async {
-    final installed = await DeviceApps.getInstalledApplications(
-      includeSystemApps: true,
-      onlyAppsWithLaunchIntent: true,
-    );
+  Future<Map<String, int>> buildRandomFloorMap({List<int>? floors}) async {
+    final choices = (floors == null || floors.isEmpty)
+        ? List<int>.generate(10, (i) => i + 1)
+        : floors;
+    final installed = await _native.getInstalledApps();
     final rng = Random();
     final result = <String, int>{};
     for (final app in installed) {
-      final cfg = _box.get(app.packageName);
+      final pkg = app['packageName'] as String? ?? '';
+      if (pkg.isEmpty) continue;
+      final cfg = _box.get(pkg);
       if (cfg != null && cfg.isPinned) continue;
-      result[app.packageName] = rng.nextInt(10) + 1;
+      result[pkg] = choices[rng.nextInt(choices.length)];
     }
     return result;
   }
 
-  /// Applies a floor map directly to the box (used when lock mode is OFF).
+  /// Applies a floor map directly to the box.
   Future<void> applyFloorMap(Map<String, int> floorMap) async {
-    final installed = await DeviceApps.getInstalledApplications(
-      includeSystemApps: true,
-      onlyAppsWithLaunchIntent: true,
-    );
+    final installed = await _native.getInstalledApps();
     for (final app in installed) {
-      final newFloor = floorMap[app.packageName];
-      if (newFloor == null) continue;
-      final cfg = _box.get(app.packageName) ??
-          AppConfig(
-              packageName: app.packageName, appName: app.appName, floor: 1);
+      final pkg = app['packageName'] as String? ?? '';
+      final newFloor = floorMap[pkg];
+      if (pkg.isEmpty || newFloor == null) continue;
+      final cfg = _box.get(pkg) ??
+          AppConfig(packageName: pkg, appName: _appLabel(app), floor: 1);
       cfg.floor = newFloor;
       await _box.put(cfg.packageName, cfg);
     }

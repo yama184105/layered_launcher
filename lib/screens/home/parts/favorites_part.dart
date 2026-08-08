@@ -103,13 +103,13 @@ extension FavoritesMethods on _HomeScreenState {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               children: [
-                Icon(isOpen ? Icons.folder_open : Icons.folder, color: _fontColor.withOpacity(0.54), size: 16),
+                Icon(isOpen ? Icons.folder_open : Icons.folder, color: _fontColor.withValues(alpha: 0.54), size: 16),
                 const SizedBox(width: 8),
-                Text(folderName, style: TextStyle(color: _fontColor.withOpacity(0.8), fontSize: 14)),
+                Text(folderName, style: TextStyle(color: _fontColor.withValues(alpha: 0.8), fontSize: 14)),
                 const SizedBox(width: 4),
-                Text('(${folderApps.length})', style: TextStyle(color: _fontColor.withOpacity(0.4), fontSize: 11)),
+                Text('(${folderApps.length})', style: TextStyle(color: _fontColor.withValues(alpha: 0.4), fontSize: 11)),
                 const Spacer(),
-                Icon(isOpen ? Icons.expand_less : Icons.expand_more, color: _fontColor.withOpacity(0.4), size: 14),
+                Icon(isOpen ? Icons.expand_less : Icons.expand_more, color: _fontColor.withValues(alpha: 0.4), size: 14),
               ],
             ),
           ),
@@ -183,7 +183,7 @@ extension FavoritesMethods on _HomeScreenState {
           children: [
             ReorderableDragStartListener(
               index: index,
-              child: Icon(Icons.drag_handle, color: textColor.withOpacity(0.38), size: 20),
+              child: Icon(Icons.drag_handle, color: textColor.withValues(alpha: 0.38), size: 20),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -193,7 +193,7 @@ extension FavoritesMethods on _HomeScreenState {
               onTap: () => _showAppBottomSheet(app, floor),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Icon(Icons.more_vert, color: textColor.withOpacity(0.38), size: 20),
+                child: Icon(Icons.more_vert, color: textColor.withValues(alpha: 0.38), size: 20),
               ),
             ),
             GestureDetector(
@@ -207,7 +207,7 @@ extension FavoritesMethods on _HomeScreenState {
               },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                child: Icon(Icons.close, color: textColor.withOpacity(0.38), size: 20),
+                child: Icon(Icons.close, color: textColor.withValues(alpha: 0.38), size: 20),
               ),
             ),
           ],

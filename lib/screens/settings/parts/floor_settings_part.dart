@@ -23,34 +23,55 @@ extension FloorSettingsMethods on _SettingsScreenState {
                   final uFloor = underF - i; // BnF -> B1F
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.15),
-                      border: Border.all(color: Colors.blueAccent.withOpacity(0.5)),
+                      color: Colors.blue.withValues(alpha: 0.15),
+                      border: Border.all(
+                        color: Colors.blueAccent.withValues(alpha: 0.5),
+                      ),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text('B${uFloor}F',
-                        style: const TextStyle(color: Colors.blueAccent, fontSize: 11)),
+                    child: Text(
+                      'B${uFloor}F',
+                      style: const TextStyle(
+                        color: Colors.blueAccent,
+                        fontSize: 11,
+                      ),
+                    ),
                   );
                 }),
                 if (underF > 0)
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 4),
-                    child: Text('│', style: TextStyle(color: Colors.white24, fontSize: 16)),
+                    child: Text(
+                      '│',
+                      style: TextStyle(color: Colors.white24, fontSize: 16),
+                    ),
                   ),
                 // Above-ground floors
                 ...List.generate(maxF, (i) {
                   final floor = i + 1;
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 2),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
+                      color: Colors.white.withValues(alpha: 0.08),
                       border: Border.all(color: Colors.white24),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Text('${floor}F',
-                        style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                    child: Text(
+                      '${floor}F',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                      ),
+                    ),
                   );
                 }),
               ],
@@ -68,34 +89,66 @@ extension FloorSettingsMethods on _SettingsScreenState {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(S.of(context).maxFloorLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(
+                    S.of(context).maxFloorLabel,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
                   const SizedBox(width: 8),
                   _rangeStepButton(Icons.remove, () async {
-                    if (maxF > 1) { await ss.setMaxFloors(maxF - 1); setState(() {}); }
+                    if (maxF > 1) {
+                      await ss.setMaxFloors(maxF - 1);
+                      setState(() {});
+                    }
                   }),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text('${maxF}F', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+                    child: Text(
+                      '${maxF}F',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                   _rangeStepButton(Icons.add, () async {
-                    if (maxF < 20) { await ss.setMaxFloors(maxF + 1); setState(() {}); }
+                    if (maxF < 20) {
+                      await ss.setMaxFloors(maxF + 1);
+                      setState(() {});
+                    }
                   }),
                 ],
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(S.of(context).undergroundLabel, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(
+                    S.of(context).undergroundLabel,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
                   const SizedBox(width: 8),
                   _rangeStepButton(Icons.remove, () async {
-                    if (underF > 0) { await ss.setUndergroundFloors(underF - 1); setState(() {}); }
+                    if (underF > 0) {
+                      await ss.setUndergroundFloors(underF - 1);
+                      setState(() {});
+                    }
                   }),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text('B${underF}F', style: const TextStyle(color: Colors.blueAccent, fontSize: 13, fontWeight: FontWeight.w500)),
+                    child: Text(
+                      'B${underF}F',
+                      style: const TextStyle(
+                        color: Colors.blueAccent,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                   _rangeStepButton(Icons.add, () async {
-                    if (underF < 10) { await ss.setUndergroundFloors(underF + 1); setState(() {}); }
+                    if (underF < 10) {
+                      await ss.setUndergroundFloors(underF + 1);
+                      setState(() {});
+                    }
                   }),
                 ],
               ),
@@ -110,7 +163,8 @@ extension FloorSettingsMethods on _SettingsScreenState {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 28, height: 28,
+        width: 28,
+        height: 28,
         decoration: BoxDecoration(
           border: Border.all(color: Colors.white24),
           borderRadius: BorderRadius.circular(4),
@@ -125,7 +179,8 @@ extension FloorSettingsMethods on _SettingsScreenState {
     final ss = _ss;
 
     // ── Animation summary ──
-    final typeLabel = {
+    final typeLabel =
+        {
           'slide': s.animTypeSlide,
           'stair': s.animTypeStair,
           'fade': s.animTypeFade,
@@ -151,10 +206,20 @@ extension FloorSettingsMethods on _SettingsScreenState {
         children: [_buildAnimationSection()],
       ),
       _rowDivider,
-      _settingRow(s.singleFolderMode, ss.singleFolderMode ? s.actionEnabled : s.actionDisabled, () async {
-        final v = await _showBoolDialog(s.singleFolderMode, ss.singleFolderMode);
-        if (v != null) { await ss.setSingleFolderMode(v); setState(() {}); }
-      }),
+      _settingRow(
+        s.singleFolderMode,
+        ss.singleFolderMode ? s.actionEnabled : s.actionDisabled,
+        () async {
+          final v = await _showBoolDialog(
+            s.singleFolderMode,
+            ss.singleFolderMode,
+          );
+          if (v != null) {
+            await ss.setSingleFolderMode(v);
+            setState(() {});
+          }
+        },
+      ),
       _rowDivider,
       _expandableRow(
         key: 'kaiso_floorrange',
@@ -172,10 +237,14 @@ extension FloorSettingsMethods on _SettingsScreenState {
         children: [
           SwitchListTile(
             contentPadding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-            title: Text(s.recentlyAddedShow,
-                style: const TextStyle(color: Colors.white, fontSize: 14)),
-            subtitle: Text(ss.showRecentlyAdded ? s.actionEnabled : s.actionDisabled,
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            title: Text(
+              s.recentlyAddedShow,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
+            subtitle: Text(
+              ss.showRecentlyAdded ? s.actionEnabled : s.actionDisabled,
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
             activeColor: Colors.tealAccent,
             value: ss.showRecentlyAdded,
             onChanged: (v) async {
@@ -191,14 +260,22 @@ extension FloorSettingsMethods on _SettingsScreenState {
                 children: [
                   Row(
                     children: [
-                      Text(s.judgmentDaysLabel,
-                          style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      Text(
+                        s.judgmentDaysLabel,
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                        ),
+                      ),
                       const SizedBox(width: 8),
-                      Text(s.daysValue(ss.recentlyAddedDays),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500)),
+                      Text(
+                        s.daysValue(ss.recentlyAddedDays),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
                   Slider(
@@ -219,101 +296,163 @@ extension FloorSettingsMethods on _SettingsScreenState {
         ],
       ),
       _rowDivider,
-      _settingRow(s.alphabetIndex, ss.showAlphabetIndex ? s.actionEnabled : s.actionDisabled, () async {
-        final v = await _showBoolDialog(s.alphabetIndex, ss.showAlphabetIndex);
-        if (v != null) { await ss.setShowAlphabetIndex(v); setState(() {}); }
-      }),
+      _settingRow(
+        s.alphabetIndex,
+        ss.showAlphabetIndex ? s.actionEnabled : s.actionDisabled,
+        () async {
+          final v = await _showBoolDialog(
+            s.alphabetIndex,
+            ss.showAlphabetIndex,
+          );
+          if (v != null) {
+            await ss.setShowAlphabetIndex(v);
+            setState(() {});
+          }
+        },
+      ),
       _rowDivider,
-      _settingRow(s.defaultNewAppFloor, floorLabel(ss.defaultNewAppFloor), () async {
-        final ug = ss.undergroundFloors;
-        final maxF = ss.maxFloors;
-        final floors = [
-          for (int i = ug; i >= 1; i--) -i,
-          for (int i = 1; i <= maxF; i++) i,
-        ];
-        final v = await showDialog<int>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF1A1A1A),
-            title: Text(S.of(ctx).defaultNewAppFloor,
-                style: const TextStyle(color: Colors.white, fontSize: 14)),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView(
-                shrinkWrap: true,
-                children: floors.map((f) => ListTile(
-                  dense: true,
-                  title: Text(floorLabel(f),
-                      style: TextStyle(
-                          color: f == ss.defaultNewAppFloor ? Colors.tealAccent : Colors.white,
-                          fontSize: 14)),
-                  trailing: f == ss.defaultNewAppFloor
-                      ? const Icon(Icons.check, color: Colors.tealAccent, size: 18)
-                      : null,
-                  onTap: () => Navigator.pop(ctx, f),
-                )).toList(),
+      _settingRow(
+        s.defaultNewAppFloor,
+        floorLabel(ss.defaultNewAppFloor),
+        () async {
+          final ug = ss.undergroundFloors;
+          final maxF = ss.maxFloors;
+          final floors = [
+            for (int i = ug; i >= 1; i--) -i,
+            for (int i = 1; i <= maxF; i++) i,
+          ];
+          final v = await showDialog<int>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF1A1A1A),
+              title: Text(
+                S.of(ctx).defaultNewAppFloor,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
               ),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: floors
+                      .map(
+                        (f) => ListTile(
+                          dense: true,
+                          title: Text(
+                            floorLabel(f),
+                            style: TextStyle(
+                              color: f == ss.defaultNewAppFloor
+                                  ? Colors.tealAccent
+                                  : Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                          trailing: f == ss.defaultNewAppFloor
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Colors.tealAccent,
+                                  size: 18,
+                                )
+                              : null,
+                          onTap: () => Navigator.pop(ctx, f),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    S.of(ctx).actionCancel,
+                    style: const TextStyle(color: Colors.white54),
+                  ),
+                ),
+              ],
             ),
-            actions: [TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)))],
-          ),
-        );
-        if (v != null) { await ss.setDefaultNewAppFloor(v); setState(() {}); }
-      }),
+          );
+          if (v != null) {
+            await ss.setDefaultNewAppFloor(v);
+            setState(() {});
+          }
+        },
+      ),
     ];
   }
-
 
   Future<void> _showBulkBgColorPicker() async {
     final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(S.of(ctx).bulkBackgroundChange, style: const TextStyle(color: Colors.white, fontSize: 15)),
+        title: Text(
+          S.of(ctx).bulkBackgroundChange,
+          style: const TextStyle(color: Colors.white, fontSize: 15),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(S.of(ctx).bulkApplyAllMessage,
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            Text(
+              S.of(ctx).bulkApplyAllMessage,
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
             const SizedBox(height: 12),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.palette, color: Colors.white54),
-              title: Text(S.of(ctx).selectColor, style: const TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(
+                S.of(ctx).selectColor,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
               onTap: () => Navigator.pop(ctx, 'color'),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.image, color: Colors.white54),
-              title: Text(S.of(ctx).selectWallpaper, style: const TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(
+                S.of(ctx).selectWallpaper,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
               onTap: () => Navigator.pop(ctx, 'wallpaper'),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.auto_awesome, color: Colors.white54),
-              title: Text(S.of(ctx).defaultWallpaper, style: const TextStyle(color: Colors.white, fontSize: 13)),
+              title: Text(
+                S.of(ctx).defaultWallpaper,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
               onTap: () => Navigator.pop(ctx, 'default_wallpaper'),
             ),
             if (_ss.homeWallpaper != null) ...[
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.opacity, color: Colors.white54),
-                title: Text(S.of(ctx).changeWallpaperOpacity, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                title: Text(
+                  S.of(ctx).changeWallpaperOpacity,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                ),
                 onTap: () => Navigator.pop(ctx, 'opacity'),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.delete, color: Colors.redAccent),
-                title: Text(S.of(ctx).deleteWallpaper, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                title: Text(
+                  S.of(ctx).deleteWallpaper,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                ),
                 onTap: () => Navigator.pop(ctx, 'delete'),
               ),
             ],
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx),
-              child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              S.of(ctx).actionCancel,
+              style: const TextStyle(color: Colors.white54),
+            ),
+          ),
         ],
       ),
     );
@@ -370,7 +509,10 @@ extension FloorSettingsMethods on _SettingsScreenState {
     // Apply color to home
     await _ss.setHomeBackground(color);
     // Apply to all floors
-    final colors = List<int?>.filled(_ss.maxFloors, color == Colors.transparent ? null : color.value);
+    final colors = List<int?>.filled(
+      _ss.maxFloors,
+      color == Colors.transparent ? null : color.value,
+    );
     await _ss.applyThemePreset(colors);
     // Apply to settings background
     await _ss.setSettingsBackground(color);
@@ -380,6 +522,13 @@ extension FloorSettingsMethods on _SettingsScreenState {
   Future<void> _bulkApplyWallpaper() async {
     final path = await _pickAndCropWallpaper(context);
     if (path == null || !mounted) return;
+    final confirmed = await _confirmWallpaperPreview(
+      context,
+      path: path,
+      title: S.of(context).bulkBackgroundChange,
+      opacity: _ss.homeOverlayOpacity,
+    );
+    if (!confirmed || !mounted) return;
     // Clear all existing wallpapers first
     await _clearAllWallpapers();
     // Apply new wallpaper to home
@@ -408,21 +557,124 @@ class _FloorBgScreen extends StatefulWidget {
 class _FloorBgScreenState extends State<_FloorBgScreen> {
   SettingsService get _ss => widget.settingsService;
 
+  Future<bool> _confirmWallpaperPreview({
+    required String path,
+    required String title,
+    double opacity = 0.5,
+  }) async {
+    final textColor = _ss.effectiveFontColor;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Text(
+          title,
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 360,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.file(File(path), fit: BoxFit.cover),
+                Container(color: Colors.black.withValues(alpha: opacity)),
+                Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Preview',
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'App name sample',
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.88),
+                          fontSize: _ss.fontSize,
+                          fontFamily: _ss.fontFamily.isEmpty
+                              ? null
+                              : _ss.fontFamily,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        floorLabel(1),
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.7),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              S.of(ctx).actionCancel,
+              style: const TextStyle(color: Colors.white54),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              S.of(ctx).actionSave,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
   List<(int, String)> _presetColorsFor(BuildContext ctx) {
     final s = S.of(ctx);
     return [
-      (0xFF000000, s.colorPureBlack), (0xFF1A1A1A, s.colorCharcoal), (0xFF333333, s.colorDarkGray),
-      (0xFF666666, s.colorMediumGray), (0xFFAAAAAA, s.colorLightGray), (0xFFFFFFFF, s.colorWhite),
-      (0xFF5C0000, s.colorDarkRed), (0xFFB22222, s.colorRedDeep), (0xFF8B2500, s.colorOrangeRed),
-      (0xFF7A3500, s.colorDarkOrange), (0xFF4A2800, s.colorBrown), (0xFF4A0020, s.colorBurgundy),
-      (0xFF000428, s.colorDarkNavy), (0xFF001F5B, s.colorNavy), (0xFF0A0A5C, s.colorDarkBlue),
-      (0xFF191970, s.colorMidnightBlue), (0xFF003333, s.colorTeal), (0xFF003D3D, s.colorDarkCyan),
-      (0xFF0A2E0A, s.colorForestGreen), (0xFF1A3D1A, s.colorDarkGreen),
-      (0xFF2A3000, s.colorOlive), (0xFF004D00, s.colorHunterGreen),
-      (0xFF1E0033, s.colorDarkPurple), (0xFF3D0066, s.colorPurple),
-      (0xFF1A0066, s.colorIndigo), (0xFF3D003D, s.colorPlum),
-      (0xFF2D0015, s.colorDarkMaroon), (0xFF3D001A, s.colorDarkWine),
-      (0xFF2D1A2D, s.colorDarkMauve), (0xFF1A1A2E, s.colorDarkSlate), (0xFF1A2E1A, s.colorDarkMoss),
+      (0xFF000000, s.colorPureBlack),
+      (0xFF1A1A1A, s.colorCharcoal),
+      (0xFF333333, s.colorDarkGray),
+      (0xFF666666, s.colorMediumGray),
+      (0xFFAAAAAA, s.colorLightGray),
+      (0xFFFFFFFF, s.colorWhite),
+      (0xFF5C0000, s.colorDarkRed),
+      (0xFFB22222, s.colorRedDeep),
+      (0xFF8B2500, s.colorOrangeRed),
+      (0xFF7A3500, s.colorDarkOrange),
+      (0xFF4A2800, s.colorBrown),
+      (0xFF4A0020, s.colorBurgundy),
+      (0xFF000428, s.colorDarkNavy),
+      (0xFF001F5B, s.colorNavy),
+      (0xFF0A0A5C, s.colorDarkBlue),
+      (0xFF191970, s.colorMidnightBlue),
+      (0xFF003333, s.colorTeal),
+      (0xFF003D3D, s.colorDarkCyan),
+      (0xFF0A2E0A, s.colorForestGreen),
+      (0xFF1A3D1A, s.colorDarkGreen),
+      (0xFF2A3000, s.colorOlive),
+      (0xFF004D00, s.colorHunterGreen),
+      (0xFF1E0033, s.colorDarkPurple),
+      (0xFF3D0066, s.colorPurple),
+      (0xFF1A0066, s.colorIndigo),
+      (0xFF3D003D, s.colorPlum),
+      (0xFF2D0015, s.colorDarkMaroon),
+      (0xFF3D001A, s.colorDarkWine),
+      (0xFF2D1A2D, s.colorDarkMauve),
+      (0xFF1A1A2E, s.colorDarkSlate),
+      (0xFF1A2E1A, s.colorDarkMoss),
     ];
   }
 
@@ -443,9 +695,17 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
     if (xfile == null || !mounted) return;
     final result = await Navigator.push<String>(
       context,
-      MaterialPageRoute(builder: (_) => _WallpaperCropScreen(imagePath: xfile.path)),
+      MaterialPageRoute(
+        builder: (_) => _WallpaperCropScreen(imagePath: xfile.path),
+      ),
     );
     if (result != null) {
+      final confirmed = await _confirmWallpaperPreview(
+        path: result,
+        title: floorLabel(floor),
+        opacity: _ss.floorOverlayOpacity(floor),
+      );
+      if (!confirmed || !mounted) return;
       await _ss.setFloorWallpaper(floor, result);
       if (mounted) setState(() {});
     }
@@ -472,9 +732,17 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
     if (xfile == null || !mounted) return;
     final result = await Navigator.push<String>(
       context,
-      MaterialPageRoute(builder: (_) => _WallpaperCropScreen(imagePath: xfile.path)),
+      MaterialPageRoute(
+        builder: (_) => _WallpaperCropScreen(imagePath: xfile.path),
+      ),
     );
     if (result != null) {
+      final confirmed = await _confirmWallpaperPreview(
+        path: result,
+        title: S.of(context).floorBackground,
+        opacity: _ss.homeOverlayOpacity,
+      );
+      if (!confirmed || !mounted) return;
       for (final f in _allFloors) {
         await _ss.setFloorWallpaper(f, result);
       }
@@ -493,21 +761,40 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: Text(S.of(ctx).bulkOpacityTitle, style: const TextStyle(color: Colors.white, fontSize: 14)),
+          title: Text(
+            S.of(ctx).bulkOpacityTitle,
+            style: const TextStyle(color: Colors.white, fontSize: 14),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${(opacity * 100).round()}%', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              Text(
+                '${(opacity * 100).round()}%',
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
               Slider(
-                value: opacity, min: 0, max: 1, divisions: 20,
-                activeColor: Colors.white, inactiveColor: Colors.white24,
+                value: opacity,
+                min: 0,
+                max: 1,
+                divisions: 20,
+                activeColor: Colors.white,
+                inactiveColor: Colors.white24,
                 onChanged: (v) => setInner(() => opacity = v),
               ),
-              Text(S.of(ctx).opacityScaleHint, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              Text(
+                S.of(ctx).opacityScaleHint,
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+              ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                S.of(ctx).actionCancel,
+                style: const TextStyle(color: Colors.white54),
+              ),
+            ),
             TextButton(
               onPressed: () async {
                 for (final f in _allFloors) {
@@ -515,7 +802,10 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                 }
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: Text(S.of(ctx).actionApply, style: const TextStyle(color: Colors.white)),
+              child: Text(
+                S.of(ctx).actionApply,
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -533,7 +823,10 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D0D0D),
         foregroundColor: Colors.white,
-        title: Text(s.floorBackground, style: const TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text(
+          s.floorBackground,
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -544,8 +837,14 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(s.bulkAllFloorChange,
-                    style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                Text(
+                  s.bulkAllFloorChange,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -554,10 +853,16 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white70,
                         side: const BorderSide(color: Colors.white24),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                       ),
                       icon: const Icon(Icons.palette, size: 14),
-                      label: Text(s.bulkColorSet, style: const TextStyle(fontSize: 12)),
+                      label: Text(
+                        s.bulkColorSet,
+                        style: const TextStyle(fontSize: 12),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
@@ -565,10 +870,16 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white70,
                         side: const BorderSide(color: Colors.white24),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                       ),
                       icon: const Icon(Icons.image, size: 14),
-                      label: Text(s.bulkWallpaperSet, style: const TextStyle(fontSize: 12)),
+                      label: Text(
+                        s.bulkWallpaperSet,
+                        style: const TextStyle(fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
@@ -578,10 +889,16 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white70,
                     side: const BorderSide(color: Colors.white24),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                   ),
                   icon: const Icon(Icons.opacity, size: 14),
-                  label: Text(s.bulkOpacitySet, style: const TextStyle(fontSize: 12)),
+                  label: Text(
+                    s.bulkOpacitySet,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
               ],
             ),
@@ -590,110 +907,164 @@ class _FloorBgScreenState extends State<_FloorBgScreen> {
           const SizedBox(height: 4),
           // ── Per-floor settings ─────────────────────────────────
           ...floors.map((floor) {
-          final label = floorLabel(floor);
-          final bgVal = _ss.floorCustomBgValue(floor);
-          final wallpaper = _ss.floorWallpaper(floor);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    // Color swatch
-                    Container(
-                      width: 24, height: 24,
-                      decoration: BoxDecoration(
-                        color: bgVal != null ? Color(bgVal) : Colors.transparent,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white38),
-                      ),
+            final label = floorLabel(floor);
+            final bgVal = _ss.floorCustomBgValue(floor);
+            final wallpaper = _ss.floorWallpaper(floor);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        bgVal != null
-                            ? (presetColors.where((p) => p.$1 == bgVal).map((p) => p.$2).firstOrNull
-                                ?? '#${bgVal.toRadixString(16).padLeft(8, '0').substring(2)}')
-                            : s.noColorSet,
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
-                      ),
-                    ),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () => _pickColor(floor),
-                      child: Text(s.selectColor, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                    ),
-                    if (bgVal != null)
-                      GestureDetector(
-                        onTap: () async { await _ss.setFloorCustomBgValue(floor, null); setState(() {}); },
-                        child: const Icon(Icons.restart_alt, color: Colors.white38, size: 18),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    if (wallpaper != null && wallpaper.isNotEmpty) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Image.file(
-                          File(wallpaper),
-                          height: 40, width: 60,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      // Color swatch
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: bgVal != null
+                              ? Color(bgVal)
+                              : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white38),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Slider(
-                          value: _ss.floorOverlayOpacity(floor),
-                          min: 0, max: 1, divisions: 20,
-                          activeColor: Colors.white, inactiveColor: Colors.white24,
-                          onChanged: (v) async {
-                            await _ss.setFloorOverlayOpacity(floor, v);
-                            setState(() {});
-                          },
+                        child: Text(
+                          bgVal != null
+                              ? (presetColors
+                                        .where((p) => p.$1 == bgVal)
+                                        .map((p) => p.$2)
+                                        .firstOrNull ??
+                                    '#${bgVal.toRadixString(16).padLeft(8, '0').substring(2)}')
+                              : s.noColorSet,
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                       TextButton(
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        onPressed: () async { await _ss.setFloorWallpaper(floor, null); setState(() {}); },
-                        child: Text(s.actionDelete, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                        onPressed: () => _pickColor(floor),
+                        child: Text(
+                          s.selectColor,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
-                    ] else ...[
-                      const Expanded(child: SizedBox()),
+                      if (bgVal != null)
+                        GestureDetector(
+                          onTap: () async {
+                            await _ss.setFloorCustomBgValue(floor, null);
+                            setState(() {});
+                          },
+                          child: const Icon(
+                            Icons.restart_alt,
+                            color: Colors.white38,
+                            size: 18,
+                          ),
+                        ),
                     ],
-                    OutlinedButton.icon(
-                      onPressed: () => _pickWallpaper(floor),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white70,
-                        side: const BorderSide(color: Colors.white24),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (wallpaper != null && wallpaper.isNotEmpty) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.file(
+                            File(wallpaper),
+                            height: 40,
+                            width: 60,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink(),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Slider(
+                            value: _ss.floorOverlayOpacity(floor),
+                            min: 0,
+                            max: 1,
+                            divisions: 20,
+                            activeColor: Colors.white,
+                            inactiveColor: Colors.white24,
+                            onChanged: (v) async {
+                              await _ss.setFloorOverlayOpacity(floor, v);
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: () async {
+                            await _ss.setFloorWallpaper(floor, null);
+                            setState(() {});
+                          },
+                          child: Text(
+                            s.actionDelete,
+                            style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        const Expanded(child: SizedBox()),
+                      ],
+                      OutlinedButton.icon(
+                        onPressed: () => _pickWallpaper(floor),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white70,
+                          side: const BorderSide(color: Colors.white24),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                        ),
+                        icon: const Icon(Icons.image, size: 14),
+                        label: Text(
+                          s.selectWallpaper,
+                          style: const TextStyle(fontSize: 12),
+                        ),
                       ),
-                      icon: const Icon(Icons.image, size: 14),
-                      label: Text(s.selectWallpaper, style: const TextStyle(fontSize: 12)),
-                    ),
-                  ],
-                ),
-                const Divider(color: Colors.white12),
-              ],
-            ),
-          );
-        }).toList(),
+                    ],
+                  ),
+                  const Divider(color: Colors.white12),
+                ],
+              ),
+            );
+          }).toList(),
         ],
       ),
     );
   }
 }
-

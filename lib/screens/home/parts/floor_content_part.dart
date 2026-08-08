@@ -23,24 +23,31 @@ extension FloorContentMethods on _HomeScreenState {
           context: context,
           builder: (ctx) => AlertDialog(
             backgroundColor: const Color(0xFF1A1A1A),
-            title: Text(S.of(ctx).deviceAdminRequired,
-                style: const TextStyle(color: Colors.white)),
+            title: Text(
+              S.of(ctx).deviceAdminRequired,
+              style: const TextStyle(color: Colors.white),
+            ),
             content: Text(
               S.of(ctx).screenOffNeedsAdmin,
               style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(S.of(ctx).actionCancel,
-                      style: const TextStyle(color: Colors.white54))),
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  S.of(ctx).actionCancel,
+                  style: const TextStyle(color: Colors.white54),
+                ),
+              ),
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
                   _native.openDeviceAdminSettings();
                 },
-                child: Text(S.of(ctx).openSettings,
-                    style: const TextStyle(color: Colors.white)),
+                child: Text(
+                  S.of(ctx).openSettings,
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
             ],
           ),
@@ -50,8 +57,7 @@ extension FloorContentMethods on _HomeScreenState {
       // it's a package name
       final app = _allApps.firstWhere(
         (a) => a.packageName == action,
-        orElse: () =>
-            AppConfig(packageName: action, appName: action, floor: 1),
+        orElse: () => AppConfig(packageName: action, appName: action, floor: 1),
       );
       await _launchWithMindfulDelay(app);
     }
@@ -70,28 +76,62 @@ extension FloorContentMethods on _HomeScreenState {
 
   // ── mindful delay ─────────────────────────────────────────────
 
+  /// 起動時に「使用回数」を1増やす。使用回数はスケジュールのスロット種別
+  /// として使われるため、schedule モードのアプリでも（usageCount を使う
+  /// スケジュールなら）カウントを進める。カウントを進めたあとエンジンを
+  /// 再評価して、閾値の区間に応じたフロアへ即座に反映する。
   Future<void> _trackUsageCountFloor(AppConfig app) async {
     final ss = widget.settingsService;
-    final rules = ss.usageCountFloorRules(app.packageName);
-    if (rules.isEmpty) return;
-    final newCount = await ss.incrementDailyLaunchCount(app.packageName);
-    // Find highest threshold that newCount satisfies
-    final sorted = [...rules]..sort((a, b) => b['threshold']!.compareTo(a['threshold']!));
-    for (final rule in sorted) {
-      if (newCount >= rule['threshold']!) {
-        final targetFloor = rule['floor']!;
-        if (app.floor != targetFloor) {
-          app.floor = targetFloor;
-          await widget.appService.saveConfig(app);
-          if (mounted) setState(() {});
+    final mode = ss.effectiveAppMode(app.packageName);
+
+    if (mode == 'usageCount') {
+      // 旧: 使用回数モード単独。即時にフロアを適用（区間 = 最も高い閾値）。
+      final rules = ss.usageCountFloorRules(app.packageName);
+      if (rules.isEmpty) return;
+      final newCount = await ss.incrementDailyLaunchCount(app.packageName);
+      final sorted = [...rules]
+        ..sort((a, b) => b['threshold']!.compareTo(a['threshold']!));
+      for (final rule in sorted) {
+        if (newCount >= rule['threshold']!) {
+          if (app.floor != rule['floor']!) {
+            await widget.appService.setPermanentFloor(app, rule['floor']!);
+            if (mounted) setState(() {});
+          }
+          break;
         }
-        break;
       }
+      return;
+    }
+
+    // 新: スケジュールのスロットで使用回数を使う場合。カウントを進めて
+    // エンジンに再評価させる（アクティブなスロットが usageCount なら
+    // その区間のフロアへ移る）。
+    if (mode == 'schedule' && _scheduleUsesUsageCount(app.packageName)) {
+      await ss.incrementDailyLaunchCount(app.packageName);
+      await _processAutoMoves();
     }
   }
 
+  /// [pkg] のスケジュールが usageCount スロットを1つでも含むか。
+  bool _scheduleUsesUsageCount(String pkg) {
+    final raw = widget.settingsService.autoMoveSchedule(pkg);
+    for (final day in raw.values) {
+      if (day is! Map) continue;
+      final def = day['default'];
+      if (def is Map && def['type'] == 'usageCount') return true;
+      final slots = day['slots'];
+      if (slots is List) {
+        for (final slot in slots) {
+          if (slot is Map && slot['type'] == 'usageCount') return true;
+        }
+      }
+    }
+    return false;
+  }
+
   Future<void> _launchWithMindfulDelay(AppConfig app) async {
-    if (!app.mindfulDelay) {
+    // 全体スイッチ OFF ならアプリ個別の指定があっても遅延しない
+    if (!widget.settingsService.mindfulDelayEnabled || !app.mindfulDelay) {
       _launchedExternalApp = true;
       widget.appService.launchApp(app.packageName);
       _trackUsageCountFloor(app);
@@ -139,19 +179,26 @@ extension FloorContentMethods on _HomeScreenState {
             },
             child: AlertDialog(
               backgroundColor: const Color(0xFF1A1A1A),
-              title: Text(_displayName(app),
-                  style: const TextStyle(color: Colors.white)),
+              title: Text(
+                _displayName(app),
+                style: const TextStyle(color: Colors.white),
+              ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(S.of(ctx).confirmOpenApp,
-                      style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                  Text(
+                    S.of(ctx).confirmOpenApp,
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
                   const SizedBox(height: 12),
-                  Text(S.of(ctx).launchInSeconds(remaining),
-                      style: const TextStyle(
-                          color: Colors.amber,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold)),
+                  Text(
+                    S.of(ctx).launchInSeconds(remaining),
+                    style: const TextStyle(
+                      color: Colors.amber,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
               actions: [
@@ -162,8 +209,10 @@ extension FloorContentMethods on _HomeScreenState {
                     _mindfulTimer = null;
                     if (ctx.mounted) Navigator.of(ctx).pop();
                   },
-                  child: Text(S.of(ctx).actionCancel,
-                      style: const TextStyle(color: Colors.redAccent)),
+                  child: Text(
+                    S.of(ctx).actionCancel,
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
                 ),
               ],
             ),
@@ -210,9 +259,14 @@ extension FloorContentMethods on _HomeScreenState {
     if (floor == 1) {
       final normal = _allApps.where((a) => a.floor == 1).toList();
       // Add emergency 1F apps (apps from other floors temporarily shown on 1F)
-      if (_emergency1FApps.isNotEmpty && _emergencyEndTime != null && _emergencyEndTime!.isAfter(DateTime.now())) {
-        final emgApps = _allApps.where((a) =>
-            _emergency1FApps.contains(a.packageName) && a.floor != 1).toList();
+      if (_emergency1FApps.isNotEmpty &&
+          _emergencyEndTime != null &&
+          _emergencyEndTime!.isAfter(DateTime.now())) {
+        final emgApps = _allApps
+            .where(
+              (a) => _emergency1FApps.contains(a.packageName) && a.floor != 1,
+            )
+            .toList();
         // Merge without duplicates
         final seen = normal.map((a) => a.packageName).toSet();
         for (final a in emgApps) {
@@ -229,23 +283,28 @@ extension FloorContentMethods on _HomeScreenState {
 
   // ── navigation ────────────────────────────────────────────────
 
-  void _navigate(int newFloor, {required bool goingDeeper, bool slideH = false}) {
-    if (_isAnimating) return;
+  void _navigate(
+    int newFloor, {
+    required bool goingDeeper,
+    bool slideH = false,
+  }) {
+    if (_isAnimating || _isHomePageAnimating) return;
     // Close all open folders when navigating between floors
     _openFolders.clear();
 
     // PageView handles HOME ↔ 1F transitions
-    if (newFloor == 1 && (_currentFloor == _HomeScreenState._homeFloor || _currentFloor == 1)) {
-      _pageCtrl.animateToPage(1, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      setState(() => _currentFloor = 1);
+    if (newFloor == 1 &&
+        (_currentFloor == _HomeScreenState._homeFloor || _currentFloor == 1)) {
+      _animateHomeAndFirstFloor(page: 1);
       return;
     }
     if (newFloor == _HomeScreenState._homeFloor && _currentFloor == 1) {
-      _pageCtrl.animateToPage(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      setState(() => _currentFloor = _HomeScreenState._homeFloor);
+      _animateHomeAndFirstFloor(page: 0);
       return;
     }
-    if (newFloor == _HomeScreenState._homeFloor && _currentFloor == _HomeScreenState._homeFloor) return;
+    if (newFloor == _HomeScreenState._homeFloor &&
+        _currentFloor == _HomeScreenState._homeFloor)
+      return;
 
     _fromFloor = _currentFloor;
     _fromApps = _appsForFloor(_currentFloor);
@@ -263,11 +322,17 @@ extension FloorContentMethods on _HomeScreenState {
         : ss.effectiveAnimSpeedMs(_fromFloor, newFloor);
 
     if (slideH) {
-      _slideCtrl.duration = Duration(milliseconds: (speedMs * 0.5).round().clamp(150, 600));
+      _slideCtrl.duration = Duration(
+        milliseconds: (speedMs * 0.5).round().clamp(150, 600),
+      );
     } else {
       if (ss.animationType == 'none') {
         // Instant - just set state
-        if (mounted) setState(() { _isAnimating = false; _fromApps = []; });
+        if (mounted)
+          setState(() {
+            _isAnimating = false;
+            _fromApps = [];
+          });
         return;
       }
       _ctrl.duration = Duration(milliseconds: speedMs);
@@ -278,13 +343,17 @@ extension FloorContentMethods on _HomeScreenState {
     ctrl.reset();
     ctrl.forward().then((_) {
       if (mounted) {
-        setState(() { _isAnimating = false; _fromApps = []; });
+        setState(() {
+          _isAnimating = false;
+          _fromApps = [];
+        });
         // Sync PageController position when landing on HOME or 1F
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           if (targetFloor == 1 && _pageCtrl.hasClients) {
             _pageCtrl.jumpToPage(1);
-          } else if (targetFloor == _HomeScreenState._homeFloor && _pageCtrl.hasClients) {
+          } else if (targetFloor == _HomeScreenState._homeFloor &&
+              _pageCtrl.hasClients) {
             _pageCtrl.jumpToPage(0);
           }
         });
@@ -319,6 +388,28 @@ extension FloorContentMethods on _HomeScreenState {
     _navigate(_HomeScreenState._homeFloor, goingDeeper: false, slideH: true);
   }
 
+  Future<void> _animateHomeAndFirstFloor({required int page}) async {
+    if (!_pageCtrl.hasClients) return;
+    _openFolders.clear();
+    _isHomePageAnimating = true;
+    try {
+      await _pageCtrl.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _currentFloor = page == 0 ? _HomeScreenState._homeFloor : 1;
+          _isHomePageAnimating = false;
+        });
+      } else {
+        _isHomePageAnimating = false;
+      }
+    }
+  }
+
   // ── home ↔ 1F view (PageView) ─────────────────────────────────
 
   Widget _buildHomeAnd1F() {
@@ -328,11 +419,18 @@ extension FloorContentMethods on _HomeScreenState {
       controller: _pageCtrl,
       onPageChanged: (page) {
         if (!_isAnimating) {
+          if (_isHomePageAnimating) return;
           _openFolders.clear();
           if (page == 0 && _searchQuery.isNotEmpty) {
             _searchCtrl.clear();
           }
-          setState(() => _currentFloor = page == 0 ? _HomeScreenState._homeFloor : 1);
+          final floor = page == 0 ? _HomeScreenState._homeFloor : 1;
+          if (_currentFloor != floor || _isHomePageAnimating) {
+            setState(() {
+              _currentFloor = floor;
+              _isHomePageAnimating = false;
+            });
+          }
         }
       },
       children: [
@@ -340,87 +438,100 @@ extension FloorContentMethods on _HomeScreenState {
         GestureDetector(
           behavior: HitTestBehavior.translucent,
           onVerticalDragEnd: _handleHomeGestureUp,
-          onDoubleTap: () => _executeGestureAction(
-              widget.settingsService.gestureDoubleTapApp),
+          onDoubleTap: () =>
+              _executeGestureAction(widget.settingsService.gestureDoubleTapApp),
           child: _buildHomeBackground(child: _buildHomeContent()),
         ),
         // Page 1: 1F + stair nav
-        _buildFloorBackground(1, child: Builder(builder: (ctx) {
-          final statusBarH = MediaQuery.of(ctx).padding.top;
-          // Eagerly walk _buildFloorWidgets so sectionKeys is populated
-          // before the index sidebar reads it (Row's children are
-          // constructed synchronously, so we can't rely on build order).
-          Map<String, GlobalKey>? sectionKeys;
-          List<Widget>? prebuiltItems;
-          if (_searchQuery.isEmpty) {
-            sectionKeys = <String, GlobalKey>{};
-            prebuiltItems = _buildFloorWidgets(1, apps1F, sectionKeys);
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    SizedBox(height: statusBarH),
-                    // Search bar fades in as user swipes from home to 1F
+        _buildFloorBackground(
+          1,
+          child: Builder(
+            builder: (ctx) {
+              final statusBarH = MediaQuery.of(ctx).padding.top;
+              // Eagerly walk _buildFloorWidgets so sectionKeys is populated
+              // before the index sidebar reads it (Row's children are
+              // constructed synchronously, so we can't rely on build order).
+              Map<String, GlobalKey>? sectionKeys;
+              List<Widget>? prebuiltItems;
+              if (_searchQuery.isEmpty) {
+                sectionKeys = <String, GlobalKey>{};
+                prebuiltItems = _buildFloorWidgets(1, apps1F, sectionKeys);
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: [
+                        SizedBox(height: statusBarH),
+                        // Search bar fades in as user swipes from home to 1F
+                        AnimatedBuilder(
+                          animation: _pageCtrl,
+                          builder: (ctx2, child) {
+                            double opacity = 0.0;
+                            try {
+                              if (_pageCtrl.hasClients) {
+                                opacity = (_pageCtrl.page ?? 0.0).clamp(
+                                  0.0,
+                                  1.0,
+                                );
+                              }
+                            } catch (_) {}
+                            return IgnorePointer(
+                              ignoring: opacity <= 0.01,
+                              child: Opacity(opacity: opacity, child: child!),
+                            );
+                          },
+                          child: _searchBar(),
+                        ),
+                        Expanded(
+                          child: _searchQuery.isNotEmpty
+                              ? _buildSearchResults()
+                              : _floorContent(
+                                  1,
+                                  apps1F,
+                                  externalSectionKeys: sectionKeys,
+                                  prebuiltListItems: prebuiltItems,
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedBuilder(
+                    animation: _pageCtrl,
+                    builder: (ctx2, child) {
+                      double opacity = 0.0;
+                      if (_pageCtrl.hasClients && _pageCtrl.page != null) {
+                        opacity = _pageCtrl.page!.clamp(0.0, 1.0);
+                      }
+                      return Opacity(opacity: opacity, child: child!);
+                    },
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(4, statusBarH + 16, 4, 16),
+                      child: _buildStairNav(),
+                    ),
+                  ),
+                  if (sectionKeys != null)
                     AnimatedBuilder(
                       animation: _pageCtrl,
                       builder: (ctx2, child) {
                         double opacity = 0.0;
-                        try {
-                          if (_pageCtrl.hasClients) {
-                            opacity = (_pageCtrl.page ?? 0.0).clamp(0.0, 1.0);
-                          }
-                        } catch (_) {}
-                        if (opacity <= 0.0) return const SizedBox.shrink();
+                        if (_pageCtrl.hasClients && _pageCtrl.page != null) {
+                          opacity = _pageCtrl.page!.clamp(0.0, 1.0);
+                        }
                         return Opacity(opacity: opacity, child: child!);
                       },
-                      child: _searchBar(),
-                    ),
-                    Expanded(
-                      child: _searchQuery.isNotEmpty
-                          ? _buildSearchResults()
-                          : _floorContent(1, apps1F,
-                              externalSectionKeys: sectionKeys,
-                              prebuiltListItems: prebuiltItems),
-                    ),
-                  ],
-                ),
-              ),
-              AnimatedBuilder(
-                animation: _pageCtrl,
-                builder: (ctx2, child) {
-                  double opacity = 0.0;
-                  if (_pageCtrl.hasClients && _pageCtrl.page != null) {
-                    opacity = _pageCtrl.page!.clamp(0.0, 1.0);
-                  }
-                  return Opacity(opacity: opacity, child: child!);
-                },
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(4, statusBarH + 16, 4, 16),
-                  child: _buildStairNav(),
-                ),
-              ),
-              if (sectionKeys != null)
-                AnimatedBuilder(
-                  animation: _pageCtrl,
-                  builder: (ctx2, child) {
-                    double opacity = 0.0;
-                    if (_pageCtrl.hasClients && _pageCtrl.page != null) {
-                      opacity = _pageCtrl.page!.clamp(0.0, 1.0);
-                    }
-                    return Opacity(opacity: opacity, child: child!);
-                  },
-                  child: _buildIndexSidebar(apps1F, sectionKeys),
-                )
-              else if (widget.settingsService.showAlphabetIndex)
-                // Reserve the column even during search (when we skip building
-                // the sidebar) so the stair-nav doesn't slide right.
-                const SizedBox(width: 32),
-            ],
-          );
-        })),
+                      child: _buildIndexSidebar(apps1F, sectionKeys),
+                    )
+                  else if (widget.settingsService.showAlphabetIndex)
+                    // Reserve the column even during search (when we skip building
+                    // the sidebar) so the stair-nav doesn't slide right.
+                    const SizedBox(width: 32),
+                ],
+              );
+            },
+          ),
+        ),
       ],
     );
   }
@@ -432,10 +543,15 @@ extension FloorContentMethods on _HomeScreenState {
 
   // ── app tile ──────────────────────────────────────────────────
 
-  Widget _appTile(AppConfig app, int floor,
-      {VoidCallback? onLongPressOverride, Color? colorOverride}) {
+  Widget _appTile(
+    AppConfig app,
+    int floor, {
+    VoidCallback? onLongPressOverride,
+    Color? colorOverride,
+  }) {
     final now = DateTime.now();
-    final isEmg = app.isEmergency &&
+    final isEmg =
+        app.isEmergency &&
         app.emergencyUntil != null &&
         app.emergencyUntil!.isAfter(now);
     final notifCount = _notifCounts[app.packageName] ?? 0;
@@ -444,7 +560,7 @@ extension FloorContentMethods on _HomeScreenState {
     final ss = widget.settingsService;
 
     return Material(
-      color: isSelected ? Colors.white.withOpacity(0.08) : Colors.transparent,
+      color: isSelected ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
       child: InkWell(
         onTap: () {
           if (_selectionMode) {
@@ -472,8 +588,9 @@ extension FloorContentMethods on _HomeScreenState {
         },
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: ss.rowSpacing),
+            horizontal: 16,
+            vertical: ss.rowSpacing,
+          ),
           child: Row(
             children: [
               if (_selectionMode)
@@ -486,8 +603,7 @@ extension FloorContentMethods on _HomeScreenState {
                       value: isSelected,
                       activeColor: Colors.white,
                       checkColor: Colors.black,
-                      side: BorderSide(
-                          color: textColor.withOpacity(0.54)),
+                      side: BorderSide(color: textColor.withValues(alpha: 0.54)),
                       onChanged: (_) => setState(() {
                         if (isSelected) {
                           _selectedPackages.remove(app.packageName);
@@ -504,36 +620,38 @@ extension FloorContentMethods on _HomeScreenState {
                   style: TextStyle(
                     color: isEmg ? Colors.redAccent : textColor,
                     fontSize: ss.fontSize,
-                    fontWeight:
-                        isEmg ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isEmg ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ),
               if (ss.lastUsedDisplayApps.contains(app.packageName))
-                Builder(builder: (_) {
-                  final label = formatLastUsedRelative(
+                Builder(
+                  builder: (_) {
+                    final label = formatLastUsedRelative(
                       context,
                       _lastUsedMap[app.packageName],
-                      now: _now);
-                  if (label == null) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: textColor.withOpacity(0.45),
-                        fontSize: 11,
+                      now: _now,
+                    );
+                    if (label == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.45),
+                          fontSize: 11,
+                        ),
                       ),
-                    ),
-                  );
-                }),
+                    );
+                  },
+                ),
               if (notifCount > 0)
                 Padding(
                   padding: const EdgeInsets.only(left: 6),
                   child: Text(
                     '($notifCount)',
                     style: TextStyle(
-                      color: textColor.withOpacity(0.45),
+                      color: textColor.withValues(alpha: 0.45),
                       fontSize: 12,
                     ),
                   ),
@@ -545,50 +663,101 @@ extension FloorContentMethods on _HomeScreenState {
     );
   }
 
-  Widget _folderTile(String name, List<AppConfig> apps, String key,
-      bool isOpen, int floor, {VoidCallback? onLongPress}) {
+  Widget _folderTile(
+    String name,
+    List<AppConfig> apps,
+    String key,
+    bool isOpen,
+    int floor, {
+    VoidCallback? onLongPress,
+  }) {
     final ss = widget.settingsService;
     final textColor = _effectiveFloorText(floor);
+    final folderKey = '$floor:$name';
+    final isSelected = _selectedFolders.contains(folderKey);
     return Material(
-      color: Colors.transparent,
+      color: isSelected
+          ? Colors.white.withValues(alpha: 0.08)
+          : Colors.transparent,
       child: InkWell(
-        onTap: () => setState(() {
-          if (widget.settingsService.singleFolderMode && !isOpen) {
-            // Close all other open folders on this floor
-            _openFolders.removeWhere((k) => k.startsWith('$floor:') && k != key);
+        onTap: () {
+          // 複数選択中はタップで選択/解除（開閉はしない）
+          if (_folderSelectionMode) {
+            setState(() {
+              if (isSelected) {
+                _selectedFolders.remove(folderKey);
+                if (_selectedFolders.isEmpty) _folderSelectionMode = false;
+              } else {
+                _selectedFolders.add(folderKey);
+              }
+            });
+            return;
           }
-          isOpen ? _openFolders.remove(key) : _openFolders.add(key);
-        }),
-        onLongPress: onLongPress ?? () {
-          final pos = apps.isNotEmpty ? apps.first.folderPosition : 'alphabetical';
-          if (pos == 'top' || pos == 'bottom') {
-            _showFolderOrderDialog(floor, pos);
-          } else {
-            _showFolderBottomSheet(name, apps, floor);
-          }
+          setState(() {
+            if (widget.settingsService.singleFolderMode && !isOpen) {
+              // Close all other open folders on this floor
+              _openFolders.removeWhere(
+                (k) => k.startsWith('$floor:') && k != key,
+              );
+            }
+            isOpen ? _openFolders.remove(key) : _openFolders.add(key);
+          });
         },
+        onLongPress: _folderSelectionMode
+            ? () => setState(() => _selectedFolders.add(folderKey))
+            : (onLongPress ??
+                () {
+                  final pos = apps.isNotEmpty
+                      ? apps.first.folderPosition
+                      : 'alphabetical';
+                  if (pos == 'top' || pos == 'bottom') {
+                    _showFolderOrderDialog(floor, pos);
+                  } else {
+                    _showFolderBottomSheet(name, apps, floor);
+                  }
+                }),
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
+              if (_folderSelectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Icon(
+                    isSelected
+                        ? Icons.check_box
+                        : Icons.check_box_outline_blank,
+                    color: isSelected
+                        ? textColor
+                        : textColor.withValues(alpha: 0.38),
+                    size: 18,
+                  ),
+                ),
               Icon(
                 isOpen ? Icons.folder_open : Icons.folder,
-                color: textColor.withOpacity(0.54),
+                color: textColor.withValues(alpha: 0.54),
                 size: 18,
               ),
               const SizedBox(width: 10),
-              Text(name,
-                  style: TextStyle(
-                      color: textColor.withOpacity(0.70), fontSize: ss.fontSize)),
+              Text(
+                name,
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.70),
+                  fontSize: ss.fontSize,
+                ),
+              ),
               const SizedBox(width: 6),
-              Text(S.of(context).folderItemsCount(apps.length),
-                  style: TextStyle(
-                      color: textColor.withOpacity(0.38), fontSize: 12)),
+              Text(
+                S.of(context).folderItemsCount(apps.length),
+                style: TextStyle(
+                  color: textColor.withValues(alpha: 0.38),
+                  fontSize: 12,
+                ),
+              ),
               const Spacer(),
               Icon(
                 isOpen ? Icons.expand_less : Icons.expand_more,
-                color: textColor.withOpacity(0.38),
+                color: textColor.withValues(alpha: 0.38),
                 size: 16,
               ),
             ],
@@ -635,7 +804,9 @@ extension FloorContentMethods on _HomeScreenState {
         },
         child: Padding(
           padding: EdgeInsets.symmetric(
-              horizontal: 16, vertical: ss.rowSpacing),
+            horizontal: 16,
+            vertical: ss.rowSpacing,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -645,31 +816,39 @@ extension FloorContentMethods on _HomeScreenState {
                 ),
               ),
               if (ss.lastUsedDisplayApps.contains(app.packageName))
-                Builder(builder: (_) {
-                  final label = formatLastUsedRelative(
+                Builder(
+                  builder: (_) {
+                    final label = formatLastUsedRelative(
                       context,
                       _lastUsedMap[app.packageName],
-                      now: _now);
-                  if (label == null) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: textColor.withOpacity(0.45),
-                        fontSize: 11,
+                      now: _now,
+                    );
+                    if (label == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.45),
+                          fontSize: 11,
+                        ),
                       ),
-                    ),
-                  );
-                }),
+                    );
+                  },
+                ),
               if (_selectionMode) ...[
                 GestureDetector(
                   onTap: () => _showAppBottomSheet(app, floor),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Icon(Icons.more_vert,
-                        color: textColor.withOpacity(0.38), size: 20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    child: Icon(
+                      Icons.more_vert,
+                      color: textColor.withValues(alpha: 0.38),
+                      size: 20,
+                    ),
                   ),
                 ),
                 GestureDetector(
@@ -680,10 +859,15 @@ extension FloorContentMethods on _HomeScreenState {
                     _loadApps();
                   },
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    child: Icon(Icons.close,
-                        color: textColor.withOpacity(0.38), size: 20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      color: textColor.withValues(alpha: 0.38),
+                      size: 20,
+                    ),
                   ),
                 ),
               ],
@@ -697,16 +881,22 @@ extension FloorContentMethods on _HomeScreenState {
   /// Wraps [child] in a KeyedSubtree with a GlobalKey, registering the key
   /// against [section] in [sectionKeys]. Used by the alphabet sidebar to
   /// scroll-to-section via Scrollable.ensureVisible.
-  Widget _wrapSectionAnchor(String section,
-      Map<String, GlobalKey>? sectionKeys, Widget child) {
+  Widget _wrapSectionAnchor(
+    String section,
+    Map<String, GlobalKey>? sectionKeys,
+    Widget child,
+  ) {
     if (sectionKeys == null) return child;
     final key = GlobalKey();
     sectionKeys[section] = key;
     return KeyedSubtree(key: key, child: child);
   }
 
-  List<Widget> _buildFloorWidgets(int floor, List<AppConfig> apps,
-      [Map<String, GlobalKey>? sectionKeys]) {
+  List<Widget> _buildFloorWidgets(
+    int floor,
+    List<AppConfig> apps, [
+    Map<String, GlobalKey>? sectionKeys,
+  ]) {
     // Recently added section at top
     final ss = widget.settingsService;
     final recentApps = ss.showRecentlyAdded
@@ -778,31 +968,44 @@ extension FloorContentMethods on _HomeScreenState {
 
     // 0. Recently added section
     if (recentApps.isNotEmpty) {
-      widgets.add(SizedBox(
-        height: 28,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(S.of(context).recentlyAddedSection,
+      widgets.add(
+        SizedBox(
+          height: 28,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                S.of(context).recentlyAddedSection,
                 style: TextStyle(
-                    color: _effectiveFloorText(floor).withOpacity(0.54),
-                    fontSize: 12)),
+                  color: _effectiveFloorText(floor).withValues(alpha: 0.54),
+                  fontSize: 12,
+                ),
+              ),
+            ),
           ),
         ),
-      ));
+      );
       for (final app in recentApps) {
         widgets.add(_appTile(app, floor));
       }
-      widgets.add(const SizedBox(height: 9, child: Divider(color: Colors.white12)));
+      widgets.add(
+        const SizedBox(height: 9, child: Divider(color: Colors.white12)),
+      );
     }
 
     // 0.5. Emergency apps section (only on 1F during emergency mode)
-    if (floor == 1 && _emergency1FApps.isNotEmpty && _emergencyEndTime != null && _emergencyEndTime!.isAfter(DateTime.now())) {
+    if (floor == 1 &&
+        _emergency1FApps.isNotEmpty &&
+        _emergencyEndTime != null &&
+        _emergencyEndTime!.isAfter(DateTime.now())) {
       final emgColor = Color(ss.emergencyAppFontColor);
       final emgMode = ss.emergencyAppDisplayMode;
-      final emgApps = apps.where((a) =>
-          _emergency1FApps.contains(a.packageName) && a.floor != 1).toList();
+      final emgApps = apps
+          .where(
+            (a) => _emergency1FApps.contains(a.packageName) && a.floor != 1,
+          )
+          .toList();
 
       if (emgMode == 'section' && emgApps.isNotEmpty) {
         // Section display: grouped at top with header
@@ -812,14 +1015,21 @@ extension FloorContentMethods on _HomeScreenState {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text(S.of(context).emergencyAppsSection,
-                  style: TextStyle(color: emgColor.withOpacity(0.7), fontSize: 12)),
+              child: Text(
+                S.of(context).emergencyAppsSection,
+                style: TextStyle(
+                  color: emgColor.withValues(alpha: 0.7),
+                  fontSize: 12,
+                ),
+              ),
             ),
           ),
         );
-        widgets.add(ss.emergencyAppShowIndex
-            ? _wrapSectionAnchor('🚨', sectionKeys, header)
-            : header);
+        widgets.add(
+          ss.emergencyAppShowIndex
+              ? _wrapSectionAnchor('🚨', sectionKeys, header)
+              : header,
+        );
 
         emgApps.sort((a, b) => _displayName(a).compareTo(_displayName(b)));
         String? lastEmgSec;
@@ -834,10 +1044,14 @@ extension FloorContentMethods on _HomeScreenState {
           }
           widgets.add(tile);
         }
-        widgets.add(const SizedBox(height: 9, child: Divider(color: Colors.white12)));
+        widgets.add(
+          const SizedBox(height: 9, child: Divider(color: Colors.white12)),
+        );
 
         // Remove emergency apps from ungrouped to avoid double-showing
-        ungrouped.removeWhere((a) => _emergency1FApps.contains(a.packageName) && a.floor != 1);
+        ungrouped.removeWhere(
+          (a) => _emergency1FApps.contains(a.packageName) && a.floor != 1,
+        );
       }
       // For 'normal' mode, emergency apps stay in ungrouped but with color override handled in tile rendering
     }
@@ -848,65 +1062,96 @@ extension FloorContentMethods on _HomeScreenState {
       final isOpen = _openFolders.contains(key);
       final isReordering = _reorderingFolderKey == key;
 
-      widgets.add(_folderTile(fn, folderMap[fn]!, key, isOpen, floor,
-        onLongPress: () {
-          if (isOpen) {
-            setState(() {
-              _reorderingFolderKey = key;
-              _reorderingFolderApps = _orderedFolderApps(fn, List.from(folderMap[fn]!));
-            });
-          } else {
-            final pos = folderMap[fn]!.isNotEmpty ? folderMap[fn]!.first.folderPosition : 'alphabetical';
-            if (pos == 'top' || pos == 'bottom') {
-              _showFolderOrderDialog(floor, pos);
+      widgets.add(
+        _folderTile(
+          fn,
+          folderMap[fn]!,
+          key,
+          isOpen,
+          floor,
+          onLongPress: () {
+            if (isOpen) {
+              setState(() {
+                _reorderingFolderKey = key;
+                _reorderingFolderApps = _orderedFolderApps(
+                  fn,
+                  List.from(folderMap[fn]!),
+                );
+              });
             } else {
-              _showFolderBottomSheet(fn, folderMap[fn]!, floor);
+              final pos = folderMap[fn]!.isNotEmpty
+                  ? folderMap[fn]!.first.folderPosition
+                  : 'alphabetical';
+              if (pos == 'top' || pos == 'bottom') {
+                _showFolderOrderDialog(floor, pos);
+              } else {
+                _showFolderBottomSheet(fn, folderMap[fn]!, floor);
+              }
             }
-          }
-        },
-      ));
+          },
+        ),
+      );
 
       if (isReordering) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(left: 20, right: 8),
-          child: ReorderableListView(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            buildDefaultDragHandles: false,
-            proxyDecorator: (child, i, anim) => Material(elevation: 0, color: Colors.transparent, child: child),
-            onReorder: (oldIdx, newIdx) async {
-              if (newIdx > oldIdx) newIdx--;
-              setState(() {
-                final item = _reorderingFolderApps.removeAt(oldIdx);
-                _reorderingFolderApps.insert(newIdx, item);
-              });
-              await widget.settingsService.setFolderOrder(
-                fn,
-                _reorderingFolderApps.map((a) => a.packageName).toList(),
-              );
-            },
-            children: [
-              for (int i = 0; i < _reorderingFolderApps.length; i++)
-                _folderItemTileReorder(_reorderingFolderApps[i], floor, fn, i, key: ValueKey(_reorderingFolderApps[i].packageName)),
-            ],
-          ),
-        ));
-        widgets.add(Align(
-          alignment: Alignment.centerRight,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: TextButton(
-              onPressed: () => setState(() => _reorderingFolderKey = null),
-              child: Text(S.of(context).actionDone, style: const TextStyle(color: Colors.white)),
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(left: 20, right: 8),
+            child: ReorderableListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles: false,
+              proxyDecorator: (child, i, anim) => Material(
+                elevation: 0,
+                color: Colors.transparent,
+                child: child,
+              ),
+              onReorder: (oldIdx, newIdx) async {
+                if (newIdx > oldIdx) newIdx--;
+                setState(() {
+                  final item = _reorderingFolderApps.removeAt(oldIdx);
+                  _reorderingFolderApps.insert(newIdx, item);
+                });
+                await widget.settingsService.setFolderOrder(
+                  fn,
+                  _reorderingFolderApps.map((a) => a.packageName).toList(),
+                );
+              },
+              children: [
+                for (int i = 0; i < _reorderingFolderApps.length; i++)
+                  _folderItemTileReorder(
+                    _reorderingFolderApps[i],
+                    floor,
+                    fn,
+                    i,
+                    key: ValueKey(_reorderingFolderApps[i].packageName),
+                  ),
+              ],
             ),
           ),
-        ));
+        );
+        widgets.add(
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton(
+                onPressed: () => setState(() => _reorderingFolderKey = null),
+                child: Text(
+                  S.of(context).actionDone,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        );
       } else if (isOpen) {
         for (final app in _orderedFolderApps(fn, List.from(folderMap[fn]!))) {
-          widgets.add(Padding(
-            padding: const EdgeInsets.only(left: 20),
-            child: _folderItemTile(app, floor, fn),
-          ));
+          widgets.add(
+            Padding(
+              padding: const EdgeInsets.only(left: 20),
+              child: _folderItemTile(app, floor, fn),
+            ),
+          );
         }
       }
     }
@@ -923,8 +1168,10 @@ extension FloorContentMethods on _HomeScreenState {
       final hasFld = fldIdx < alphFolders.length;
       final bool takeApp;
       if (hasApp && hasFld) {
-        takeApp = _displayName(ungrouped[appIdx]).toLowerCase()
-                .compareTo(alphFolders[fldIdx].toLowerCase()) <=
+        takeApp =
+            _displayName(
+              ungrouped[appIdx],
+            ).toLowerCase().compareTo(alphFolders[fldIdx].toLowerCase()) <=
             0;
       } else {
         takeApp = hasApp;
@@ -933,10 +1180,17 @@ extension FloorContentMethods on _HomeScreenState {
         final app = ungrouped[appIdx++];
         final sec = _indexChar(_displayName(app));
         // Apply emergency color override for emergency 1F apps in 'normal' mode
-        final isEmg1F = floor == 1 && _emergency1FApps.contains(app.packageName) && app.floor != 1
-            && _emergencyEndTime != null && _emergencyEndTime!.isAfter(DateTime.now());
-        Widget tile = _appTile(app, floor,
-            colorOverride: isEmg1F ? Color(ss.emergencyAppFontColor) : null);
+        final isEmg1F =
+            floor == 1 &&
+            _emergency1FApps.contains(app.packageName) &&
+            app.floor != 1 &&
+            _emergencyEndTime != null &&
+            _emergencyEndTime!.isAfter(DateTime.now());
+        Widget tile = _appTile(
+          app,
+          floor,
+          colorOverride: isEmg1F ? Color(ss.emergencyAppFontColor) : null,
+        );
         if (sec != lastSection) {
           tile = _wrapSectionAnchor(sec, sectionKeys, tile);
           lastSection = sec;
@@ -965,17 +1219,24 @@ extension FloorContentMethods on _HomeScreenState {
 
     if (widgets.isEmpty) {
       widgets.add(const SizedBox(height: 32));
-      widgets.add(Center(
-        child: Text(S.of(context).noAppsOnFloor,
-            style: const TextStyle(color: Colors.white24, fontSize: 14)),
-      ));
+      widgets.add(
+        Center(
+          child: Text(
+            S.of(context).noAppsOnFloor,
+            style: const TextStyle(color: Colors.white24, fontSize: 14),
+          ),
+        ),
+      );
     }
     return widgets;
   }
 
-  Widget _floorContent(int floor, List<AppConfig> apps,
-      {Map<String, GlobalKey>? externalSectionKeys,
-      List<Widget>? prebuiltListItems}) {
+  Widget _floorContent(
+    int floor,
+    List<AppConfig> apps, {
+    Map<String, GlobalKey>? externalSectionKeys,
+    List<Widget>? prebuiltListItems,
+  }) {
     if (floor == _HomeScreenState._homeFloor) return _buildHomeContent();
 
     final isCurrent = floor == _currentFloor;
@@ -986,17 +1247,25 @@ extension FloorContentMethods on _HomeScreenState {
     // map only if the caller didn't supply one and we're the current static
     // floor — but in that case nobody will read the keys, so it's effectively
     // a throwaway.
-    final sectionKeys = externalSectionKeys ??
+    final sectionKeys =
+        externalSectionKeys ??
         (isCurrentAndStill ? <String, GlobalKey>{} : null);
     // If the caller already walked _buildFloorWidgets eagerly (so sectionKeys
     // is populated before the index sidebar reads it), reuse those items —
     // we can't call _buildFloorWidgets twice on the same map because it
     // creates duplicate GlobalKeys.
-    final listItems = prebuiltListItems ??
-        _buildFloorWidgets(floor, apps, sectionKeys);
+    final listItems =
+        prebuiltListItems ?? _buildFloorWidgets(floor, apps, sectionKeys);
 
     final navBarH = MediaQuery.of(context).viewPadding.bottom;
-    final selectionBarH = _selectionMode ? 100.0 : 0.0;
+    // 5ボタンなので狭い画面では2〜3行に折り返す（Wrap）。少し多めに確保。
+    // 5ボタンなので狭い画面では2〜3行に折り返す（Wrap）。少し多めに確保。
+    // フォルダの複数選択バーは3ボタンなので1行ぶんで足りる。
+    final selectionBarH = _selectionMode
+        ? 140.0
+        : _folderSelectionMode
+            ? 100.0
+            : 0.0;
     // Use ListView (not ListView.builder) so all section anchors are mounted in
     // the tree — required for Scrollable.ensureVisible via GlobalKey to work
     // for items that are currently off-screen.
@@ -1028,9 +1297,11 @@ extension FloorContentMethods on _HomeScreenState {
 
   // ── content animation (unified with background movement) ────────────────────
 
-  Widget _buildAnimatedContent(double floorH,
-      {Map<String, GlobalKey>? externalSectionKeys,
-      List<Widget>? prebuiltListItems}) {
+  Widget _buildAnimatedContent(
+    double floorH, {
+    Map<String, GlobalKey>? externalSectionKeys,
+    List<Widget>? prebuiltListItems,
+  }) {
     // For slide/stair: content slides in sync with the background (unified box).
     // For fade/zoom: content crossfades at fixed position.
     // For horizontal slide (HOME ↔ 1F): content slides horizontally.
@@ -1049,21 +1320,34 @@ extension FloorContentMethods on _HomeScreenState {
           final p = animation.value;
 
           if (!_isAnimating) {
-            return _floorContent(_currentFloor, currentApps,
-                externalSectionKeys: externalSectionKeys,
-                prebuiltListItems: prebuiltListItems);
+            return _floorContent(
+              _currentFloor,
+              currentApps,
+              externalSectionKeys: externalSectionKeys,
+              prebuiltListItems: prebuiltListItems,
+            );
           }
 
           // Horizontal slide (HOME ↔ 1F): slide content left/right
           if (_isSlideAnim) {
             final outX = _goingUp ? screenW * p : -screenW * p;
             final inX = _goingUp ? -screenW * (1.0 - p) : screenW * (1.0 - p);
-            return Stack(children: [
-              Transform.translate(offset: Offset(outX, 0),
-                  child: SizedBox.expand(child: _floorContent(_fromFloor, _fromApps))),
-              Transform.translate(offset: Offset(inX, 0),
-                  child: SizedBox.expand(child: _floorContent(_currentFloor, currentApps))),
-            ]);
+            return Stack(
+              children: [
+                Transform.translate(
+                  offset: Offset(outX, 0),
+                  child: SizedBox.expand(
+                    child: _floorContent(_fromFloor, _fromApps),
+                  ),
+                ),
+                Transform.translate(
+                  offset: Offset(inX, 0),
+                  child: SizedBox.expand(
+                    child: _floorContent(_currentFloor, currentApps),
+                  ),
+                ),
+              ],
+            );
           }
 
           // Slide / Stair: content slides vertically in sync with the background.
@@ -1073,32 +1357,66 @@ extension FloorContentMethods on _HomeScreenState {
             final sp = animType == 'stair' ? _discreteStairAnim.value : p;
             final outY = _goingUp ? -floorH * sp : floorH * sp;
             final inY = _goingUp ? floorH * (1.0 - sp) : -floorH * (1.0 - sp);
-            return Stack(children: [
-              Transform.translate(offset: Offset(0, outY),
-                  child: SizedBox.expand(child: _floorContent(_fromFloor, _fromApps))),
-              Transform.translate(offset: Offset(0, inY),
-                  child: SizedBox.expand(child: _floorContent(_currentFloor, currentApps))),
-            ]);
+            return Stack(
+              children: [
+                Transform.translate(
+                  offset: Offset(0, outY),
+                  child: SizedBox.expand(
+                    child: _floorContent(_fromFloor, _fromApps),
+                  ),
+                ),
+                Transform.translate(
+                  offset: Offset(0, inY),
+                  child: SizedBox.expand(
+                    child: _floorContent(_currentFloor, currentApps),
+                  ),
+                ),
+              ],
+            );
           }
 
           // Fade / Zoom: crossfade content at fixed position.
           if (animType == 'zoom') {
-            return Stack(children: [
-              Opacity(opacity: (1.0 - p).clamp(0.0, 1.0),
-                child: Transform.scale(scale: 1.0 - 0.08 * p,
-                  child: SizedBox.expand(child: _floorContent(_fromFloor, _fromApps)))),
-              Opacity(opacity: p.clamp(0.0, 1.0),
-                child: Transform.scale(scale: 0.92 + 0.08 * p,
-                  child: SizedBox.expand(child: _floorContent(_currentFloor, currentApps)))),
-            ]);
+            return Stack(
+              children: [
+                Opacity(
+                  opacity: (1.0 - p).clamp(0.0, 1.0),
+                  child: Transform.scale(
+                    scale: 1.0 - 0.08 * p,
+                    child: SizedBox.expand(
+                      child: _floorContent(_fromFloor, _fromApps),
+                    ),
+                  ),
+                ),
+                Opacity(
+                  opacity: p.clamp(0.0, 1.0),
+                  child: Transform.scale(
+                    scale: 0.92 + 0.08 * p,
+                    child: SizedBox.expand(
+                      child: _floorContent(_currentFloor, currentApps),
+                    ),
+                  ),
+                ),
+              ],
+            );
           }
           // fade (default for all other types)
-          return Stack(children: [
-            Opacity(opacity: (1.0 - p).clamp(0.0, 1.0),
-                child: SizedBox.expand(child: _floorContent(_fromFloor, _fromApps))),
-            Opacity(opacity: p.clamp(0.0, 1.0),
-                child: SizedBox.expand(child: _floorContent(_currentFloor, currentApps))),
-          ]);
+          return Stack(
+            children: [
+              Opacity(
+                opacity: (1.0 - p).clamp(0.0, 1.0),
+                child: SizedBox.expand(
+                  child: _floorContent(_fromFloor, _fromApps),
+                ),
+              ),
+              Opacity(
+                opacity: p.clamp(0.0, 1.0),
+                child: SizedBox.expand(
+                  child: _floorContent(_currentFloor, currentApps),
+                ),
+              ),
+            ],
+          );
         },
       ),
     );
@@ -1123,8 +1441,11 @@ extension FloorContentMethods on _HomeScreenState {
   }
 
   Widget _buildFloorWithNavInner(
-      double navH, double screenW, String animType, Animation<double> anim) {
-
+    double navH,
+    double screenW,
+    String animType,
+    Animation<double> anim,
+  ) {
     final statusBarH = MediaQuery.of(context).padding.top;
     // Use the full physical screen height for slide distance so backgrounds
     // cover the entire display including status bar and nav bar areas.
@@ -1145,8 +1466,11 @@ extension FloorContentMethods on _HomeScreenState {
         _currentFloor != _HomeScreenState._homeFloor) {
       sectionKeys = <String, GlobalKey>{};
       currentApps = _appsForFloor(_currentFloor);
-      prebuiltItems =
-          _buildFloorWidgets(_currentFloor, currentApps, sectionKeys);
+      prebuiltItems = _buildFloorWidgets(
+        _currentFloor,
+        currentApps,
+        sectionKeys,
+      );
     }
 
     // UI row (transparent — backgrounds handled at this level)
@@ -1170,7 +1494,10 @@ extension FloorContentMethods on _HomeScreenState {
                     SizedBox(height: statusBarH),
                     // Keep search bar in layout during animation (invisible but
                     // maintaining size) so the app list position doesn't shift.
-                    Opacity(opacity: _isAnimating ? 0.0 : 1.0, child: _searchBar()),
+                    Opacity(
+                      opacity: _isAnimating ? 0.0 : 1.0,
+                      child: _searchBar(),
+                    ),
                     Expanded(
                       child: _buildAnimatedContent(
                         fullH,
@@ -1210,14 +1537,15 @@ extension FloorContentMethods on _HomeScreenState {
     // physical screen, even though the widget's own constraints (navH) may
     // be smaller due to emergency banners or other layout elements.
     Widget fullBg(int floor, Offset offset) => Transform.translate(
-          offset: offset,
-          child: OverflowBox(
-              minHeight: fullH,
-              maxHeight: fullH,
-              minWidth: screenW,
-              maxWidth: screenW,
-              child: _buildFloorBackground(floor, child: const SizedBox.shrink())),
-        );
+      offset: offset,
+      child: OverflowBox(
+        minHeight: fullH,
+        maxHeight: fullH,
+        minWidth: screenW,
+        maxWidth: screenW,
+        child: _buildFloorBackground(floor, child: const SizedBox.shrink()),
+      ),
+    );
 
     return ClipRect(
       child: AnimatedBuilder(
@@ -1226,34 +1554,48 @@ extension FloorContentMethods on _HomeScreenState {
           final p = anim.value;
 
           if (animType == 'fade') {
-            return Stack(children: [
-              Opacity(opacity: (1.0 - p).clamp(0.0, 1.0),
-                  child: fullBg(_fromFloor, Offset.zero)),
-              Opacity(opacity: p.clamp(0.0, 1.0),
-                  child: fullBg(_currentFloor, Offset.zero)),
-              child!,
-            ]);
+            return Stack(
+              children: [
+                Opacity(
+                  opacity: (1.0 - p).clamp(0.0, 1.0),
+                  child: fullBg(_fromFloor, Offset.zero),
+                ),
+                Opacity(
+                  opacity: p.clamp(0.0, 1.0),
+                  child: fullBg(_currentFloor, Offset.zero),
+                ),
+                child!,
+              ],
+            );
           }
 
           if (animType == 'zoom') {
-            return Stack(children: [
-              Opacity(opacity: (1.0 - p).clamp(0.0, 1.0),
-                  child: fullBg(_fromFloor, Offset.zero)),
-              Opacity(opacity: p.clamp(0.0, 1.0),
-                  child: fullBg(_currentFloor, Offset.zero)),
-              child!,
-            ]);
+            return Stack(
+              children: [
+                Opacity(
+                  opacity: (1.0 - p).clamp(0.0, 1.0),
+                  child: fullBg(_fromFloor, Offset.zero),
+                ),
+                Opacity(
+                  opacity: p.clamp(0.0, 1.0),
+                  child: fullBg(_currentFloor, Offset.zero),
+                ),
+                child!,
+              ],
+            );
           }
 
           if (animType == 'stair') {
             final sp = _discreteStairAnim.value;
             final outY = _goingUp ? -fullH * sp : fullH * sp;
             final inY = _goingUp ? fullH * (1.0 - sp) : -fullH * (1.0 - sp);
-            return Stack(children: [
-              fullBg(_fromFloor, Offset(0, outY)),
-              fullBg(_currentFloor, Offset(0, inY)),
-              child!,
-            ]);
+            return Stack(
+              children: [
+                fullBg(_fromFloor, Offset(0, outY)),
+                fullBg(_currentFloor, Offset(0, inY)),
+                child!,
+              ],
+            );
           }
 
           // Default: slide — use fullH for vertical, screenW for horizontal
@@ -1265,11 +1607,13 @@ extension FloorContentMethods on _HomeScreenState {
             bgOutY = _goingUp ? -fullH * p : fullH * p;
             bgInY = _goingUp ? fullH * (1.0 - p) : -fullH * (1.0 - p);
           }
-          return Stack(children: [
-            fullBg(_fromFloor, Offset(outX, bgOutY)),
-            fullBg(_currentFloor, Offset(inX, bgInY)),
-            child!,
-          ]);
+          return Stack(
+            children: [
+              fullBg(_fromFloor, Offset(outX, bgOutY)),
+              fullBg(_currentFloor, Offset(inX, bgInY)),
+              child!,
+            ],
+          );
         },
         child: uiContent,
       ),
@@ -1279,28 +1623,40 @@ extension FloorContentMethods on _HomeScreenState {
   // ── stair nav ─────────────────────────────────────────────────
 
   Widget _buildStairNav() {
-    final canUp = _currentFloor < _maxFloor && !_isAnimating;
-    final canDown = _currentFloor > _minFloor && !_isAnimating;
-    final borderColor = _floorText(_currentFloor).withOpacity(0.7);
-    final borderColorDim = _floorText(_currentFloor).withOpacity(0.12);
-    final hasActive = _emergencyRemaining != null ||
-        (_emergencyEndTime != null && _emergencyEndTime!.isAfter(DateTime.now()));
+    final canUp =
+        _currentFloor < _maxFloor && !_isAnimating && !_isHomePageAnimating;
+    final canDown =
+        _currentFloor > _minFloor && !_isAnimating && !_isHomePageAnimating;
+    final borderColor = _floorText(_currentFloor).withValues(alpha: 0.7);
+    final borderColorDim = _floorText(_currentFloor).withValues(alpha: 0.12);
+    final hasActive =
+        _emergencyRemaining != null ||
+        (_emergencyEndTime != null &&
+            _emergencyEndTime!.isAfter(DateTime.now()));
 
     final upLabel = canUp
         ? floorLabel(_currentFloor == -1 ? 1 : _currentFloor + 1)
         : '';
     final downLabel = canDown
-        ? floorLabel(_currentFloor == 1 && _minFloor < _HomeScreenState._homeFloor
-            ? -1
-            : _currentFloor - 1)
+        ? floorLabel(
+            _currentFloor == 1 && _minFloor < _HomeScreenState._homeFloor
+                ? -1
+                : _currentFloor - 1,
+          )
         : '';
 
     return Column(
       children: [
         // Nav buttons centered vertically
         const Spacer(),
-        _navBtn('▲', upLabel, canUp, _goDeeper,
-            borderColor: borderColor, borderColorDim: borderColorDim),
+        _navBtn(
+          '▲',
+          upLabel,
+          canUp,
+          _goDeeper,
+          borderColor: borderColor,
+          borderColorDim: borderColorDim,
+        ),
         const SizedBox(height: 8),
         Container(
           width: 46,
@@ -1312,42 +1668,58 @@ extension FloorContentMethods on _HomeScreenState {
           ),
           child: Column(
             children: [
-              Text(floorLabel(_currentFloor),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: _floorText(_currentFloor),
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold)),
-              Text(S.of(context).currentFloor,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: _floorText(_currentFloor).withOpacity(0.54),
-                      fontSize: 9)),
+              Text(
+                floorLabel(_currentFloor),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _floorText(_currentFloor),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                S.of(context).currentFloor,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _floorText(_currentFloor).withValues(alpha: 0.54),
+                  fontSize: 9,
+                ),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 8),
-        _navBtn('▼', downLabel, canDown, _goShallower,
-            borderColor: borderColor, borderColorDim: borderColorDim),
+        _navBtn(
+          '▼',
+          downLabel,
+          canDown,
+          _goShallower,
+          borderColor: borderColor,
+          borderColorDim: borderColorDim,
+        ),
         const Spacer(),
         // Emergency mode buttons: add + stop (only during emergency)
         if (hasActive) ...[
-          _buildNavIconBtn(Icons.add_circle_outline, Colors.white54,
-              () => _showEmergencyAddDialog()),
+          _buildNavIconBtn(
+            Icons.add_circle_outline,
+            Colors.white54,
+            () => _showEmergencyAddDialog(),
+          ),
           const SizedBox(height: 4),
-          _buildNavIconBtn(Icons.stop_circle_outlined, Colors.redAccent,
-              () => _stopEmergencyMode()),
+          _buildNavIconBtn(
+            Icons.stop_circle_outlined,
+            Colors.redAccent,
+            () => _stopEmergencyMode(),
+          ),
           const SizedBox(height: 4),
         ],
         // Emergency button (inactive mode) or settings gear
-        if (!hasActive) ...[
-          _buildEmergencyButton(),
-          const SizedBox(height: 6),
-        ],
+        if (!hasActive) ...[_buildEmergencyButton(), const SizedBox(height: 6)],
         // Settings gear at bottom — add bottom margin so it stays above nav bar
         Padding(
           padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewPadding.bottom + 40),
+            bottom: MediaQuery.of(context).viewPadding.bottom + 40,
+          ),
           child: _buildSettingsButton(),
         ),
       ],
@@ -1366,7 +1738,7 @@ extension FloorContentMethods on _HomeScreenState {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(color: color.withOpacity(0.3)),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Icon(icon, color: color, size: 16),
@@ -1383,25 +1755,62 @@ extension FloorContentMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(S.of(ctx).emergencyAddTitle, style: const TextStyle(color: Colors.redAccent, fontSize: 14)),
+        title: Text(
+          S.of(ctx).emergencyAddTitle,
+          style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(dense: true, contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.all_inclusive, color: Colors.redAccent, size: 20),
-              title: Text(S.of(ctx).emergencyAddAllOn1F, style: const TextStyle(color: Colors.white, fontSize: 13)),
-              onTap: () => Navigator.pop(ctx, 'all')),
-            ListTile(dense: true, contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.star, color: Colors.orangeAccent, size: 20),
-              title: Text(S.of(ctx).emergencyAddFromRegistered, style: const TextStyle(color: Colors.white, fontSize: 13)),
-              onTap: () => Navigator.pop(ctx, 'registered')),
-            ListTile(dense: true, contentPadding: EdgeInsets.zero,
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.all_inclusive,
+                color: Colors.redAccent,
+                size: 20,
+              ),
+              title: Text(
+                S.of(ctx).emergencyAddAllOn1F,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
+              onTap: () => Navigator.pop(ctx, 'all'),
+            ),
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(
+                Icons.star,
+                color: Colors.orangeAccent,
+                size: 20,
+              ),
+              title: Text(
+                S.of(ctx).emergencyAddFromRegistered,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
+              onTap: () => Navigator.pop(ctx, 'registered'),
+            ),
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.apps, color: Colors.white54, size: 20),
-              title: Text(S.of(ctx).emergencyAppListPick, style: const TextStyle(color: Colors.white, fontSize: 13)),
-              onTap: () => Navigator.pop(ctx, 'pick')),
+              title: Text(
+                S.of(ctx).emergencyAppListPick,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
+              onTap: () => Navigator.pop(ctx, 'pick'),
+            ),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54)))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              S.of(ctx).actionCancel,
+              style: const TextStyle(color: Colors.white54),
+            ),
+          ),
+        ],
       ),
     );
     if (choice == null || !mounted) return;
@@ -1412,34 +1821,48 @@ extension FloorContentMethods on _HomeScreenState {
     } else if (choice == 'registered') {
       final registered = ss.getEmergencyApps();
       if (registered.isEmpty) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(S.of(context).noEmergencyAppsRegistered)));
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(S.of(context).noEmergencyAppsRegistered)),
+          );
         return;
       }
-      final candidates = _allApps
-          .where((a) => registered.contains(a.packageName))
-          .toList()
-        ..sort((a, b) =>
-            a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
-      final picked =
-          await _showAppCheckboxDialog(S.of(context).emergencyAddFromRegistered, candidates);
+      final candidates =
+          _allApps.where((a) => registered.contains(a.packageName)).toList()
+            ..sort(
+              (a, b) =>
+                  a.appName.toLowerCase().compareTo(b.appName.toLowerCase()),
+            );
+      final picked = await _showAppCheckboxDialog(
+        S.of(context).emergencyAddFromRegistered,
+        candidates,
+      );
       if (picked == null || picked.isEmpty || !mounted) return;
       newPkgs = picked;
     } else if (choice == 'pick') {
       final apps = List<AppConfig>.from(_allApps)
-        ..sort((a, b) =>
-            a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
-      final picked = await _showAppCheckboxDialog(S.of(context).selectApp, apps);
+        ..sort(
+          (a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()),
+        );
+      final picked = await _showAppCheckboxDialog(
+        S.of(context).selectApp,
+        apps,
+      );
       if (picked == null || picked.isEmpty || !mounted) return;
       newPkgs = picked;
     }
     if (newPkgs == null || newPkgs.isEmpty || !mounted) return;
 
-    final block = ss.checkEmergencyLimit(S.of(context), choice, newPkgs.toList());
+    final block = ss.checkEmergencyLimit(
+      S.of(context),
+      choice,
+      newPkgs.toList(),
+    );
     if (block != null) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(block)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(block)));
       }
       return;
     }
@@ -1460,11 +1883,14 @@ extension FloorContentMethods on _HomeScreenState {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(color: textColor.withOpacity(0.12)),
+              border: Border.all(color: textColor.withValues(alpha: 0.12)),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: Icon(Icons.warning_amber_rounded,
-                color: textColor.withOpacity(0.54), size: 16),
+            child: Icon(
+              Icons.warning_amber_rounded,
+              color: textColor.withValues(alpha: 0.54),
+              size: 16,
+            ),
           ),
         ),
       ),
@@ -1533,8 +1959,10 @@ extension FloorContentMethods on _HomeScreenState {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
-          title: Text(title,
-              style: const TextStyle(color: Colors.white, fontSize: 14)),
+          title: Text(
+            title,
+            style: const TextStyle(color: Colors.white, fontSize: 14),
+          ),
           content: SizedBox(
             width: double.maxFinite,
             height: 400,
@@ -1551,12 +1979,14 @@ extension FloorContentMethods on _HomeScreenState {
                   contentPadding: EdgeInsets.zero,
                   activeColor: Colors.orangeAccent,
                   checkColor: Colors.black,
-                  title: Text(name,
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 13)),
-                  subtitle: Text(floorLabel(app.floor),
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 10)),
+                  title: Text(
+                    name,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  subtitle: Text(
+                    floorLabel(app.floor),
+                    style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  ),
                   value: checked,
                   onChanged: (v) => setInner(() {
                     if (v == true) {
@@ -1571,17 +2001,50 @@ extension FloorContentMethods on _HomeScreenState {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(S.of(ctx).actionCancel,
-                    style: const TextStyle(color: Colors.white54))),
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                S.of(ctx).actionCancel,
+                style: const TextStyle(color: Colors.white54),
+              ),
+            ),
             TextButton(
-                onPressed: () =>
-                    Navigator.pop(ctx, Set<String>.from(selected)),
-                child: Text(S.of(ctx).actionDecide,
-                    style: const TextStyle(color: Colors.white))),
+              onPressed: () => Navigator.pop(ctx, Set<String>.from(selected)),
+              child: Text(
+                S.of(ctx).actionDecide,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  /// 緊急使用の選択肢1行。サブタイトルにその方式の残り回数を出す。
+  Widget _emergencyChoiceTile(
+    BuildContext ctx,
+    IconData icon,
+    Color color,
+    String title,
+    String mode,
+  ) {
+    final remaining = widget.settingsService.emergencyRemainingLabel(
+      S.of(ctx),
+      mode,
+    );
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: color, size: 20),
+      title: Text(
+        title,
+        style: const TextStyle(color: Colors.white, fontSize: 13),
+      ),
+      subtitle: Text(
+        remaining,
+        style: const TextStyle(color: Colors.white38, fontSize: 10),
+      ),
+      onTap: () => Navigator.pop(ctx, mode),
     );
   }
 
@@ -1590,7 +2053,8 @@ extension FloorContentMethods on _HomeScreenState {
     if (!ss.canActivateEmergency()) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ss.emergencyLimitBlockMessage(S.of(context)))));
+          SnackBar(content: Text(ss.emergencyLimitBlockMessage(S.of(context)))),
+        );
       }
       return;
     }
@@ -1598,35 +2062,50 @@ extension FloorContentMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(S.of(ctx).emergencyUseTitle, style: const TextStyle(color: Colors.redAccent, fontSize: 15)),
+        title: Text(
+          S.of(ctx).emergencyUseTitle,
+          style: const TextStyle(color: Colors.redAccent, fontSize: 15),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(S.of(ctx).emergencyUseDescription,
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(
+              S.of(ctx).emergencyUseDescription,
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
+            ),
             const SizedBox(height: 12),
-            ListTile(
-              dense: true, contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.all_inclusive, color: Colors.redAccent, size: 20),
-              title: Text(S.of(ctx).emergencyShowAllOn1F, style: const TextStyle(color: Colors.white, fontSize: 13)),
-              onTap: () => Navigator.pop(ctx, 'all'),
+            // 残り回数を出しておく（押す前に判断できるように）
+            _emergencyChoiceTile(
+              ctx,
+              Icons.all_inclusive,
+              Colors.redAccent,
+              S.of(ctx).emergencyShowAllOn1F,
+              'all',
             ),
-            ListTile(
-              dense: true, contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.star, color: Colors.orangeAccent, size: 20),
-              title: Text(S.of(ctx).emergencyChooseRegistered, style: const TextStyle(color: Colors.white, fontSize: 13)),
-              onTap: () => Navigator.pop(ctx, 'registered'),
+            _emergencyChoiceTile(
+              ctx,
+              Icons.star,
+              Colors.orangeAccent,
+              S.of(ctx).emergencyChooseRegistered,
+              'registered',
             ),
-            ListTile(
-              dense: true, contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.apps, color: Colors.white54, size: 20),
-              title: Text(S.of(ctx).emergencyAppListPick, style: const TextStyle(color: Colors.white, fontSize: 13)),
-              onTap: () => Navigator.pop(ctx, 'pick'),
+            _emergencyChoiceTile(
+              ctx,
+              Icons.apps,
+              Colors.white54,
+              S.of(ctx).emergencyAppListPick,
+              'pick',
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              S.of(ctx).actionCancel,
+              style: const TextStyle(color: Colors.white54),
+            ),
+          ),
         ],
       ),
     );
@@ -1640,37 +2119,50 @@ extension FloorContentMethods on _HomeScreenState {
       if (registered.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(S.of(context).emergencyAppsRegisterHelp)));
+            SnackBar(content: Text(S.of(context).emergencyAppsRegisterHelp)),
+          );
         }
         return;
       }
       // Show picker so the user explicitly selects which registered apps to
       // enable on 1F (instead of defaulting to all of them).
-      final candidates = _allApps
-          .where((a) => registered.contains(a.packageName))
-          .toList()
-        ..sort((a, b) =>
-            a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
+      final candidates =
+          _allApps.where((a) => registered.contains(a.packageName)).toList()
+            ..sort(
+              (a, b) =>
+                  a.appName.toLowerCase().compareTo(b.appName.toLowerCase()),
+            );
       final picked = await _showAppCheckboxDialog(
-          S.of(context).emergencyChooseRegistered, candidates);
+        S.of(context).emergencyChooseRegistered,
+        candidates,
+      );
       if (picked == null || picked.isEmpty || !mounted) return;
       targetPkgs = picked;
     } else if (choice == 'pick') {
       final apps = List<AppConfig>.from(_allApps)
-        ..sort((a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
-      final picked =
-          await _showAppCheckboxDialog(S.of(context).emergencyChooseTargetApps, apps);
+        ..sort(
+          (a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()),
+        );
+      final picked = await _showAppCheckboxDialog(
+        S.of(context).emergencyChooseTargetApps,
+        apps,
+      );
       if (picked == null || picked.isEmpty || !mounted) return;
       targetPkgs = picked;
     }
     if (targetPkgs == null || targetPkgs.isEmpty) return;
 
     // Detailed limit check now that we know the chosen apps.
-    final block = ss.checkEmergencyLimit(S.of(context), choice, targetPkgs.toList());
+    final block = ss.checkEmergencyLimit(
+      S.of(context),
+      choice,
+      targetPkgs.toList(),
+    );
     if (block != null) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(block)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(block)));
       }
       return;
     }
@@ -1680,14 +2172,43 @@ extension FloorContentMethods on _HomeScreenState {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(S.of(ctx).selectDuration, style: const TextStyle(color: Colors.redAccent, fontSize: 14)),
-        content: Text(S.of(ctx).emergencyDurationDescription,
-            style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        title: Text(
+          S.of(ctx).selectDuration,
+          style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+        ),
+        content: Text(
+          S.of(ctx).emergencyDurationDescription,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(S.of(ctx).actionCancel, style: const TextStyle(color: Colors.white54))),
-          TextButton(onPressed: () => Navigator.pop(ctx, 15), child: Text(S.of(ctx).minutesShort15, style: const TextStyle(color: Colors.orangeAccent))),
-          TextButton(onPressed: () => Navigator.pop(ctx, 30), child: Text(S.of(ctx).minutesShort30, style: const TextStyle(color: Colors.orangeAccent))),
-          TextButton(onPressed: () => Navigator.pop(ctx, 60), child: Text(S.of(ctx).minutesShort60, style: const TextStyle(color: Colors.redAccent))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              S.of(ctx).actionCancel,
+              style: const TextStyle(color: Colors.white54),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 15),
+            child: Text(
+              S.of(ctx).minutesShort15,
+              style: const TextStyle(color: Colors.orangeAccent),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 30),
+            child: Text(
+              S.of(ctx).minutesShort30,
+              style: const TextStyle(color: Colors.orangeAccent),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 60),
+            child: Text(
+              S.of(ctx).minutesShort60,
+              style: const TextStyle(color: Colors.redAccent),
+            ),
+          ),
         ],
       ),
     );
@@ -1724,10 +2245,14 @@ extension FloorContentMethods on _HomeScreenState {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              border: Border.all(color: textColor.withOpacity(0.12)),
+              border: Border.all(color: textColor.withValues(alpha: 0.12)),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: Icon(Icons.settings, color: textColor.withOpacity(0.54), size: 16),
+            child: Icon(
+              Icons.settings,
+              color: textColor.withValues(alpha: 0.54),
+              size: 16,
+            ),
           ),
         ),
       ),
@@ -1735,9 +2260,13 @@ extension FloorContentMethods on _HomeScreenState {
   }
 
   Widget _navBtn(
-      String label, String sub, bool enabled, VoidCallback onTap,
-      {Color borderColor = Colors.white70,
-      Color borderColorDim = Colors.white12}) {
+    String label,
+    String sub,
+    bool enabled,
+    VoidCallback onTap, {
+    Color borderColor = Colors.white70,
+    Color borderColorDim = Colors.white12,
+  }) {
     return SizedBox(
       width: 46,
       child: Material(
@@ -1750,23 +2279,30 @@ extension FloorContentMethods on _HomeScreenState {
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
               border: Border.all(
-                  color: enabled ? borderColor.withOpacity(0.38) : borderColorDim),
+                color: enabled ? borderColor.withValues(alpha: 0.38) : borderColorDim,
+              ),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Column(
               children: [
-                Text(label,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: enabled
-                            ? _floorText(_currentFloor)
-                            : _floorText(_currentFloor).withOpacity(0.24),
-                        fontSize: 14)),
-                Text(enabled && sub.isNotEmpty ? sub : '',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: _floorText(_currentFloor).withOpacity(0.38),
-                        fontSize: 9)),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: enabled
+                        ? _floorText(_currentFloor)
+                        : _floorText(_currentFloor).withValues(alpha: 0.24),
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  enabled && sub.isNotEmpty ? sub : '',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _floorText(_currentFloor).withValues(alpha: 0.38),
+                    fontSize: 9,
+                  ),
+                ),
               ],
             ),
           ),

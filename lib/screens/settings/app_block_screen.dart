@@ -155,7 +155,7 @@ class _NotificationSettingsScreenState
   Widget _accessBanner() {
     final s = S.of(context);
     return Material(
-      color: Colors.amber.withOpacity(0.10),
+      color: Colors.amber.withValues(alpha: 0.10),
       child: InkWell(
         onTap: () async {
           await _native.openNotificationAccessSettings();
@@ -202,7 +202,7 @@ class _NotificationSettingsScreenState
           margin: const EdgeInsets.only(left: 4),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
           decoration: BoxDecoration(
-            color: selected ? color.withOpacity(0.20) : Colors.transparent,
+            color: selected ? color.withValues(alpha: 0.20) : Colors.transparent,
             border: Border.all(
                 color: selected ? color : Colors.white24),
             borderRadius: BorderRadius.circular(4),
@@ -381,7 +381,7 @@ class _NotificationSettingsScreenState
                           });
                         },
                         selected: isChecked,
-                        selectedTileColor: Colors.white.withOpacity(0.05),
+                        selectedTileColor: Colors.white.withValues(alpha: 0.05),
                         leading: _selectionMode
                             ? Checkbox(
                                 value: isChecked,
@@ -611,9 +611,9 @@ class _AppBlockScreenState extends State<_AppBlockScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.08),
+                      color: Colors.amber.withValues(alpha: 0.08),
                       border:
-                          Border.all(color: Colors.amber.withOpacity(0.5)),
+                          Border.all(color: Colors.amber.withValues(alpha: 0.5)),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -977,7 +977,7 @@ class _BatchPendingScreenState extends State<_BatchPendingScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          color: Colors.white.withOpacity(0.04),
+          color: Colors.white.withValues(alpha: 0.04),
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
           child: Row(
             children: [
