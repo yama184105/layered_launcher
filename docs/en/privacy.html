@@ -19,13 +19,14 @@
 
 <main class="section">
   <h1 style="font-size: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Privacy Policy</h1>
-  <p class="muted small">Last updated: 2026-05-03</p>
+  <p class="muted small">Last updated: 2026-10-23</p>
 
   <h2>1. Overview</h2>
   <p>
     Layered Launcher ("the App") is a home launcher that runs on the user's Android device.
-    The App does not transmit personal information to external servers, nor share it with any third party.
+    The App does not collect personal information to transmit to external servers, nor share it with any third party.
     All settings and usage history are stored solely on the user's device (local storage).
+    The only exceptions are the two optional features described in "4. Communication with external services": weather display and the online wallpaper gallery.
   </p>
 
   <h2>2. Information handled</h2>
@@ -37,7 +38,9 @@
     <li><strong>App launch history and counts</strong>: recorded for the "usage-driven floor change", "auto-move", and "app blocking" features</li>
     <li><strong>User settings</strong>: floor configuration, wallpaper, fonts, and other preferences</li>
     <li><strong>(Only when permitted) Notification metadata</strong>: source app and counts, used for notification batching</li>
-    <li><strong>(Only when permitted) App usage statistics</strong>: read from the OS Usage API for the screen-time display</li>
+    <li><strong>(Only when permitted) App usage statistics</strong>: read from the OS Usage API for the screen-time display, the recent-apps list, and usage-count / usage-time based mode switching</li>
+    <li><strong>(Only when permitted) Approximate location</strong>: the last known latitude/longitude held by the OS is read for the weather display. It is not stored on the device</li>
+    <li><strong>(Only when permitted) Calendar events</strong>: read to show upcoming events on the home screen. Never sent off-device</li>
   </ul>
 
   <h2>3. Storage</h2>
@@ -46,21 +49,32 @@
     No data is sent to any cloud, third-party server, or analytics service.
   </p>
 
-  <h2>4. Third-party sharing</h2>
+  <h2>4. Communication with external services</h2>
   <p>
     The App does not share collected information with any third party. No advertising, analytics, or
-    crash-reporting SDKs are bundled.
+    crash-reporting SDKs are bundled. Only when you use the following two optional features is the minimum
+    information required for that feature sent to an external service.
   </p>
+  <ul>
+    <li><strong>Weather display</strong>: if location access is granted, the approximate latitude/longitude of your current position is sent to Open-Meteo (open-meteo.com) to fetch the forecast. No account or device identifier is sent.</li>
+    <li><strong>Online wallpaper gallery</strong>: when you search for wallpapers, the search term you entered is sent to Unsplash (unsplash.com) to retrieve images.</li>
+  </ul>
+  <p>If you do not use these features, the App never connects to the internet.</p>
 
   <h2>5. Permissions</h2>
   <p>The Android permissions requested by the App are:</p>
   <ul>
     <li><strong>QUERY_ALL_PACKAGES</strong>: enumerate installed apps (core launcher functionality)</li>
-    <li><strong>PACKAGE_USAGE_STATS</strong> (optional): screen-time display</li>
-    <li><strong>BIND_NOTIFICATION_LISTENER_SERVICE</strong> (optional): notification batching</li>
-    <li><strong>POST_NOTIFICATIONS</strong>: notifications for Mindful Delay and auto-move</li>
-    <li><strong>READ_EXTERNAL_STORAGE / READ_MEDIA_IMAGES</strong>: wallpaper selection</li>
-    <li><strong>SET_WALLPAPER</strong>: wallpaper application</li>
+    <li><strong>PACKAGE_USAGE_STATS</strong> (optional): screen-time display, recent-apps list, and usage-count / usage-time based mode switching</li>
+    <li><strong>BIND_NOTIFICATION_LISTENER_SERVICE</strong> (optional): notification batching, blocking, and history</li>
+    <li><strong>BIND_DEVICE_ADMIN</strong> (optional): screen-lock gesture (e.g. swipe down to turn the screen off). The only policy used is "lock the screen"; the App never wipes data or changes passwords. You can revoke it at any time under Settings → Security → Device admin apps</li>
+    <li><strong>SCHEDULE_EXACT_ALARM</strong> (optional): deliver batched notifications at the exact time you chose</li>
+    <li><strong>POST_NOTIFICATIONS</strong>: notifications for Mindful Delay, auto-move, and batched delivery</li>
+    <li><strong>ACCESS_COARSE_LOCATION</strong> (optional): weather display</li>
+    <li><strong>READ_CALENDAR</strong> (optional): upcoming events on the home screen</li>
+    <li><strong>INTERNET</strong>: used only by the weather display and the online wallpaper gallery</li>
+    <li><strong>REQUEST_DELETE_PACKAGES</strong>: uninstall from the app-management screen (always via the OS confirmation dialog)</li>
+    <li><strong>RECEIVE_BOOT_COMPLETED / VIBRATE / EXPAND_STATUS_BAR</strong>: restore scheduled notifications after reboot, haptic feedback, and expanding the notification shade</li>
   </ul>
   <p>
     Optional permissions only activate the related features when explicitly granted by the user.
