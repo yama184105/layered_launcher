@@ -15,7 +15,7 @@
 
 ```
 docs/
-├── index.html              トップページ (β テスター募集)
+├── index.html              トップページ (公開予定・料金)
 ├── privacy.html            プライバシーポリシー (Play Store 必須)
 ├── styles.css              共通スタイル
 ├── .nojekyll               Jekyll を無効化 (アンダースコア始まりのファイルを処理させない)
